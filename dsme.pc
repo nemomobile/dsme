@@ -1,0 +1,10 @@
+prefix=/usr
+includedir=${prefix}/include
+libdir=${prefix}/lib
+
+Name: dsme
+Description: DSME dsmesock dynamic library
+Version: 0.60.0
+Requires:
+Libs: -L${libdir} -ldsme
+Cflags: -I${includedir}

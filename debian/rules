@@ -1,0 +1,111 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+# GNU copyright 1997 to 1999 by Joey Hess.
+#
+# Modified to make a template file for a multi-binary package with separated
+# build-arch and build-indep targets  by Bill Allombert 2001
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+# This has to be exported to make some magic below work.
+export DH_OPTIONS
+
+CFLAGS = -Wall -g
+
+ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
+	CFLAGS += -O0
+else
+	CFLAGS += -O2
+endif
+
+# To build testcases as well, add "testcases" to DEB_BUILD_OPTIONS
+ifneq (,$(findstring testcases,$(DEB_BUILD_OPTIONS)))
+	DH_OPTIONS=
+else
+	DH_OPTIONS=-Ndsme-testcases
+endif
+
+configure: configure-stamp
+configure-stamp:
+	dh_testdir
+	# Add here commands to configure the package.
+
+	touch configure-stamp
+
+#Architecture
+build: build-stamp
+
+build-stamp: configure-stamp
+
+# To build testcases as well, add "testcases" to DEB_BUILD_OPTIONS
+ifneq (,$(findstring testcases,$(DEB_BUILD_OPTIONS)))
+	$(MAKE) tests
+else
+	$(MAKE)
+endif
+
+	touch build-stamp
+
+clean:
+	dh_testdir
+	dh_testroot
+	rm -f build-stamp configure-stamp
+
+	# Add here commands to clean up after the build process.
+	$(MAKE) distclean
+
+	dh_clean
+
+install:
+	dh_testdir
+	dh_testroot
+	dh_clean -k -s
+	dh_installdirs
+
+	# Add here commands to install the package into
+	# debian/tmp.
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
+	#mkdir $(CURDIR)/debian/tmp/etc/dsme
+	install -m 440  lifeguard.uids $(CURDIR)/debian/tmp/etc/dsme/
+
+	# install tests (if needed)
+ifneq (,$(findstring testcases,$(DEB_BUILD_OPTIONS)))
+	$(MAKE) tests_install DESTDIR=$(CURDIR)/debian/tmp
+endif
+
+	dh_install -s
+
+# Must not depend on anything. This is to be called by
+# binary-arch/binary-indep
+# in another 'make' thread.
+binary-arch: build install
+	dh_testdir
+	dh_testroot
+	dh_installchangelogs
+	dh_installdocs -XREADME
+	dh_installexamples
+	dh_installinit -p dsme --no-start -- start 02 1 2 3 4 5 .
+	dh_installinit -p dsme --name=dsme-dbus --no-start -- start 20 1 2 3 4 5 .
+	dh_installman
+	dh_link
+	dh_strip --dbg-package=libdsme0.2.0
+	dh_compress
+	dh_fixperms
+	dh_makeshlibs --exclude=/usr/lib/dsme/
+	dh_installdeb
+	dh_shlibdeps -l$(CURDIR)/debian/libdsme0.2.0/usr/lib
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+# Build architecture independant packages using the common target.
+binary-indep: build install
+#	$(MAKE) -f debian/rules DH_OPTIONS=-i binary-common
+
+# Build architecture dependant packages using the common target.
+#binary-arch: build install
+#	$(MAKE) -f debian/rules DH_OPTIONS=-a binary-common
+
+binary: binary-arch binary-indep
+.PHONY: build clean binary-indep binary-arch binary install install-indep install-arch configure

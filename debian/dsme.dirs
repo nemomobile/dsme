@@ -1,0 +1,6 @@
+sbin
+usr/lib/dsme
+usr/sbin
+usr/share/doc/dsme
+var/lib/dsme/stats
+usr/bin

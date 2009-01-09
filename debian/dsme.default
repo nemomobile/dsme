@@ -1,0 +1,8 @@
+# This is a configuration file for /etc/init.d/dsme; it allows you to
+# perform common modifications to the behavior of the Device State
+# Management Entity daemon startup without editing the init script
+DAEMON_OPTS="-d -p /usr/lib/dsme/libstartup.so"
+#export DSME_SUSPEND=1
+export DSME_INIT=1
+#export DSME_BLANK=1
+#export DSME_BOOTREASON=1

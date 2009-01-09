@@ -1,0 +1,7 @@
+dsme for Debian
+---------------
+
+Debian package of DSME is just a dummy package containing dsmetool and test
+programs.
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>, Thu, 22 Apr 2004 09:52:11 +0300

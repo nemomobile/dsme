@@ -1,0 +1,79 @@
+/**
+   @file dsme_dbus.h
+
+   D-Bus C binding for DSME
+   <p>
+   Copyright (C) 2009 Nokia Corporation.
+
+   @author Semi Malinen <semi.malinen@nokia.com>
+
+   This file is part of Dsme.
+
+   Dsme is free software; you can redistribute it and/or modify
+   it under the terms of the GNU Lesser General Public License
+   version 2.1 as published by the Free Software Foundation.
+
+   Dsme is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Lesser General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public
+   License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#ifndef DSME_DBUS_H
+#define DSME_DBUS_H
+
+#include <stdbool.h>
+
+typedef struct DsmeDbusMessage DsmeDbusMessage;
+
+typedef void DsmeDbusMethod(const DsmeDbusMessage* request,
+                            DsmeDbusMessage**      reply);
+
+typedef void DsmeDbusHandler(const DsmeDbusMessage* ind);
+
+typedef struct dsme_dbus_binding_t {
+  DsmeDbusMethod* method;
+  const char*     name;
+} dsme_dbus_binding_t;
+
+typedef struct dsme_dbus_signal_binding_t {
+  DsmeDbusHandler* handler;
+  const char*      interface;
+  const char*      name;
+} dsme_dbus_signal_binding_t;
+
+
+void dsme_dbus_bind_methods(bool*                      bound_already,
+                            const dsme_dbus_binding_t* bindings,
+                            const char*                service,
+                            const char*                interface);
+
+void dsme_dbus_unbind_methods(bool*                      really_bound,
+                              const dsme_dbus_binding_t* bindings,
+                              const char*                service,
+                              const char*                interface);
+
+void dsme_dbus_bind_signals(bool*                             bound_already,
+                            const dsme_dbus_signal_binding_t* bindings);
+
+void dsme_dbus_unbind_signals(bool*                             really_bound,
+                              const dsme_dbus_signal_binding_t* bindings);
+
+DsmeDbusMessage* dsme_dbus_reply_new(const DsmeDbusMessage* request);
+
+DsmeDbusMessage* dsme_dbus_signal_new(const char* path,
+                                      const char* interface,
+                                      const char* name);
+
+void dsme_dbus_message_append_string(DsmeDbusMessage* msg, const char* s);
+
+int         dsme_dbus_message_get_int(const DsmeDbusMessage* msg);
+const char* dsme_dbus_message_get_string(const DsmeDbusMessage* msg);
+
+// NOTE: frees the signal; hence not const
+void dsme_dbus_signal_emit(DsmeDbusMessage* sig);
+
+#endif

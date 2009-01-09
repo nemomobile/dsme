@@ -1,0 +1,979 @@
+dsme (0.60.0) unstable; urgency=low
+
+  * License under LGPL 2.1
+  * Remove obsolete message fields.
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Fri, 09 Jan 2009 09:44:25 +0000
+
+dsme (0.59.9) unstable; urgency=low
+
+  * Fix actdead -> user transition to pass correct runlevel to telinit.
+  * Remove /usr/bin/console-msg.sh.
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Tue, 09 Dec 2008 09:54:45 +0000
+
+dsme (0.59.8) unstable; urgency=low
+
+  * Introduce a shutdown delay to the transition to actdead. 
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Mon, 01 Dec 2008 09:01:21 +0000
+
+dsme (0.59.7) unstable; urgency=low
+
+  * Make thermal shutdown longer to give UI more time
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Thu, 27 Nov 2008 09:39:52 +0000
+
+dsme (0.59.6) unstable; urgency=low
+
+  * Add a new header and library for D-Bus names: dsme_dbus_if
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Wed, 29 Oct 2008 15:19:39 +0000
+
+dsme (0.59.5) unstable; urgency=low
+
+  * Don't do thermal or battery empty shutdown during emergency call
+  * Restore alarm status at start-up
+  * Add support for DSM_MSGTYPE_SET_CHARGER_STATE
+  * Add support for DSM_MSGTYPE_SET_BATTERY_STATE
+  * Use g_timeout_add_seconds()
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Mon, 06 Oct 2008 14:16:17 +0300
+
+dsme (0.59.4) unstable; urgency=low
+
+  * Workaround to lower the probability of NB#88918
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Thu, 25 Sep 2008 09:18:36 +0300
+
+dsme (0.59.3) unstable; urgency=low
+
+  * Build with surface thermal management by default.
+    (NOTE: uses libbmeipc to get BTEMP)
+  * Use latest parameters for thermal management.
+  * Fix a dsme crash when booting to acting dead.
+  * Add alarm tracking to dsme state handling.
+  * Check for low battery at startup.
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Tue, 23 Sep 2008 16:04:04 +0300
+
+dsme (0.59.2) unstable; urgency=low
+
+  * Implemented: NR#190122
+  * Implemented: NR#190124
+  * Implemented: NR#190125
+  * Implemented: NR#190126
+  * Add support for battery thermal sensor.
+  * Blacklist old (CPU rev 2) OMAP in thermal manager.
+  * Implement thermal objects as plug-ins.
+  * Add support for thermal manager tuning via config files.
+  * Dsme should now automatically connect to D-Bus.
+  * Dsme now tracks alarm state.
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Tue, 02 Sep 2008 15:16:36 +0300
+
+dsme (0.59.1) unstable; urgency=low
+
+  * Implemented: NR#190123
+  * Implemented: NR#190130
+  * Add thermal manager.
+  * Add suport for omap thermal sensor.
+  * Add thermal shutdown policy to thermal manager.
+  * Fix a case where message was lost on client exit.
+  * Swwd is now started even if hwwd is not available.
+  * Add RTLD_GLOBAL to module plug-in dlopen().
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Thu, 21 Aug 2008 07:46:14 +0300
+
+dsme (0.59.0) unstable; urgency=low
+
+  * Add /etc/dsme/lifeguard.uids with UID 29999 (user) to the package
+    WARNING: due to user now being listed in lifeguard.uids, lifeguard
+    will do a reset in case of a user-started client respawning too fast
+  * Convert to using glib (a major operation; expect breakage and leakage)
+  * Provide a D-Bus API for version info, powerup, reboot and shutdown
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Fri, 27 Jun 2008 15:06:14 +0300
+
+dsme (0.58.5) unstable; urgency=low
+
+  * Fix initial dsme state selection.
+  * Fix dsmetool segv.
+  * Remove unused headers from packaging.
+  * Make some data types opaque.
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Fri, 23 May 2008 10:25:31 +0300
+
+dsme (0.58.4) unstable; urgency=low
+
+  * Fixed a NULL pointer reference on missing $RUNLEVEL
+
+ -- Semi Malinen <semi.malinen@noki.nokia.com>  Tue, 29 Apr 2008 14:50:40 +0300
+
+dsme (0.58.3) unstable; urgency=low
+
+  * Start dsme at proper runlevels.
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Tue, 22 Apr 2008 15:19:52 +0300
+
+dsme (0.58.2) unstable; urgency=low
+
+  [ Semi Malinen ]
+  * update dsme init script
+
+  [ David Weinehall ]
+  * Fix various lintian warnings
+
+ -- David Weinehall <david.weinehall@nokia.com>  Thu, 10 Apr 2008 16:01:57 +0300
+
+dsme (0.58.1) unstable; urgency=low
+
+  * Fixed a couple of packaging bugs.
+  * Packaged header files that mce needs.
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Tue,  1 Apr 2008 15:15:53 +0300
+
+dsme (0.58.0) unstable; urgency=low
+
+  * Major changes in how dsme messages are specified and used
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Wed, 12 Mar 2008 12:38:44 +0200
+
+dsme (0.57.12) unstable; urgency=low
+
+  * Fixes: NB#74814 : synthesize activity upon entering user state
+  * Fixes: NB#75409 : fixed a memory leak in kicker
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Wed,  7 Nov 2007 11:02:58 +0200
+
+dsme (0.57.11) unstable; urgency=low
+
+  * NB#58120: hwwd kicking thread moved to a separate process
+  * NB#70163, NB#72539, NB#72629: (in)activity signals no
+    longer tied to screen blanking
+  * NB#73869: keyboard slide switch now monitored
+  * fixed some Coverity warnings
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Mon, 29 Oct 2007 10:19:38 +0200
+
+dsme (0.57.10) unstable; urgency=low
+
+  * NB#70695: remove unnecessary FBIOBLANK ioctl() calls
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Wed,  3 Oct 2007 13:47:33 +0300
+
+dsme (0.57.9) unstable; urgency=low
+
+  * NB#71117: adapted to sysfs changes in usb driver
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Thu, 27 Sep 2007 12:33:57 +0300
+
+dsme (0.57.8) unstable; urgency=low
+
+  * fixed lcd dim value
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Tue, 18 Sep 2007 05:28:17 +0900
+
+dsme (0.57.7) unstable; urgency=low
+
+  * Screen brightness adjustment is now more refined
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Mon, 17 Sep 2007 19:07:57 +0900
+
+dsme (0.57.6) unstable; urgency=low
+
+  * NB#65830: fb dev is now kept open
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Thu, 13 Sep 2007 17:48:13 +0900
+
+dsme (0.57.5) unstable; urgency=low
+
+  * NB#66400: go to user state if state file is missing
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Thu, 23 Aug 2007 20:26:36 +0900
+
+dsme (0.57.4) unstable; urgency=low
+
+  * NB#65325: libcal and state modules now built with -fPIC
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Fri, 10 Aug 2007 22:06:34 +0900
+
+dsme (0.57.3) unstable; urgency=low
+
+  * NB#52438: frozen processes now given 2 secs between SIGABRT and
+    SIGKILL
+  * sensing of both mmc doors and Mini-A
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Fri, 25 May 2007 17:07:09 +0900
+
+dsme (0.57.2) unstable; urgency=low
+
+  * fix a type, add missing changelog entry
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Tue,  8 May 2007 17:27:28 +0900
+
+dsme (0.57.1) unstable; urgency=low
+
+  * temperature module now finds tmp105 in sysfs
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Tue,  8 May 2007 04:09:13 +0900
+
+dsme (0.57) unstable; urgency=low
+
+  * NB#51109: call setsid() after fork() for child
+  * NB#54863: low battery ignored in rd-mode
+  * added Mini-B status to peripheral.c
+  * added brightness control messages for a range up to 255
+  * added new debug printfs and fixed old debug messages
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Wed, 25 Apr 2007 16:07:02 +0300
+
+dsme (0.56.9) unstable; urgency=low
+
+  * Do reboot-loop shutdown only when bootreason is sw_rst or 32wd_to. Clear
+    reboot-loop counter on reboot-loop shutdown. Fixes: NB#48483
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Mon,  5 Feb 2007 10:55:57 +0200
+
+dsme (0.56.8) unstable; urgency=low
+
+  * NB#48778: DSME now unprotects processes at nice 0
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Tue,  5 Dec 2006 15:05:44 +0200
+
+dsme (0.56.7) unstable; urgency=low
+
+  * Emit only changes in activity state (NB#48722)
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Thu, 30 Nov 2006 15:47:46 +0200
+
+dsme (0.56.6) unstable; urgency=low
+
+  * 47895: telinit -t adjustment
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Tue, 21 Nov 2006 11:47:43 +0200
+
+dsme (0.56.5) unstable; urgency=low
+
+  * 46740: DSM_MSGTYPE_ACTIVITY_IND is now broadcast when there is user activity
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Mon, 20 Nov 2006 16:11:12 +0200
+
+dsme (0.56.4) unstable; urgency=low
+
+  * bug 46446: dsme now sets oom_adj for itself and its children
+
+ -- Semi Malinen <semaline@nokia.com>  Wed, 15 Nov 2006 13:41:00 +0200
+
+dsme (0.56.3) unstable; urgency=low
+
+  * bugfix: OTP locking delay problem fix
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Mon,  6 Nov 2006 15:36:05 +0200
+
+dsme (0.56.2) unstable; urgency=low
+
+  * temperature.c: lowered critical temp to 80, reorganized code in init
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Tue, 26 Sep 2006 16:49:31 +0300
+
+dsme (0.56.1) unstable; urgency=low
+
+  * Build libdsme0-dbg package (Fixes: NB#40796)
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Wed, 20 Sep 2006 10:19:23 +0300
+
+dsme (0.56) unstable; urgency=low
+
+  * cal: OTP support (based on the patch from Roman) 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Fri,  8 Sep 2006 17:06:00 +0300
+
+dsme (0.55.6) unstable; urgency=low
+
+  * dsmetool.c: Use the default group in case only UID was specified
+    Fixes NB#39374
+  * peripheral.c: correct path for USB state 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Mon,  4 Sep 2006 14:10:13 +0300
+
+dsme (0.55.5) unstable; urgency=low
+
+  * inactivity-blank.c: increased backlight levels on DIM and lowest ON level
+    slightly
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Thu, 31 Aug 2006 11:54:58 +0300
+
+dsme (0.55.4) unstable; urgency=low
+
+  * temperature.c: changed the paths according to the kernel driver 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Wed, 30 Aug 2006 13:10:40 +0300
+
+dsme (0.55.3) unstable; urgency=low
+
+  * cal/cal.c: mark the area valid in compress_config_area() (patch from
+    Juha Y.)
+  * modules/temperature.c: set the HOT limit to 81C (limit from A. Haggman) 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Thu, 24 Aug 2006 15:20:28 +0300
+
+dsme (0.55.2) unstable; urgency=low
+
+  * state.c: Doh! Broadcast the indication
+  * state.c: write the reset counters after 60s, not 15s 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Wed, 23 Aug 2006 11:18:25 +0300
+
+dsme (0.55.1) unstable; urgency=low
+
+  * state.c: send thermal indication to external, not internal queue 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Wed, 23 Aug 2006 10:48:41 +0300
+
+dsme (0.55) unstable; urgency=low
+
+  * state.c: Send THERMAL_SHUTDOWN_IND 5s before the thermal shutdown
+  * temperature.c: treshold -> threshold :)
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Tue, 22 Aug 2006 13:41:23 +0300
+
+dsme (0.54.1) unstable; urgency=low
+
+  * Fix typo in read_saved_state() return value on error
+  * Send state to BME always (Fixes: NB#35990) 
+  * Make thermal shutdown unconditional
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Tue, 15 Aug 2006 09:13:26 +0300
+
+dsme (0.54) unstable; urgency=low
+
+  * temperature.c: changes to comply with the latest kernel driver version 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Mon, 14 Aug 2006 12:03:56 +0300
+
+dsme (0.53) unstable; urgency=low
+
+  * state.c: initial support for choosing correct state on alarm and allow
+    >24h alarms.
+  * libretu.[ch]: added files to access retu rtc from state
+  * peripheral.c: file added, this replaces old cover.c to listen sysfs device
+    state changes using select() instead of kevents. Corrected sysfs paths.
+  * Bugfix: do not shutdown on rootfs timeout if in RD mode
+  * activitymonitor.c: moved listening for new input methods from now obsolete
+    cover.c to activitymonitor.c
+  * Enabled temperature module with THOT limit 60. 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Mon,  7 Aug 2006 13:40:36 +0300
+
+dsme (0.52) unstable; urgency=low
+
+  * Reworked the state selection. If a test state is not selected after
+    getting the battery type, we wait until the rootfs is mounted. The state
+    is read and stored from the rootfs.
+  * cal-nand.c: ignore ENOTTY if MEMSETOOBSEL failed (patch from Henrik) 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Tue,  1 Aug 2006 09:22:40 +0300
+
+dsme (0.51) unstable; urgency=low
+
+  [ Mikko K. Ylinen ]
+  * Add support for temperature monitoring. The module is still disabled.
+
+  [ Ismo Laitinen ]
+  * Disable actmon rescanning during boot (60s) (N#31248)
+  * Added ROOTFS_MOUNTED msg, option to dsmetool and simple handler in state
+    module
+  * more verbose errors in inactivity-blank 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Tue, 20 Jun 2006 10:12:34 +0300
+
+dsme (0.50) unstable; urgency=low
+
+  * Branched
+  * Send the brightness value after the brightness has been changed
+  * Added the handler for SIGINT
+  * Struct passwd should not be free'ed, it's static
+  * Remove select and close pipe in spawn_shutdown()
+  * Removed old fallbacks for backlight sysfs files
+  * Make CAL differentiate between user and config blocks when writing
+    (patch from Juha)
+  * allow only root to access CAL 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Mon, 12 Jun 2006 11:15:24 +0300
+
+dsme (0.43.2) unstable; urgency=low
+
+  * If no input devices are found, add sane defaults (N#30068)
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Mon, 22 May 2006 15:18:16 +0300
+
+dsme (0.43.1) unstable; urgency=low
+
+  * Slight cleanup of new activitymonitor code
+  * Fix deallocation problem in lifeguard (N#29314)
+  * Make fix for N#20221 more robust by giving more time (2s) for the device
+    file to appear 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Tue, 16 May 2006 14:23:02 +0300
+
+dsme (0.43) unstable; urgency=low
+
+  * Reworked activitymonitor. Replaced add or del commands with resync that just 
+    tells activitymonitor to rescan the /dev/input/event* for input devices. 
+    Getting device names from kevents is not that good a solution. This
+    fixes N#20221.
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Fri,  5 May 2006 13:39:41 +0300
+
+dsme (0.42) unstable; urgency=low
+
+  * Processwd: Added DSME_WD_SYNC, disables timer based kicking, enables
+    manual kicking
+  * hwwd: if DSME_WD_SYNC is defined, request manual ping for processwd 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Tue, 25 Apr 2006 16:53:06 +0300
+
+dsme (0.41.3) unstable; urgency=low
+
+  * Made the backlight fade a bit slower (N#26668)
+  * Set /proc/PID/oom_adj to -17 for processes with negative nice (N#27637)
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Mon, 24 Apr 2006 16:08:44 +0300
+
+dsme (0.41.2) unstable; urgency=low
+
+  * inactivity-blank: timeouts should be greater than zero, zero is not
+  	allowed
+  * CAL: Add block_header rollover detection. Patch from Juha. 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Mon,  3 Apr 2006 20:55:06 +0300
+
+dsme (0.41.1) unstable; urgency=low
+
+  * Bugfix: remove also processes with RESET policy to be able to restart them
+    in case reboots are disabled
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Thu,  9 Mar 2006 15:22:32 +0200
+
+dsme (0.41) unstable; urgency=low
+
+  * install dsmetest again
+  * stderr and stdout logging prettier
+  * made fading a bit slower
+  * Bugfix: Lifeguard used pointer to dsme_process_t after deleteproc if proc
+  kept reswpawning
+  * default display brightness 9->7
+  * set select() again on -EINTR in mainloop
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Fri,  3 Feb 2006 12:30:53 +0200
+
+dsme (0.40.0) unstable; urgency=low
+
+  * Added possibility to add and del devices to activitymonitor
+  * Add and delete devices to actmon based on the kevents
+  * Bugfix from n770: cal_[read|write]_block() in cal-wrapper.c didn't check
+  for -EINTR (#21663). Patch from Mikko.
+  * Fix the race with mainloop select() and SIGCHLD using a self-pipe
+  * Bugfix from n770: display turns OFF and automatically ON when T&K lock is
+  enabled (#22051)
+  * Bugfix: close client connections properly in mainloop
+  * Bugfix: free selectstruct in handle_selects()
+  * Read the initial cover state after setting the listener for kevents
+  * Enable logging by default for now
+  * Bugfix from n770 (#22186): prettier sysloggin in lifeguard
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Wed, 11 Jan 2006 09:12:05 +0200
+
+dsme (0.30.11) unstable; urgency=low
+
+  * If a connection to a process using processwd gets closed, kill the process
+  * Clear reboot count after 600s uptime
+  * If OSSO_LOG is defined, compile in the logging
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Tue, 13 Sep 2005 11:10:02 +0300
+
+dsme (0.30.10) unstable; urgency=low
+
+  * Check battery type only in non-R&D mode
+  * Check reboot count only in non-R&D mode
+  * Make all reboot reasons behave as sw_rst
+  * Added a define DSME_LOG_ENABLE that compiles in the logging 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Wed,  7 Sep 2005 11:54:38 +0300
+
+dsme (0.30.9) unstable; urgency=low
+
+  * Save state to CAL only if it has changed
+  * Keep count on consecutive reboots. After 10 reboots, enter MALF state
+    and shutdown (in production mode) after 2 minutes.
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Mon,  5 Sep 2005 12:58:26 +0300
+
+dsme (0.30.8) unstable; urgency=low
+
+  * Fixed the issue with shutdown if it was for some reason requested when
+    /dev/initctl was not created yet.
+  * Now BME reports if battery is too low for boot. In that case we
+    shutdown immediately.
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Sun,  4 Sep 2005 16:02:12 +0300
+
+dsme (0.30.7) unstable; urgency=low
+
+  * Fix bug shutdown on wrong battery type reported by BME
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Sun,  4 Sep 2005 09:44:30 +0300
+
+dsme (0.30.6) unstable; urgency=low
+
+  * Check the charger status before proceeding in boot to act.dead (bug:
+    18504)
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Sat,  3 Sep 2005 16:33:27 +0300
+
+dsme (0.30.5) unstable; urgency=low
+
+  * Do not turn on display in ACTDEAD if MMC, HP or USB is changed since
+    the device is supposed to look like being off.
+  * Deny writes to non-user CAL area for non-root (Bug: 18537)
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Sat,  3 Sep 2005 10:42:42 +0300
+
+dsme (0.30.4) unstable; urgency=low
+
+  * Fix race condition when disabling activitymonitor 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Wed, 24 Aug 2005 15:23:53 +0300
+
+dsme (0.30.3) unstable; urgency=low
+
+  * Increased the timeout to 35s when waiting the first state. This is due
+    the BME that waits 30s in case of the almost flat battery.
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Tue, 16 Aug 2005 14:36:59 +0300
+
+dsme (0.30.2) unstable; urgency=low
+
+  * Read R&D mode flag correctly in lifeguard 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Tue, 16 Aug 2005 13:33:06 +0300
+
+dsme (0.30.1) unstable; urgency=low
+
+  * Bugfix in the detection of already running process in Lifeguard
+  * Fixed display handling with alarm states
+  * Disable activitymonitoring in ACTDEAD 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Fri, 15 Jul 2005 17:57:38 +0300
+
+dsme (0.30) unstable; urgency=low
+
+  * Lifeguard resets configurable by R&D mode flags
+  * WD kicking configurable by R&D mode flags
+  * Dynamic backlight scaling  
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Fri,  1 Jul 2005 16:26:12 +0300
+
+dsme (0.29.1) unstable; urgency=low
+
+  * Lifeguard reports ret_value or signal from exited process (bug #14557)
+  * A better fix to special shutdown problem, no signal handlers in thread
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Wed, 29 Jun 2005 17:18:56 +0300
+
+dsme (0.29) unstable; urgency=low
+
+  * Moved the CAL core from cal-module to dsme. That makes the CAL use
+    easier from other modules
+  * Added a signal handler to WD kicker thread, fixes a special shutdown on
+    initfs
+  * Do not install dsmetest
+  * A new Lifeguard policy: try to restart but do not reboot
+  * Added pkgconfig files 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Wed, 15 Jun 2005 14:43:05 +0300
+
+dsme (0.28.4) unstable; urgency=low
+
+  * Better error messages for libcal 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Wed,  1 Jun 2005 10:29:13 +0300
+
+dsme (0.28.3) unstable; urgency=low
+
+  * Bugfix: timer was destroyed twice (#13487) 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Tue, 31 May 2005 16:00:36 +0300
+
+dsme (0.28.2) unstable; urgency=low
+
+  * Workaround for a new, buggy toolchain 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Tue, 31 May 2005 13:13:57 +0300
+
+dsme (0.28.1) unstable; urgency=low
+
+  * Fix the build on new toolchain
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Fri, 27 May 2005 14:20:49 +0300
+
+dsme (0.28) unstable; urgency=low
+
+  * Enabled WD kicking
+  * Lifeguard reboots are disabled if /etc/no_lg_reboots exists
+  * Send display state changes to MCE
+  * Use POSIX clock_gettime(CLOCK_MONOTONIC) for timers 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Tue, 24 May 2005 08:21:49 +0300
+
+dsme (0.27) unstable; urgency=low
+
+  * Added LOCAL state 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Thu, 12 May 2005 15:22:14 +0300
+
+dsme (0.26) unstable; urgency=low
+
+  * Store dsme_state to CAL instead of initfs
+  * Send the data save message when display is turned off by inactivity
+  * Start display inactivity timer only after the first set_blank_timeout
+  * Lifeguard stats and reset counter are saved to rootfs instead of initfs
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Wed, 11 May 2005 15:09:10 +0300
+
+dsme (0.25.4) unstable; urgency=low
+
+  * Fixed changelog typos
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Thu, 10 May 2005 12:34:56 +0300
+
+dsme (0.25.3) unstable; urgency=low
+
+  * Fix a memory leak in cal.c:compress_config_area 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Thu, 28 Apr 2005 12:51:35 +0300
+
+dsme (0.25.2) unstable; urgency=low
+
+  * If the state was TEST, the sw_rst bootreason leads back to TEST
+  * cal.c updated and bugfixed
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Wed, 27 Apr 2005 15:55:44 +0300
+
+dsme (0.25.1) unstable; urgency=low
+
+  * Enabled the backlight refresh with 4s period as requested from Oulu
+  * Added CAL debug functions 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Fri, 22 Apr 2005 15:14:12 +0300
+
+dsme (0.25) unstable; urgency=low
+
+  * Moved CAL-files from initrd-progs
+  * Added cal module and libcal wrapper
+  * Disabled the backlight refreshing until we have more measurement data 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Wed, 20 Apr 2005 16:31:38 +0300
+
+dsme (0.24) unstable; urgency=low
+
+  * Added Igor's watchdog kicker, disabled until tested with heavy loads
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Tue, 19 Apr 2005 11:02:09 +0300
+
+dsme (0.23) unstable; urgency=low
+
+  * Refresh the backlight setting every 3s when the display is on 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Mon, 18 Apr 2005 10:57:52 +0300
+
+dsme (0.22) unstable; urgency=low
+
+  * Lifeguard now refuses to start the same process again
+  * Fixed MMC and Tahvo device names.. 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Mon, 11 Apr 2005 11:09:39 +0300
+
+dsme (0.21) unstable; urgency=low
+
+  * Make Lifeguard start faster
+  * Fixed an UID bug in Lifeguard with RESET policy
+  * dsmetool option -v gives DSME and dsmetool version
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Thu,  7 Apr 2005 16:37:56 +0300
+
+dsme (0.20.4) unstable; urgency=low
+
+  * Support also the third possible omapfb naming convetion in sysfs 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Wed, 30 Mar 2005 13:15:08 +0300
+
+dsme (0.20.3) unstable; urgency=low
+
+  * Support also the "old" device driver naming convention for omapfb 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Tue, 29 Mar 2005 09:54:39 +0300
+
+dsme (0.20.2) unstable; urgency=low
+
+  * initgroups() in spawn (fixes bug #8343) 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Wed, 23 Mar 2005 13:18:16 +0200
+
+dsme (0.20.1) unstable; urgency=low
+
+  * Adopted to the new display driver name 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Mon, 21 Mar 2005 15:30:59 +0200
+
+dsme (0.20) unstable; urgency=low
+
+  * Turn on the display when MMC, USB or headphone switch state changes
+  * Lifeguard restart and reset stats
+  * Small bugfixes in select.c and logging.c
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Fri, 18 Mar 2005 09:52:26 +0200
+
+dsme (0.19.3) unstable; urgency=low
+
+  * Build the package from cvs export instead of checkout
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Tue, 15 Mar 2005 15:42:40 +0200
+
+dsme (0.19.2) unstable; urgency=low
+
+  * Added username/groupname support to dsmetool
+  * -dev package should really be arch:any
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Tue, 15 Mar 2005 11:03:38 +0200
+
+dsme (0.19.1) unstable; urgency=low
+
+  * Enabled inactivity-locks module
+  * Enabled fade out when turning off the display 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Mon, 21 Feb 2005 09:08:09 +0200
+
+dsme (0.19) unstable; urgency=low
+
+  * Do not blank the screen in actdead due to inactivity
+  * Added DSME_ALARM_SNOOZED and tuned actdead display states
+  * Store the state (user/actdead) to initfs and use that in case of reset
+    bootreasons (sw_rst, 32wd_to)
+  * Stores reset counts and uncontrolled shutdowns to /var/lib/dsme on initfs
+  * Shutdown on wrong battery types in USER and ACTDEAD
+  * Lifeguard can set the nice value
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Wed, 16 Feb 2005 16:08:05 +0200
+
+dsme (0.18) unstable; urgency=low
+
+  * Added configuration file for UIDs able to use Lifeguard with reset policy
+  * Added an option to specify UID and GID for a process started by Lifeguard
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Mon, 31 Jan 2005 14:14:39 +0200
+
+dsme (0.17.1) unstable; urgency=low
+
+  * Added bootreason 32wd_to for OMAP wd timeout, goes to USER for now
+  * Cleanups 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Tue, 25 Jan 2005 13:19:38 +0200
+
+dsme (0.17) unstable; urgency=low
+
+  * Added similar logging as BME (STI etc.). Defaults to syslog.
+  * DSME handles the reboot and shutdown in initfs, on rootfs we use still
+    runlevels
+  * Added REBOOT_REQ 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Fri, 21 Jan 2005 13:55:25 +0200
+
+dsme (0.16.1) unstable; urgency=low
+
+  * Updated brigthness levels to match UI spec 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Mon, 10 Jan 2005 16:45:17 +0200
+
+dsme (0.16) unstable; urgency=low
+
+  * Test state is triggered with mbus bootreason regardless of the BSI
+  * Added shutdown timer after sending the shutdown message
+  * Cover module uses the new netlink/syfs kernel interface
+  * added rtc_alarm bootreason, we'll enter ACTDEAD with DSME_ALARM_SET
+  * Fixed display blanking
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Tue,  4 Jan 2005 15:15:13 +0200
+
+dsme (0.15.3) unstable; urgency=low
+
+  * Dang.. fixed the include path in bootstate.c 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Tue,  7 Dec 2004 08:57:55 +0200
+
+dsme (0.15.2) unstable; urgency=low
+
+  * Fixed bootstate 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Thu,  2 Dec 2004 14:21:32 +0200
+
+dsme (0.15.1) unstable; urgency=low
+
+  * Made bootstate to query state after boot
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Thu,  2 Dec 2004 09:25:35 +0200
+
+dsme (0.15) unstable; urgency=low
+
+  * Moved debugging/test stuff from dsmetool to dsmetest
+  * Battery cover and protection cover events handling improved, not enabled
+    needs testing on real HW to tune possible timings to reduce glitches
+  * sw_rst bootreason leads to NORMAL state for now 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Thu,  2 Dec 2004 09:06:39 +0200
+
+dsme (0.14.1) unstable; urgency=low
+
+  * Added missing ifdefs to state.h and inactivity-blank.h 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Fri, 26 Nov 2004 08:48:32 +0200
+   
+dsme (0.14) unstable; urgency=low
+
+  * Display inactivity support functional
+  * First version of the inactivity-locks module
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Mon, 15 Nov 2004 10:27:01 +0200
+
+dsme (0.13) unstable; urgency=low
+
+  * Changes in processwd and display messages
+  * EM indication messages from BME
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Fri, 12 Nov 2004 10:28:22 +0200
+
+dsme (0.12) unstable; urgency=low
+
+  * Added SHUTDOWN_REQ, POWERUP_REQ and SET_ALARM_STATE messages
+    for MCE to use 
+  * Tuned ACTDEAD behaviour for handling new messages
+    and when receiving charger or alarm status
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Thu, 28 Oct 2004 08:35:01 +0300
+
+dsme (0.11.2) unstable; urgency=low
+
+  * fixed state.h install permissions (644) 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Tue, 19 Oct 2004 12:55:15 +0300
+
+dsme (0.11.1) unstable; urgency=low
+
+  * fixed install gids 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Tue, 19 Oct 2004 08:57:16 +0300
+
+dsme (0.11) unstable; urgency=low
+
+  * set/get display brightness functions, driver if & calibration still missing
+  * added -fPIC to libraries where it was missing
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Fri,  1 Oct 2004 12:53:53 +0300
+
+dsme (0.10) unstable; urgency=low
+
+  * handling of device cover included in inactivity-blank module
+  * inactivity message is sent when display is blanked, not on display dim
+  * added shutdown timer in actdead charger disconnect 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Fri, 17 Sep 2004 16:19:45 +0300
+
+dsme (0.9) unstable; urgency=low
+
+  * dsme not included in the dsme package (on initfs)
+  * fixed a bug in charger message handling
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Fri, 10 Sep 2004 15:32:21 +0300
+
+dsme (0.8) unstable; urgency=low
+
+  * some state code moved to initfs (bootmode)
+  * basic battery type and charger support
+  * removed dsme and libs from dsme package (they are installed in initfs)
+  * fixed a bug in activitymonitor "do-not-flood"-feature 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Fri,  3 Sep 2004 13:19:39 +0300
+
+dsme (0.7) unstable; urgency=low
+
+  * display-blank: dim and blank timeouts can be set to the same value
+  * checks are made when setting new dim and blank timeouts
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Wed, 18 Aug 2004 09:14:53 +0300
+
+dsme (0.6) unstable; urgency=low
+
+  * bugfixes in processwd
+  * remove testcases from debian/control (debian/control-testcases has it)
+    file until we figure out tbench
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Wed, 11 Aug 2004 14:11:13 +0300
+
+dsme (0.5) unstable; urgency=low
+
+  * fixed couple of memory leaks in use of queue_message
+  * the first implementation of processwd module
+  * added simple shutdown and module unloading when exiting
+  * added missing copyrights and file author information (bug: #617)
+  * added missing checks for malloc return values (bug: #617)
+  * startstop is now called lifeguard
+  * inactivitymonitor is now called activitymonitor
+  * inactivity-suspend: added a message to request suspend immediately
+  * use osso-log.h (bug: #617)
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Fri, 16 Jul 2004 14:58:33 +0300
+
+dsme (0.4) unstable; urgency=low
+
+  * fixed suspend/blank prevention to work for pseudo connections too
+  * libstate improved
+  * activated libstate module in libstartup
+  * display_status_change message will be sent
+  * status change messages will be sent
+  * saves state to FILE_PREVIOUS_STATE so it can be read after SW reset
+  * many bugfixes
+  * dsmetool added to utils
+  * many new messages defined
+  * startup module tries to read modulelist from /etc/dsme/modules.conf
+  * inactivity events sent on display dim
+  * dsme is started by default in rcS at S37
+  * bootreason support
+  * startstop module loaded on startup
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Fri,  2 Jul 2004 12:42:19 +0300
+
+dsme (0.3) unstable; urgency=low
+
+  * version number fixed since we have native package
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Thu, 20 May 2004 12:23:47 +0300
+
+dsme (0.2-1) unstable; urgency=low
+
+  * parts of the DSME internals have been cleaned up and improved
+  * Initial state management support (not enabled in libstartup.so)
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Thu, 20 May 2004 11:57:39 +0300
+
+dsme (0.1-1) unstable; urgency=low
+
+  * Initial Release.
+  * Has support for display and suspend timers that are reset from user
+  activity
+  * user activity is read from stdin and input layer (eventX)
+  * currently display blanking only printfs
+  * 
+
+ -- Ismo Laitinen <ismo.laitinen@nokia.com>  Thu, 29 Apr 2004 15:13:00 +0300
+

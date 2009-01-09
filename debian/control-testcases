@@ -1,0 +1,38 @@
+Source: dsme
+Section: misc
+Priority: optional
+Maintainer: Ismo Laitinen <ismo.laitinen@nokia.com>
+Build-Depends: debhelper (>= 4.1.0)
+Standards-Version: 3.6.1
+
+Package: dsme
+Section: misc
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: Device State Management Entity
+ This package contains the Device State Management Entity which provides state 
+ management features such as service monitoring, process watchdog and 
+ inactivity tracking.
+
+Package: libdsme0
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: DSME dsmesock dynamic library
+ This package contains dynamic libraries for programs that communicate with the
+ Device State Management Entity.
+
+Package: libdsme0-dev
+Section: devel
+Architecture: any
+Depends: libdsme0 (= ${Source-Version})
+Description: Development files for dsme
+ This package contains headers and static libraries needed to develop programs
+ that want to communicate with the Device State Management Entity.
+
+Package: dsme-testcases
+Section: devel
+Architecture: any
+Depends: tbench
+Description: Development files for dsme
+ This package contains test cases to validate dsme's behaviour.

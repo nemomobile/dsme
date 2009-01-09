@@ -1,0 +1,5 @@
+debian/tmp/usr/include/dsme/*
+debian/tmp/usr/lib/libdsme.a
+debian/tmp/usr/lib/libdsme.so
+debian/tmp/usr/lib/libdsme_dbus_if.so
+debian/tmp/usr/lib/pkgconfig/

@@ -1,0 +1,695 @@
+/**
+   @file dsme_dbus.c
+
+   D-Bus C binding for DSME
+   <p>
+   Copyright (C) 2008-2009 Nokia Corporation.
+
+   @author Semi Malinen <semi.malinen@nokia.com>
+
+   This file is part of Dsme.
+
+   Dsme is free software; you can redistribute it and/or modify
+   it under the terms of the GNU Lesser General Public License
+   version 2.1 as published by the Free Software Foundation.
+
+   Dsme is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Lesser General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public
+   License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+// TODO: add D-Bus filtering
+
+#include "dsme_dbus.h"
+
+#include "dsme/logging.h"
+
+#include <glib.h>
+#include <dbus/dbus.h>
+#include <dbus/dbus-glib.h>
+#include <dbus/dbus-glib-lowlevel.h>
+
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+
+
+struct DsmeDbusMessage {
+  DBusConnection* connection;
+  DBusMessage*    msg;
+  DBusMessageIter iter;
+};
+
+DsmeDbusMessage* dsme_dbus_reply_new(const DsmeDbusMessage* request)
+{
+  DsmeDbusMessage* m = 0;
+
+  if (request) {
+      m = g_new(DsmeDbusMessage, 1);
+
+      m->connection = dbus_connection_ref(request->connection);
+      m->msg        = dbus_message_new_method_return(request->msg);
+
+      dbus_message_iter_init_append(m->msg, &m->iter);
+  }
+
+  return m;
+}
+
+static void message_delete(DsmeDbusMessage* reply)
+{
+  dbus_message_unref(reply->msg);
+  dbus_connection_unref(reply->connection);
+  g_free(reply);
+}
+
+void dsme_dbus_message_append_string(DsmeDbusMessage* msg, const char* s)
+{
+  if (msg) {
+      dbus_message_iter_append_basic(&msg->iter, DBUS_TYPE_STRING, &s);
+      // TODO: log append errors
+  }
+}
+
+static void message_iter_next(DBusMessageIter* iter)
+{
+  if (dbus_message_iter_has_next(iter)) {
+      dbus_message_iter_next(iter);
+  }
+}
+
+int dsme_dbus_message_get_int(const DsmeDbusMessage* msg)
+{
+  dbus_int32_t i = 0;
+
+  if (msg) {
+      // TODO: check type!
+      dbus_message_iter_get_basic((DBusMessageIter*)&msg->iter, &i);
+      message_iter_next((DBusMessageIter*)&msg->iter);
+  }
+
+  return i;
+}
+
+const char* dsme_dbus_message_get_string(const DsmeDbusMessage* msg)
+{
+  const char* s = "";
+
+  if (msg) {
+      // TODO: check type!
+      dbus_message_iter_get_basic((DBusMessageIter*)&msg->iter, &s);
+      message_iter_next((DBusMessageIter*)&msg->iter);
+  }
+
+  return s;
+}
+
+static void message_send_and_delete(DsmeDbusMessage* msg)
+{
+  // TODO: check for errors and log them
+  dbus_connection_send(msg->connection, msg->msg, 0);
+  dbus_connection_flush(msg->connection);
+
+  message_delete(msg);
+}
+
+
+static DBusConnection* system_bus(DBusError* error)
+{
+  DBusConnection* connection;
+
+  if (!(connection = dbus_bus_get(DBUS_BUS_SYSTEM, error))) {
+    dsme_log(LOG_DEBUG, "dbus_bus_get(): %s\n", error->message);
+    dbus_error_free(error);
+  }
+
+  return connection;
+}
+
+DsmeDbusMessage* dsme_dbus_signal_new(const char* path,
+                                      const char* interface,
+                                      const char* name)
+{
+  DsmeDbusMessage* s = 0;
+  DBusError        error;
+  DBusConnection*  connection;
+
+  if (path && interface && name) {
+      dbus_error_init(&error);
+
+      // TODO: we only use the system bus
+      if ((connection = system_bus(&error))) {
+          s = g_new(DsmeDbusMessage, 1);
+
+          s->connection = connection;
+          s->msg        = dbus_message_new_signal(path, interface, name);
+
+          dbus_message_iter_init_append(s->msg, &s->iter);
+      }
+  }
+
+  return s;
+}
+
+void dsme_dbus_signal_emit(DsmeDbusMessage* sig)
+{
+  if (sig) {
+      message_send_and_delete(sig);
+  }
+}
+
+
+typedef struct Dispatcher Dispatcher;
+
+typedef bool CanDispatch(const Dispatcher* d, const DBusMessage* msg);
+typedef void Dispatch(const Dispatcher* dispatcher,
+                      DBusConnection*   connection,
+                      DBusMessage*      msg);
+
+struct Dispatcher {
+  CanDispatch* can_dispatch;
+  Dispatch*    dispatch;
+  union {
+    DsmeDbusMethod*  method;
+    DsmeDbusHandler* handler;
+  };
+  const char*  interface;
+  const char*  name;
+  const char*  rules;
+};
+
+static bool method_dispatcher_can_dispatch(const Dispatcher*  d,
+                                           const DBusMessage* msg)
+{
+  /* const-cast-away due to silly D-Bus interface */
+  return dbus_message_is_method_call((DBusMessage*)msg, d->interface, d->name);
+}
+
+static void method_dispatcher_dispatch(const Dispatcher* dispatcher,
+                                       DBusConnection*   connection,
+                                       DBusMessage*      msg)
+{
+  DsmeDbusMessage  request = {
+    dbus_connection_ref(connection), dbus_message_ref(msg)
+  };
+  DsmeDbusMessage* reply   = 0;
+
+  dispatcher->method(&request, &reply);
+
+  dbus_connection_unref(request.connection);
+  dbus_message_unref(request.msg);
+
+  if (reply) {
+    message_send_and_delete(reply);
+  }
+}
+
+static Dispatcher* method_dispatcher_new(DsmeDbusMethod* method,
+                                         const char*     interface,
+                                         const char*     name,
+                                         const char*     rules)
+{
+  Dispatcher* dispatcher = g_new(Dispatcher, 1);
+
+  dispatcher->can_dispatch = method_dispatcher_can_dispatch;
+  dispatcher->dispatch     = method_dispatcher_dispatch;
+  dispatcher->method       = method;
+  // NOTE: we don't bother to strdup()
+  dispatcher->interface    = interface;
+  dispatcher->name         = name;
+  dispatcher->rules        = rules;
+
+  return dispatcher;
+}
+
+static bool handler_dispatcher_can_dispatch(const Dispatcher*  d,
+                                            const DBusMessage* msg)
+{
+  /* const-cast-away due to silly D-Bus interface */
+  return dbus_message_is_signal((DBusMessage*)msg, d->interface, d->name);
+}
+
+static void handler_dispatcher_dispatch(const Dispatcher* dispatcher,
+                                        DBusConnection*   connection,
+                                        DBusMessage*      msg)
+{
+  DsmeDbusMessage ind = {
+    dbus_connection_ref(connection), dbus_message_ref(msg)
+  };
+
+  dbus_message_iter_init(msg, &ind.iter);
+
+  dispatcher->handler(&ind);
+
+  dbus_connection_unref(ind.connection);
+  dbus_message_unref(ind.msg);
+}
+
+static Dispatcher* handler_dispatcher_new(DsmeDbusHandler* handler,
+                                          const char*      interface,
+                                          const char*      name)
+{
+  Dispatcher* dispatcher = g_new(Dispatcher, 1);
+
+  dispatcher->can_dispatch = handler_dispatcher_can_dispatch;
+  dispatcher->dispatch     = handler_dispatcher_dispatch;
+  dispatcher->handler      = handler;
+  // NOTE: we don't bother to strdup()
+  dispatcher->interface    = interface;
+  dispatcher->name         = name;
+
+  return dispatcher;
+}
+
+// TODO: virtual dispatcher_delete()
+
+
+// TODO: Maybe combine DispatcherList with Service?
+//       Or better yet: provide dispatcher_list_init() instead of _new()
+typedef struct DispatcherList {
+  GSList* dispatchers;
+} DispatcherList;
+
+static DispatcherList* dispatcher_list_new()
+{
+  DispatcherList* list = g_new(DispatcherList, 1);
+
+  list->dispatchers = 0;
+
+  return list;
+}
+
+static void dispatcher_list_add(DispatcherList* list, Dispatcher* dispatcher)
+{
+  list->dispatchers = g_slist_prepend(list->dispatchers, dispatcher);
+}
+
+static bool dispatcher_list_dispatch(const DispatcherList* list,
+                                     DBusConnection*       connection,
+                                     DBusMessage*          msg)
+{
+  bool          dispatched = false;
+  Dispatcher*   d          = 0;
+  const GSList* i;
+
+  for (i = list->dispatchers; i; i = g_slist_next(i)) {
+    d = i->data;
+    if (d->can_dispatch(d, msg)) {
+        d->dispatch(d, connection, msg);
+        dispatched = true;
+        break; // TODO: we only dispatch one method
+    }
+  }
+
+  return dispatched;
+}
+
+
+typedef bool FilterMessageHandler(gpointer        child,
+                                  DBusConnection* connection,
+                                  DBusMessage*    msg);
+
+typedef struct Filter {
+  DBusConnection*       connection;
+  void*                 child;
+  FilterMessageHandler* handler;
+} Filter;
+
+static bool filter_handle_message(Filter* filter, DBusMessage* msg)
+{
+  switch (dbus_message_get_type(msg)) {
+
+  case DBUS_MESSAGE_TYPE_METHOD_CALL:
+    //dsme_log(LOG_DEBUG, "D-Bus: unknown method call");
+    // TODO: add logging
+  break;
+
+  case DBUS_MESSAGE_TYPE_SIGNAL:
+    //dsme_log(LOG_DEBUG, "D-Bus: unknown signal:");
+    //dsme_log(LOG_DEBUG, "path:   '%s'", dbus_message_get_path(msg));
+    //dsme_log(LOG_DEBUG, "if:     '%s'", dbus_message_get_interface(msg));
+    //dsme_log(LOG_DEBUG, "member: '%s'", dbus_message_get_member(msg));
+  break;
+
+  case DBUS_MESSAGE_TYPE_ERROR:
+  {
+    DBusError error;
+
+    dbus_error_init(&error);
+    dbus_set_error_from_message(&error, msg);
+    dsme_log(LOG_DEBUG,
+             "D-Bus: %s: %s",
+             dbus_message_get_error_name(msg),
+             error.message);
+    dbus_error_free(&error);
+  }
+  break;
+
+  default:
+    // IGNORE (silently ignore per D-Bus documentation)
+    break;
+  }
+
+  return false;
+}
+
+static DBusHandlerResult filter_static_message_handler(
+  DBusConnection* connection,
+  DBusMessage*    msg,
+  gpointer        filterp)
+{
+  DBusHandlerResult result = DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+  Filter*           filter = filterp;
+
+  if (filter->handler(filter->child, connection, msg) ||
+      filter_handle_message(filter, msg))
+  {
+      result = DBUS_HANDLER_RESULT_HANDLED;
+  }
+
+  return result;
+}
+
+static Filter* filter_new(void* child, FilterMessageHandler* handler)
+{
+  DBusError       error;
+  DBusConnection* connection;
+  Filter*         filter = 0;
+
+  dbus_error_init(&error);
+
+  // TODO: we only use the system bus
+  if ((connection = system_bus(&error)) == 0) {
+    dsme_log(LOG_ERR, "system_bus() failed: %s", error.message);
+    dbus_error_free(&error);
+  } else {
+
+    dbus_connection_setup_with_g_main(connection, 0);
+    filter = g_new(Filter, 1);
+
+    if (!dbus_connection_add_filter(connection,
+                                    filter_static_message_handler,
+                                    filter,
+                                    0))
+    {
+      dsme_log(LOG_ERR, "dbus_connection_add_filter() failed");
+      g_free(filter);
+      filter = 0;
+    } else {
+
+      filter->connection = connection;
+      filter->child      = child;
+      filter->handler    = handler;
+
+    }
+  }
+
+  return filter;
+}
+
+static void filter_delete(Filter* filter)
+{
+  /* TODO */
+  /* remove the D-Bus filter */
+}
+
+
+typedef struct Service {
+  Filter*         filter;
+  const char*     name;
+  DispatcherList* methods;
+} Service;
+
+static bool service_handle_message(gpointer        servicep,
+                                   DBusConnection* connection,
+                                   DBusMessage*    msg)
+{
+  Service*  service = servicep;
+  bool      handled = false;
+
+  if (dbus_message_get_type(msg) == DBUS_MESSAGE_TYPE_METHOD_CALL) {
+    //dsme_log(LOG_DEBUG, "D-Bus: method call");
+    handled = dispatcher_list_dispatch(service->methods, connection, msg);
+  }
+
+  return handled;
+}
+
+static Service* service_new(const char* name)
+{
+  DBusError error;
+  Filter*   filter  = 0;
+  Service*  service = 0;
+
+  dbus_error_init(&error);
+
+  service = g_new(Service, 1);
+
+  if (!(filter = filter_new(service, service_handle_message))) {
+    g_free(service);
+    service = 0;
+  }
+
+  if (service) {
+    if (dbus_bus_request_name(filter->connection, name, 0, &error) !=
+        DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER)
+    {
+      dsme_log(LOG_DEBUG, "dbus_request_name(): %s\n", error.message);
+      dbus_error_free(&error);
+      g_free(service);
+      service = 0;
+      filter_delete(filter);
+      filter = 0;
+    }
+  }
+
+  if (service) {
+    service->filter  = filter;
+    service->name    = name;
+    service->methods = dispatcher_list_new();
+  }
+
+  return service;
+}
+
+// TODO; service_delete()
+
+static void service_bind(Service*       service,
+                         DsmeDbusMethod method,
+                         const char*    interface,
+                         const char*    name,
+                         const char*    rules)
+{
+  dispatcher_list_add(service->methods,
+                      method_dispatcher_new(method, interface, name, rules));
+}
+
+typedef struct Server {
+  GData* services;
+} Server;
+
+static Server* server_new()
+{
+  Server* server = g_new(Server, 1);
+
+  server->services = 0;
+  
+  return server;
+}
+
+static bool server_bind(Server*        server,
+                        DsmeDbusMethod method,
+                        const char*    service,
+                        const char*    interface,
+                        const char*    name,
+                        const char*    rules)
+{
+  bool     bound = false;
+  Service* s;
+
+  if (!(s = g_datalist_get_data(&server->services, service))) {
+    if ((s = service_new(service))) {
+      g_datalist_set_data(&server->services, service, s);
+    }
+  }
+
+  if (s) {
+    service_bind(s, method, interface, name, rules);
+    bound = true;
+  }
+
+  return bound;
+}
+
+static Server* server_instance()
+{
+  static Server* the_server = 0;
+
+  if (!the_server) {
+    the_server = server_new();
+  }
+
+  return the_server;
+}
+
+
+typedef struct Client {
+  Filter*         filter;
+  DispatcherList* handlers;
+} Client;
+
+static bool client_handle_message(gpointer        clientp,
+                                  DBusConnection* connection,
+                                  DBusMessage*    msg)
+{
+  Client* client  = clientp;
+  bool    handled = false;
+
+  if (dbus_message_get_type(msg) == DBUS_MESSAGE_TYPE_SIGNAL) {
+    //dsme_log(LOG_DEBUG, "D-Bus: signal");
+    handled = dispatcher_list_dispatch(client->handlers, connection, msg);
+  }
+
+  return handled;
+}
+
+static bool client_bind(Client*          client,
+                        DsmeDbusHandler* handler,
+                        const char*      interface,
+                        const char*      name)
+{
+  bool        bound        = false;
+  const char* match_format = "type='signal', interface='%s', member='%s'";
+  char*       match;
+  DBusError   error;
+
+  dispatcher_list_add(client->handlers,
+                      handler_dispatcher_new(handler, interface, name));
+
+  match = malloc(strlen(match_format) +
+                 strlen(interface)    +
+                 strlen(name) - 3);
+  sprintf(match, match_format, interface, name);
+
+  dbus_error_init(&error);
+  dbus_bus_add_match(client->filter->connection, match, &error);
+  free(match);
+
+  if (dbus_error_is_set(&error)) {
+      dsme_log(LOG_DEBUG, "dbus_bus_add_match(): %s", error.message);
+      dbus_error_free(&error);
+  } else {
+      dsme_log(LOG_DEBUG, "bound handler for: %s, %s", interface, name);
+      bound = true;
+  }
+
+  return bound;
+}
+
+static Client* client_new()
+{
+    Filter* filter = 0;
+    Client* client = 0;
+
+    client = g_new(Client, 1);
+
+    if (!(filter = filter_new(client, client_handle_message))) {
+        g_free(client);
+        client = 0;
+    }
+
+    if (client) {
+        client->filter   = filter;
+        client->handlers = dispatcher_list_new();
+    }
+
+    return client;
+}
+
+static Client* client_instance()
+{
+  static Client* the_client = 0;
+
+  if (!the_client) {
+    the_client = client_new();
+  }
+
+  return the_client;
+}
+
+
+void dsme_dbus_bind_methods(bool*                      bound_already,
+                            const dsme_dbus_binding_t* bindings,
+                            const char*                service,
+                            const char*                interface)
+{
+  if (bound_already && !*bound_already) {
+
+      const dsme_dbus_binding_t* binding = bindings;
+
+      while (binding && binding->method) {
+          if (!server_bind(server_instance(),
+                           binding->method,
+                           service,
+                           interface,
+                           binding->name,
+                           0))
+            {
+              dsme_log(LOG_ERR, "D-Bus binding for '%s' failed", binding->name);
+              // TODO: roll back the ones that succeeded and break?
+            }
+          ++binding;
+      }
+
+      *bound_already = true;
+  }
+}
+
+void dsme_dbus_unbind_methods(bool*                      really_bound,
+                              const dsme_dbus_binding_t* bindings,
+                              const char*                service,
+                              const char*                interface)
+{
+  if (really_bound && *really_bound) {
+
+      // TODO
+
+      *really_bound = false;
+  }
+}
+
+
+void dsme_dbus_bind_signals(bool*                             bound_already,
+                            const dsme_dbus_signal_binding_t* bindings)
+{
+  if (bound_already && !*bound_already) {
+      const dsme_dbus_signal_binding_t* binding = bindings;
+
+      while (binding && binding->handler) {
+          if (!client_bind(client_instance(),
+                           binding->handler,
+                           binding->interface,
+                           binding->name))
+          {
+              dsme_log(LOG_ERR, "D-Bus binding for '%s' failed", binding->name);
+              // TODO: roll back the ones that succeeded and break?
+          }
+          ++binding;
+      }
+  }
+}
+
+void dsme_dbus_unbind_signals(bool*                             really_bound,
+                              const dsme_dbus_signal_binding_t* bindings)
+{
+  if (really_bound && *really_bound) {
+
+      // TODO
+
+      *really_bound = false;
+  }
+}

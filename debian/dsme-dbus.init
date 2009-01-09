@@ -1,0 +1,29 @@
+#! /bin/sh
+#
+# Init startup kludge to connect dsme to D-Bus.
+#
+# Copyright (C) 2008 Nokia Corporation.  All rights reserved.
+#
+# @author Semi Malinen <semi.malinen@nokia.com>
+
+WAITDBUS=/usr/sbin/waitdbus
+WAITDBUS_FLAGS='system'
+DSMETOOL=/usr/sbin/dsmetool
+DSMETOOL_FLAGS='--start-dbus'
+INITFILE=/etc/init.d/dsme-dbus
+
+case "$1" in
+start)
+	printf "Connecting dsme to D-Bus"
+	$WAITDBUS $WAITDBUS_FLAGS
+	$DSMETOOL $DSMETOOL_FLAGS
+	printf ".\n"
+	;;
+
+*)
+	printf "Usage: $INITFILE start\n" >&2
+	exit 1
+	;;
+esac
+
+exit 0
