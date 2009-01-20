@@ -75,7 +75,9 @@ const char *modules[] = {
     "libdbusproxy.so",
     "libalarmtracker.so",
     "libthermalmanager.so",
+#ifdef DSME_MEMORY_THERMAL_MGMT
     "libthermalobject_memory.so",
+#endif
 #ifdef DSME_BMEIPC
     "libthermalobject_surface.so",
 #endif

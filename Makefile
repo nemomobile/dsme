@@ -57,6 +57,10 @@ ifneq (,$(findstring DSME_BMEIPC,$(C_DEFINES)))
 export DSME_BMEIPC = yes
 endif
 
+ifneq (,$(findstring DSME_MEMORY_THERMAL_MGMT,$(C_DEFINES)))
+export DSME_MEMORY_THERMAL_MGMT = yes
+endif
+
 #
 # Target composition and overrides
 #

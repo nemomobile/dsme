@@ -10,10 +10,14 @@ SO_LIBRARIES    := libstartup              \
                    libdbusproxy            \
                    libalarmtracker         \
                    libthermalmanager       \
-                   libthermalobject_memory \
                    libemergencycalltracker
+
 ifdef DSME_BMEIPC
 SO_LIBRARIES    += libthermalobject_surface
+endif
+
+ifdef DSME_MEMORY_THERMAL_MGMT
+SO_LIBRARIES    += libthermalobject_memory
 endif
 
 
@@ -58,9 +62,11 @@ thermalsensor_battery.o : C_EXTRA_GENFLAGS := -fPIC
 libthermalobject_surface_EXTRA_LDFLAGS := -lbmeipc
 endif
 
+ifdef DSME_MEMORY_THERMAL_MGMT
 libthermalobject_memory_C_OBJS := thermalobject_memory.o thermalsensor_omap.o
 thermalobject_memory.o: C_EXTRA_GENFLAGS := -fPIC
 thermalsensor_omap.o :  C_EXTRA_GENFLAGS := -fPIC -std=c99
+endif
 
 libemergencycalltracker_C_OBJS := emergencycalltracker.o
 emergencycalltracker.o : C_EXTRA_GENFLAGS := -fPIC
@@ -87,6 +93,9 @@ INSTALL_SO_LIBRARIES    :=  libstartup.so libprocesswd.so \
                             libemergencycalltracker.so
 ifdef DSME_BMEIPC
 INSTALL_SO_LIBRARIES	+=	libthermalobject_surface.so
+endif
+ifdef DSME_MEMORY_THERMAL_MGMT
+INSTALL_SO_LIBRARIES	+=	libthermalobject_memory.so
 endif
 $(INSTALL_SO_LIBRARIES): INSTALL_PERM := 755
 $(INSTALL_SO_LIBRARIES): INSTALL_DIR  := $(DESTDIR)/usr/lib/dsme
