@@ -1,3 +1,13 @@
+dsme (0.60.1) unstable; urgency=low
+
+  * Add dsme.upstart
+  * Disable thermal management of memory
+  * Add skeleton thermaltool for disabling thermal mgmt in the future
+  * Add more logging to console
+  * Make several log messages more important
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Tue, 20 Jan 2009 13:11:00 +0000
+
 dsme (0.60.0) unstable; urgency=low
 
   * License under LGPL 2.1
