@@ -559,8 +559,7 @@ static void send_reset_request()
 	dsme_log(LOG_CRIT, "Here we will request for sw reset");
 
 	if (!lg_reboot_enabled) {
-		dsme_log(LOG_ERR, "Lifeguard reboots disabled from CAL");
-		fprintf(stderr, "DSME: Lifeguard reboots disabled from CAL\n");
+		dsme_log(LOG_CRIT, "Lifeguard reboots disabled from CAL");
 		dsme_log(LOG_ERR, "The device is in unstable state, reboot manually!");
 		return;
 	}
@@ -605,28 +604,18 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_EXITED, client, msg)
           if (WIFSIGNALED(status)) {
               signalled = 1;
               signal = WTERMSIG(status);
-              dsme_log(LOG_ERR,
+              dsme_log(LOG_CRIT,
                        "process '%s' with pid %d exited with signal: %d", 
                        proc->command,
                        proc->pid,
                        signal);
-              fprintf(stderr,
-                      "DSME: process '%s' with pid %d exited with signal: %d\n",
-                      proc->command,
-                      proc->pid,
-                      signal);
           } else if (WIFEXITED(status)) {
               ret_value = WEXITSTATUS(status);
-              dsme_log(LOG_ERR,
+              dsme_log(LOG_CRIT,
                        "process '%s' with pid %d exited with return value: %d", 
                        proc->command,
                        proc->pid,
                        ret_value);
-              fprintf(stderr,
-                      "DSME: process '%s' with pid %d exited with return value: %d\n", 
-                      proc->command,
-                      proc->pid,
-                      ret_value);
           }
 
           switch (proc->action) {
@@ -656,21 +645,15 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_EXITED, client, msg)
                           dsme_log(LOG_CRIT,
                                    "'%s' spawning too fast -> reset",
                                    proc->command);
-                          fprintf(stderr,
-                                  "DSME: '%s' spawning too fast \n -> reset\n", 
-                                  proc->command);
                           update_reset_count(proc->command);
                           send_lifeguard_notice(DSM_LGNOTICE_RESET,
                                                 proc->command);
                           send_reset_request(client);
                       } else {
                           /* RESPAWN_FAIL */
-                          dsme_log(LOG_ERR,
+                          dsme_log(LOG_CRIT,
                                    "'%s' spawning too fast, stop trying", 
                                    proc->command);
-                          fprintf(stderr,
-                                  "DSME:'%s' spawning too fast\n stop trying\n",
-                                  proc->command);
                           send_lifeguard_notice(DSM_LGNOTICE_PROCESS_FAILED,
                                                 proc->command);
                       }
@@ -692,26 +675,19 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_EXITED, client, msg)
                                      proc->gid,
                                      proc->nice,
                                      proc->env);
-              dsme_log(LOG_ERR,
+              dsme_log(LOG_CRIT,
                        "process '%s' exited and restarted with pid %d",
                        proc->command,
                        proc->pid);
-              fprintf(stderr,
-                      "DSME: process '%s' exited\n and restarted with pid %d\n",
-                      proc->command,
-                      proc->pid);
               update_restart_count(proc->command);
               send_lifeguard_notice(DSM_LGNOTICE_PROCESS_RESTART,
                                     proc->command);
               break;
             case RESET:
               if (proc->uid == 0 || g_slist_find(uids, (void*)proc->uid)) {
-                  dsme_log(LOG_CRIT, 
+                  dsme_log(LOG_CRIT,
                            "'%s' exited with RESET policy -> reset",
                            proc->command);
-                  fprintf(stderr,
-                          "DSME: '%s' exited\n with RESET policy -> reset\n", 
-                          proc->command);
                   update_reset_count(proc->command);
                   send_lifeguard_notice(DSM_LGNOTICE_RESET, proc->command);
                   send_reset_request(client);

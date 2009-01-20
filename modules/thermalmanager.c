@@ -133,7 +133,7 @@ static void update_thermal_object_status(thermal_object_t* thermal_object)
 #endif
 
   if (!thermal_object->conf->get_temperature(&temp)) {
-      dsme_log(LOG_WARNING,
+      dsme_log(LOG_CRIT,
                "error getting %s temperature",
                thermal_object->conf->name);
       // TODO: WHAT IS THE SENSIBLE THING TO DO IF A SENSOR FAILS?
@@ -332,7 +332,7 @@ static bool thermal_object_config_read(
                  &new_config.state[i].max,
                  &new_config.state[i].interval) != 3)
       {
-          dsme_log(LOG_INFO, "syntax error in thermal tuning on line %d", i+1);
+          dsme_log(LOG_CRIT, "syntax error in thermal tuning on line %d", i+1);
           success = false;
           break;
       }

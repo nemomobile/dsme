@@ -200,22 +200,24 @@ static dsme_state_t select_state(void)
       } else if (test) {
           state = DSME_STATE_TEST;
       } else if (battery_empty) {
-          dsme_log(LOG_WARNING, "Battery empty shutdown!");
+          dsme_log(LOG_CRIT, "Battery empty shutdown!");
           state = DSME_STATE_SHUTDOWN;
       } else if (device_overheated) {
-          dsme_log(LOG_WARNING, "Thermal shutdown!");
+          dsme_log(LOG_CRIT, "Thermal shutdown!");
           state = DSME_STATE_SHUTDOWN;
       } else if (shutdown_requested) {
           if (charger_state != CHARGER_DISCONNECTED || alarm_set) {
-              dsme_log(LOG_WARNING,
+              dsme_log(LOG_CRIT,
                        "Actdead (charger: %s, alarm: %s)",
                        charger_state == CHARGER_CONNECTED ? "on"  : "off(?)",
                        alarm_set                          ? "set" : "not set");
               state = DSME_STATE_ACTDEAD;
           } else {
+              dsme_log(LOG_CRIT, "Normal shutdown");
               state = DSME_STATE_SHUTDOWN;
           }
       } else if (reboot_requested) {
+          dsme_log(LOG_CRIT, "Reboot");
           state = DSME_STATE_REBOOT;
       } else {
           state = DSME_STATE_USER;
@@ -237,7 +239,7 @@ static void change_state_if_necessary(void)
 
 static void try_to_change_state(dsme_state_t new_state)
 {
-  dsme_log(LOG_DEBUG,
+  dsme_log(LOG_CRIT,
            "state change request: %s -> %s",
            state_name(current_state),
            state_name(new_state));
@@ -285,12 +287,12 @@ static void try_to_change_state(dsme_state_t new_state)
       if (!rd_mode_enabled()) {
           start_delayed_shutdown_timer(MALF_SHUTDOWN_TIMER);
       } else {
-          dsme_log(LOG_DEBUG, "R&D mode enabled, not shutting down");
+          dsme_log(LOG_CRIT, "R&D mode enabled, not shutting down");
       }
       break;
 
     default:
-      dsme_log(LOG_DEBUG,
+      dsme_log(LOG_CRIT,
                "not possible to change to state %s (%d)",
                state_name(new_state),
                new_state);
@@ -340,7 +342,7 @@ static void start_delayed_shutdown_timer(unsigned seconds)
           dsme_log(LOG_CRIT, "Could not create a shutdown timer; exit!");
           exit(EXIT_FAILURE);
       }
-      dsme_log(LOG_INFO, "Shutdown in %i seconds", seconds);
+      dsme_log(LOG_CRIT, "Shutdown in %i seconds", seconds);
   }
 }
 
@@ -354,7 +356,7 @@ static void start_delayed_actdead_timer(unsigned seconds)
           dsme_log(LOG_CRIT, "Could not create an actdead timer; exit!");
           exit(EXIT_FAILURE);
       }
-      dsme_log(LOG_INFO, "Actdead in %i seconds", seconds);
+      dsme_log(LOG_CRIT, "Actdead in %i seconds", seconds);
   }
 }
 
@@ -363,12 +365,12 @@ static void stop_delayed_runlevel_timers(void)
     if (delayed_shutdown_timer) {
         dsme_destroy_timer(delayed_shutdown_timer);
         delayed_shutdown_timer = 0;
-        dsme_log(LOG_DEBUG, "Delayed shutdown timer stopped");
+        dsme_log(LOG_CRIT, "Delayed shutdown timer stopped");
     }
     if (delayed_actdead_timer) {
         dsme_destroy_timer(delayed_actdead_timer);
         delayed_actdead_timer = 0;
-        dsme_log(LOG_DEBUG, "Delayed actdead timer stopped");
+        dsme_log(LOG_CRIT, "Delayed actdead timer stopped");
     }
 }
 
@@ -410,7 +412,7 @@ static void start_overheat_timer(void)
           dsme_log(LOG_CRIT, "Could not create a timer; overheat immediately!");
           delayed_overheat_fn(0);
       } else {
-          dsme_log(LOG_INFO,
+          dsme_log(LOG_CRIT,
                    "Thermal shutdown in %d seconds",
                    DSME_THERMAL_SHUTDOWN_TIMER);
       }
@@ -422,7 +424,7 @@ static void stop_overheat_timer(void)
   if (overheat_timer) {
       dsme_destroy_timer(overheat_timer);
       overheat_timer = 0;
-      dsme_log(LOG_DEBUG, "Thermal shutdown timer stopped");
+      dsme_log(LOG_CRIT, "Thermal shutdown timer stopped");
   }
 }
 
@@ -510,7 +512,7 @@ DSME_HANDLER(DSM_MSGTYPE_SET_CHARGER_STATE, conn, msg)
  */
 DSME_HANDLER(DSM_MSGTYPE_SHUTDOWN_REQ, conn, msg)
 {
-  dsme_log(LOG_NOTICE, "shutdown request received");
+  dsme_log(LOG_CRIT, "shutdown request received");
 
   shutdown_requested = true;
   change_state_if_necessary();
@@ -522,7 +524,7 @@ DSME_HANDLER(DSM_MSGTYPE_SHUTDOWN_REQ, conn, msg)
  */
 DSME_HANDLER(DSM_MSGTYPE_POWERUP_REQ, conn, msg)
 {
-  dsme_log(LOG_NOTICE, "powerup request received");
+  dsme_log(LOG_CRIT, "powerup request received");
 
   shutdown_requested = false;
   change_state_if_necessary();
@@ -531,7 +533,7 @@ DSME_HANDLER(DSM_MSGTYPE_POWERUP_REQ, conn, msg)
 
 DSME_HANDLER(DSM_MSGTYPE_REBOOT_REQ, conn, msg)
 {
-  dsme_log(LOG_NOTICE, "reboot request received");
+  dsme_log(LOG_CRIT, "reboot request received");
 
   reboot_requested = true;
   change_state_if_necessary();
@@ -552,7 +554,7 @@ DSME_HANDLER(DSM_MSGTYPE_SET_ALARM_STATE, conn, msg)
 
 DSME_HANDLER(DSM_MSGTYPE_SET_THERMAL_STATE, conn, msg)
 {
-  dsme_log(LOG_DEBUG,
+  dsme_log(LOG_CRIT,
            "%s state received",
            msg->overheated ? "overheated" : "not overheated");
 
@@ -568,7 +570,7 @@ DSME_HANDLER(DSM_MSGTYPE_SET_THERMAL_STATE, conn, msg)
 
 DSME_HANDLER(DSM_MSGTYPE_SET_EMERGENCY_CALL_STATE, conn, msg)
 {
-  dsme_log(LOG_DEBUG,
+  dsme_log(LOG_CRIT,
            "emergency call %s state received",
            msg->ongoing ? "on" : "off");
 
@@ -585,7 +587,7 @@ DSME_HANDLER(DSM_MSGTYPE_SET_EMERGENCY_CALL_STATE, conn, msg)
 
 DSME_HANDLER(DSM_MSGTYPE_SET_BATTERY_STATE, conn, msg)
 {
-  dsme_log(LOG_DEBUG,
+  dsme_log(LOG_CRIT,
            "battery %s state received",
            msg->empty ? "empty" : "not empty");
 
@@ -617,17 +619,17 @@ static bool rd_mode_enabled(void)
   char*         p;
 
   if (cal_read_block(0, "r&d_mode", &vptr, &len, CAL_FLAG_USER) < 0) {
-      dsme_log(LOG_ERR, "Error reading R&D mode flag, assuming disabled");
+      dsme_log(LOG_CRIT, "Error reading R&D mode flag, assuming disabled");
       return false;
   }
 
   p = (char*)vptr;
   if (len >= 1 && *p) {
-      dsme_log(LOG_DEBUG, "R&D mode enabled");
+      dsme_log(LOG_CRIT, "R&D mode enabled");
       enabled = true;
   } else {
       enabled = false;
-      dsme_log(LOG_DEBUG, "R&D mode disabled");
+      dsme_log(LOG_CRIT, "R&D mode disabled");
   }
   free(vptr);
 
@@ -659,14 +661,13 @@ void module_init(module_t* handle)
   if (!runlevel) {
       malf = true;
       dsme_log(LOG_CRIT, "$RUNLEVEL: No such environment variable");
-      fprintf(stderr, "$RUNLEVEL: No such environment variable\n");
   } else {
       set_initial_state_bits(atoi(runlevel));
   }
 
   change_state_if_necessary();
 
-  dsme_log(LOG_DEBUG, "Startup state: %s", state_name(current_state));
+  dsme_log(LOG_CRIT, "Startup state: %s", state_name(current_state));
 }
 
 void module_fini(void)

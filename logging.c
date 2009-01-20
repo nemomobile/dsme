@@ -204,6 +204,11 @@ int dsme_log_txt(int level, const char *fmt, ...)
     va_list ap;
     va_start(ap, fmt);
     dsme_log_routine(level, fmt, ap);
+    /* also output to console for critical errors and more important */
+    if (level <= LOG_CRIT) {
+        vfprintf(stderr, fmt, ap);
+        fprintf(stderr, "\n");
+    }
     va_end(ap);
     return 0;
 }
