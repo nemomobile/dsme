@@ -89,7 +89,6 @@ INSTALL_SO_LIBRARIES    :=  libstartup.so libprocesswd.so \
                             libdbusproxy.so \
                             libalarmtracker.so \
                             libthermalmanager.so \
-                            libthermalobject_memory.so \
                             libemergencycalltracker.so
 ifdef DSME_BMEIPC
 INSTALL_SO_LIBRARIES	+=	libthermalobject_surface.so
