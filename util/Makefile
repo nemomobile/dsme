@@ -1,7 +1,7 @@
 #
 # Build targets
 #
-BINARIES	:=	batttest dsmetool dsmetest bootstate kick_wd waitfordsme kicker
+BINARIES	:=	batttest dsmetool dsmetest bootstate kick_wd waitfordsme kicker thermaltool
 
 #
 # Target composition and overrides
@@ -21,6 +21,8 @@ waitfordsme_SO_LIBS	:=	dsme
 kicker_C_OBJS 	:=	kicker.o
 kicker_SO_LIBS	:=	dsme
 kicker_LIBS     :=      cal
+thermaltool_C_OBJS := thermaltool.o
+thermaltool_LIBS   := cal
 
 #
 # Install files in this directory
@@ -30,7 +32,7 @@ INSTALL_OWNER   :=      $(shell id -u)
 INSTALL_GROUP   :=      $(shell id -g)
 
 
-INSTALL_BINARIES                        :=      batttest dsmetool bootstate waitfordsme dsmetest kicker
+INSTALL_BINARIES                        :=      batttest dsmetool bootstate waitfordsme dsmetest kicker thermaltool
 $(INSTALL_BINARIES): INSTALL_PERM       :=      755
 $(INSTALL_BINARIES): INSTALL_DIR        :=      $(DESTDIR)/usr/sbin
 

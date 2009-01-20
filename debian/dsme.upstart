@@ -1,0 +1,46 @@
+description "Device state manager entity"
+author "Semi Malinen"
+
+start on starting bme
+stop on starting shutdown
+
+console output
+
+script
+        THERMALCONFIG=/etc/dsme/temp_surface
+        THERMALTOOL=/usr/sbin/thermaltool
+        rm -f $THERMALCONFIG
+        [ -x $THERMALTOOL ] && RDFLAGS=$($THERMALTOOL)
+        echo $RDFLAGS | grep -q cert-test \
+            && cat > $THERMALCONFIG <<-'EOF'
+		-99, 110, 60
+		110, 115, 60
+		115, 120, 30
+		120, 999, 30
+		EOF
+
+        STATE=`getbootstate 2>/dev/null`
+        touch /tmp/$STATE
+        echo $STATE > /tmp/STATE
+
+        echo "Entering state '$STATE'."
+        case $STATE in
+        BOOT)
+                def_runlevel=6
+            ;;
+        USER)
+            def_runlevel=2
+            ;;
+        ACT_DEAD)
+            def_runlevel=5
+            ;;
+        LOCAL|TEST)
+            def_runlevel=3
+            ;;
+        esac
+        export RUNLEVEL=$def_runlevel
+        export DSME_INIT=1
+        exec /sbin/dsme -p /usr/lib/dsme/libstartup.so
+end script
+
+respawn

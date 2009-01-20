@@ -5,4 +5,5 @@ debian/tmp/usr/sbin/dsmetool
 debian/tmp/usr/sbin/kicker
 debian/tmp/usr/sbin/batttest
 debian/tmp/usr/sbin/bootstate
+debian/tmp/usr/sbin/thermaltool
 debian/tmp/etc/dsme/lifeguard.uids
