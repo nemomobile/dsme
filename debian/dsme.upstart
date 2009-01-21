@@ -10,8 +10,9 @@ script
         THERMALCONFIG=/etc/dsme/temp_surface
         THERMALTOOL=/usr/sbin/thermaltool
         rm -f $THERMALCONFIG
-        [ -x $THERMALTOOL ] && RDFLAGS=$($THERMALTOOL)
-        echo $RDFLAGS | grep -q cert-test \
+        [ -x $THERMALTOOL ] \
+            && RDFLAGS=$($THERMALTOOL) \
+            && echo $RDFLAGS | grep -q cert-test \
             && cat > $THERMALCONFIG <<-'EOF'
 		-99, 110, 60
 		110, 115, 60
