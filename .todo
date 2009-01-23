@@ -18,8 +18,11 @@
     <note priority="medium" time="1228294688">
         stop using runlevels; use bootstates instead
     </note>
-    <note priority="medium" time="1228308492">
+    <note priority="medium" time="1228308492" done="1232699668">
         disable memory thermal object
+        <comment>
+            disabled in 0.60.1
+        </comment>
     </note>
     <note priority="medium" time="1229419447">
         remove non-reentrant stuff from signal_handler()
