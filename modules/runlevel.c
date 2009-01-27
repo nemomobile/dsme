@@ -53,10 +53,10 @@ static bool change_runlevel(dsme_runlevel_t runlevel)
   char command[32];
 
   snprintf(command, sizeof(command), "telinit -t 0 %i", runlevel);
-  dsme_log(LOG_DEBUG, "Issuing telinit %i", runlevel);
+  dsme_log(LOG_CRIT, "Issuing telinit %i", runlevel);
 
   if (system(command) != 0) {
-      dsme_log(LOG_ERR, "failed to change runlevel, trying again in 2s");
+      dsme_log(LOG_CRIT, "failed to change runlevel, trying again in 2s");
       sleep(2);
       return system(command) == 0;
   }
@@ -83,7 +83,7 @@ static void shutdown(dsme_runlevel_t runlevel)
       dsme_log(LOG_DEBUG, "Shutdown request to bad runlevel (%d)", runlevel);
       return;
   }
-  dsme_log(LOG_DEBUG, "Shutdown/reboot");
+  dsme_log(LOG_CRIT, "Shutdown/reboot");
 
   /* kick WDs once */
   broadcast_internally(&msg2);
