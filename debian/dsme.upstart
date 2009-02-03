@@ -1,7 +1,7 @@
 description "Device state manager entity"
 author "Semi Malinen"
 
-start on starting bme
+start on stopped rcS
 stop on starting shutdown
 
 console output
