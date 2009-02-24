@@ -45,15 +45,8 @@ typedef struct {
     dsme_state_t state;
 } DSM_MSGTYPE_STATE_CHANGE_IND;
 
-
-// TODO: obsolete and remove dsme_shutdown_t
-typedef enum {
-    DSME_NORMAL_SHUTDOWN = 0,
-} dsme_shutdown_t;
-
 typedef struct {
     DSMEMSG_PRIVATE_FIELDS
-    dsme_shutdown_t state; // TODO: remove this field
 } DSM_MSGTYPE_SHUTDOWN_REQ;
 
 
