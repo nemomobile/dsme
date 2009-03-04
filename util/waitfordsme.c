@@ -35,7 +35,7 @@
 
 #define DSME_START_TIMEOUT 5
 
-int main(void) {
+int main(int argc, char* argv[]) {
 	
 	struct timeval start;
 	struct timeval now;
@@ -43,12 +43,14 @@ int main(void) {
 
 	gettimeofday(&start, NULL);
 
-	printf("Wait for DSME socket to appear\n");
+	printf("%s: Wait for DSME socket... ", argv[0]);
+	fflush(stdout);
 
 	while (1) {
 		conn = dsmesock_connect();
 		if (conn > 0) {
 			dsmesock_close(conn);
+			printf("OK\n");
 			return EXIT_SUCCESS;
 		}
 		
