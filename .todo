@@ -27,7 +27,7 @@
     <note priority="medium" time="1229419447">
         remove non-reentrant stuff from signal_handler()
     </note>
-    <note priority="medium" time="1229678796">
+    <note priority="medium" time="1229678796" done="1237213146">
         remove field 'state' from DSM_MSGTYPE_SHUTDOWN_REQ
     </note>
     <note priority="medium" time="1234964310">
