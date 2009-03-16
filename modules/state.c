@@ -92,6 +92,7 @@ static void start_delayed_actdead_timer(unsigned seconds);
 static void stop_delayed_runlevel_timers(void);
 static int  delayed_shutdown_fn(void* unused);
 static int  delayed_actdead_fn(void* unused);
+static void change_runlevel(dsme_state_t state);
 
 static void start_overheat_timer(void);
 static void stop_overheat_timer(void);
@@ -249,27 +250,26 @@ static void try_to_change_state(dsme_state_t new_state)
     case DSME_STATE_SHUTDOWN: /* Runlevel 0 */ /* FALL THROUGH */
     case DSME_STATE_REBOOT:   /* Runlevel 6 */
       change_state(new_state);
-
       start_delayed_shutdown_timer(SHUTDOWN_TIMER_TIMEOUT);
       break;
 
     case DSME_STATE_USER:    /* Runlevel 2 */ /* FALL THROUGH */
     case DSME_STATE_ACTDEAD: /* Runlevel 5 */
-      if (current_state == DSME_STATE_NOT_SET ||
-          current_state == DSME_STATE_USER    ||
-          current_state == DSME_STATE_ACTDEAD)
-      {
-          dsme_state_t old_state = current_state;
-
+      if (current_state == DSME_STATE_NOT_SET) {
+          /* we have just booted up; simply change the state */
+          change_state(new_state);
+      } else if (current_state == DSME_STATE_ACTDEAD) {
+          /* immediate runlevel change from ACTDEAD to USER */
+          change_state(new_state);
+          change_runlevel(new_state);
+      } else if (current_state == DSME_STATE_USER) {
+          /* runlevel change from USER to ACTDEAD involves a reboot */
+          dsme_log(LOG_CRIT, "go to actdead via reboot");
+          new_state = DSME_STATE_REBOOT;
           change_state(new_state);
 
-          if (old_state == DSME_STATE_USER) {
-              /* make a delayed runlevel change from user to actdead state */
-              start_delayed_actdead_timer(SHUTDOWN_TIMER_TIMEOUT);
-          } else if (old_state == DSME_STATE_ACTDEAD) {
-              /* make an immediate runlevel change from actdead to user state */
-              delayed_actdead_fn(0);
-          }
+          /* make a delayed runlevel change from user to actdead state */
+          start_delayed_actdead_timer(SHUTDOWN_TIMER_TIMEOUT);
       }
       break;
 
@@ -386,14 +386,19 @@ static int delayed_shutdown_fn(void* unused)
 
 static int delayed_actdead_fn(void* unused)
 {
-  DSM_MSGTYPE_CHANGE_RUNLEVEL msg = DSME_MSG_INIT(DSM_MSGTYPE_CHANGE_RUNLEVEL);
-
-  msg.runlevel = state2runlevel(current_state);
-  broadcast_internally(&msg);
+  change_runlevel(DSME_STATE_ACTDEAD);
 
   delayed_actdead_timer = 0;
 
   return 0; /* stop the interval */
+}
+
+static void change_runlevel(dsme_state_t state)
+{
+  DSM_MSGTYPE_CHANGE_RUNLEVEL msg = DSME_MSG_INIT(DSM_MSGTYPE_CHANGE_RUNLEVEL);
+
+  msg.runlevel = state2runlevel(state);
+  broadcast_internally(&msg);
 }
 
 
