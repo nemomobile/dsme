@@ -1,3 +1,11 @@
+dsme (0.60.3) unstable; urgency=low
+
+  * Fixes: NB#102806 - go to actdead via reboot state
+  * Remove obsolete field from DSM_MSGTYPE_SHUTDOWN_REQ
+  * Improve waitfordsme logging
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Mon, 16 Mar 2009 14:17:59 +0000
+
 dsme (0.60.2) unstable; urgency=low
 
   * /etc/event.d/dsme: Fix starting order between rcS, dsme and bme
