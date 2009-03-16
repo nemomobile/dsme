@@ -336,14 +336,14 @@ static module_t* load_state_module(const char*  runlevel,
   return module;
 }
 
-static void request_shutdown_expecting_actdead(module_t* state)
+static void request_shutdown_expecting_reboot(module_t* state)
 {
   DSM_MSGTYPE_SHUTDOWN_REQ msg = TEST_MSG_INIT(DSM_MSGTYPE_SHUTDOWN_REQ);
   send_message(state, &msg);
 
   DSM_MSGTYPE_STATE_CHANGE_IND* ind;
   assert((ind = queued(DSM_MSGTYPE_STATE_CHANGE_IND)));
-  assert(ind->state == DSME_STATE_ACTDEAD);
+  assert(ind->state == DSME_STATE_REBOOT);
   free(ind);
 
   DSM_MSGTYPE_SAVE_DATA_IND* ind2;
@@ -419,7 +419,7 @@ static void testcase1(void)
   module_t* state = load_state_module("2", DSME_STATE_USER);
   assert(!timer_exists());
 
-  request_shutdown_expecting_actdead(state);
+  request_shutdown_expecting_reboot(state);
 
   unload_module_under_test(state);
 }
@@ -428,8 +428,6 @@ static void testcase2(void)
 {
   /*
    * 1. request shutdown when charger is known to be plugged in
-   * 2. unplug charger
-   * 3. wait for the shutdown to happen
    */
   // boot to user state
   module_t* state = load_state_module("2", DSME_STATE_USER);
@@ -440,7 +438,32 @@ static void testcase2(void)
   assert(message_queue_is_empty());
   assert(!timer_exists());
 
-  request_shutdown_expecting_actdead(state);
+  request_shutdown_expecting_reboot(state);
+
+  unload_module_under_test(state);
+}
+
+static void testcase2b(void)
+{
+  /*
+   * continue after booting to actdead
+   * 2. unplug a known to be plugged in charger
+   * 3. wait for the shutdown to happen
+   */
+  module_t* state = load_state_module("5", DSME_STATE_ACTDEAD);
+  assert(!timer_exists());
+
+  // unplug charger
+  connect_charger(state);
+  assert(!timer_exists());
+  assert(message_queue_is_empty());
+  disconnect_charger(state);
+  assert(timer_exists());
+  assert(message_queue_is_empty());
+
+  // plug charger
+  connect_charger(state);
+  assert(!timer_exists());
 
   // unplug charger
   disconnect_charger(state);
@@ -472,24 +495,7 @@ static void testcase3(void)
   assert(message_queue_is_empty());
   assert(!timer_exists());
 
-  request_shutdown_expecting_actdead(state);
-
-  // unplug charger
-  disconnect_charger(state);
-  assert(message_queue_is_empty());
-  assert(timer_exists());
-
-  // plug the charger back in
-  connect_charger(state);
-  assert(message_queue_is_empty());
-  assert(!timer_exists());
-
-  // unplug charger
-  disconnect_charger(state);
-
-  // wait for the shutdown
-  trigger_timer();
-  expect_shutdown(state);
+  request_shutdown_expecting_reboot(state);
 
   unload_module_under_test(state);
 }
@@ -780,7 +786,7 @@ static void testcase14(void)
 
   DSM_MSGTYPE_STATE_CHANGE_IND* ind;
   assert((ind = queued(DSM_MSGTYPE_STATE_CHANGE_IND)));
-  assert(ind->state == DSME_STATE_ACTDEAD);
+  assert(ind->state == DSME_STATE_REBOOT);
   free(ind);
 
   DSM_MSGTYPE_SAVE_DATA_IND* ind2;
@@ -971,7 +977,7 @@ static void testcase19(void)
   msg.alarm_set = true;
   send_message(state, &msg);
 
-  request_shutdown_expecting_actdead(state);
+  request_shutdown_expecting_reboot(state);
 
   unload_module_under_test(state);
 }
@@ -1127,6 +1133,7 @@ int main(int argc, const char* argv[])
 
   run(testcase1);
   run(testcase2);
+  run(testcase2b);
   run(testcase3);
   run(testcase4);
   run(testcase5);

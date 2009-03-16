@@ -356,7 +356,7 @@ static void start_delayed_actdead_timer(unsigned seconds)
           dsme_log(LOG_CRIT, "Could not create an actdead timer; exit!");
           exit(EXIT_FAILURE);
       }
-      dsme_log(LOG_CRIT, "Actdead in %i seconds", seconds);
+      dsme_log(LOG_CRIT, "Reboot for actdead in %i seconds", seconds);
   }
 }
 
