@@ -342,15 +342,7 @@ int main(int argc, char *argv[])
       dsme_log(LOG_ERR, "Couldn't protect from oom");
   }
 
-  /* init socket communication */
-  if (dsmesock_listen(receive_and_queue_message) == -1) {
-      dsme_log(LOG_CRIT, "Error creating DSM socket: %s", strerror(errno));
-#ifdef DSME_LOG_ENABLE  
-      dsme_log_close();
-#endif
-      return EXIT_FAILURE;
-  }
-
+  /* load modules */
   if (!modulebase_init(module_names)) {
       g_slist_free(module_names);
 #ifdef DSME_LOG_ENABLE  
@@ -359,6 +351,15 @@ int main(int argc, char *argv[])
       return EXIT_FAILURE;
   }
   g_slist_free(module_names);
+
+  /* init socket communication */
+  if (dsmesock_listen(receive_and_queue_message) == -1) {
+      dsme_log(LOG_CRIT, "Error creating DSM socket: %s", strerror(errno));
+#ifdef DSME_LOG_ENABLE  
+      dsme_log_close();
+#endif
+      return EXIT_FAILURE;
+  }
 
   /* set running directory */
   chdir("/");
