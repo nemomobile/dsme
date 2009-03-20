@@ -43,21 +43,22 @@ int main(int argc, char* argv[]) {
 
 	gettimeofday(&start, NULL);
 
-	printf("%s: Wait for DSME socket... ", argv[0]);
+	printf("%s: Wait for DSME socket...\n", argv[0]);
 	fflush(stdout);
 
 	while (1) {
 		conn = dsmesock_connect();
 		if (conn > 0) {
 			dsmesock_close(conn);
-			printf("OK\n");
+			printf("OK: DSME socket exists\n");
 			return EXIT_SUCCESS;
 		}
 		
 		gettimeofday(&now, NULL);
 		
 		if (now.tv_sec >= (start.tv_sec + DSME_START_TIMEOUT)) {
-			fprintf(stderr, "Timeout, DSME failed to start?\n");
+			fprintf(stderr,
+				    "ERROR: Timeout waiting for DSME socket\n");
 			return EXIT_FAILURE;
 		}
 		usleep(20000);
