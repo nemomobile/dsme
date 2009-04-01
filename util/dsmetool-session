@@ -2,7 +2,7 @@
 
 trap 'exit_handler' INT QUIT TERM EXIT ABRT SEGV
 
-usage() 
+usage()
 {
   echo "Usage: `basename $0` [args] "
   echo "-r <cmd>          Start a process"
@@ -33,10 +33,10 @@ exit_handler()
   kill -9 $PID > /dev/null 2>&1
 
   # FIXME: this _should_ exit instantly within trap handler, but doesn't.
-  exit 0 
+  exit 0
 }
 
-if [ $# -eq 0 ]; 
+if [ $# -eq 0 ];
 then
   usage
   exit 0
@@ -53,11 +53,11 @@ do_sw_reset()
     COUNT=$((COUNT-1))
     sleep 1
   done
-  # FIXME: add required reset method
   echo "Resetting node."
+  dbus-send --system --print-reply --dest=com.nokia.dsme /com/nokia/dsme com.nokia.dsme.request.req_reboot
 }
 
-start_task() 
+start_task()
 {
   # FIXME: implement nice and possibly user.
   $1 &
@@ -70,7 +70,7 @@ start_task()
 
   BIN=`basename $1`
   echo "`basename $0`: program $BIN started, pid $PID"
- 
+
   wait $PID
 
   # Note: we don't need to check if X exiting was the reason for 
@@ -91,7 +91,7 @@ start_critical_with_retries()
   RETRIES=$2
   COUNT=0
 
-  while [ $COUNT -lt $RETRIES ]; 
+  while [ $COUNT -lt $RETRIES ];
   do
     start_task $TASK 
     COUNT=$((COUNT+1))
@@ -185,7 +185,7 @@ else
   exit 0
 fi
 
-if [ "$CRITICAL_TASK" ] ; 
+if [ "$CRITICAL_TASK" ] ;
 then
   start_critical "$CRITICAL_TASK"
 elif [ "$CRITICAL_RETRY" ] ;
@@ -194,7 +194,7 @@ then
 elif [ "$NONCRITICAL_RETRY" ] ;
 then
   start_noncritical_with_retries "$NONCRITICAL_RETRY" $RETRIES
-elif [ "$NONCRITICAL" ] ; 
+elif [ "$NONCRITICAL" ] ;
 then
   start_task "$NONCRITICAL"
 fi
