@@ -2,6 +2,7 @@ debian/tmp/sbin/dsme
 debian/tmp/usr/lib/dsme/*
 debian/tmp/usr/sbin/waitfordsme
 debian/tmp/usr/sbin/dsmetool
+debian/tmp/usr/sbin/dsmetool-session
 debian/tmp/usr/sbin/kicker
 debian/tmp/usr/sbin/batttest
 debian/tmp/usr/sbin/bootstate
