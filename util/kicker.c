@@ -23,7 +23,6 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -45,6 +44,7 @@
 
 #define OOM_ADJ_VALUE -17
 
+
 static const char wd_file[] = "/dev/watchdog";
 static const int wd_period  = 30;
 
@@ -53,8 +53,9 @@ static int wd_fd = -1;
 
 static struct cal *kicker_cal;
 
-static int protect_from_oom(void) {
 
+static int protect_from_oom(void)
+{
       FILE *file = 0;
       int ret = -1;
       char filename[128];
@@ -81,8 +82,8 @@ static int protect_from_oom(void) {
       return 0;
 }
 
-static int read_cal_config(void) {
-
+static int read_cal_config(void)
+{
       void *vptr = NULL;
       unsigned long len = 0;
       int ret = 0;
@@ -153,7 +154,8 @@ static int init_wd(void)
       return ret;
 }
 
-static int register_to_dsme(dsmesock_connection_t *conn) {
+static int register_to_dsme(dsmesock_connection_t *conn)
+{
       DSM_MSGTYPE_HWWD_KICKER msg =
         DSME_MSG_INIT(DSM_MSGTYPE_HWWD_KICKER);
 
@@ -161,8 +163,8 @@ static int register_to_dsme(dsmesock_connection_t *conn) {
       return dsmesock_send(conn, &msg);
 }
 
-int main(void) {
-
+int main(void)
+{
       static dsmesock_connection_t *dsme_conn;
       fd_set rfds;
       int ret;
