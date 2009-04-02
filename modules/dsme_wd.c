@@ -140,13 +140,13 @@ int dsme_init_wd(void)
 
     if (wd_enabled) {
         wd_fd = open(wd_file, O_RDWR);
-        if (wd_fd == 0) {
+        if (wd_fd == -1) {
             dsme_log(LOG_CRIT, "Error opening the watchdog device");
             perror(wd_file);
             return errno;
         }
 
-        /*tmp will be loaded by the ioctl with the time left*/
+        /* tmp will be loaded by the ioctl with the time left */
         tmp = wd_period;
         ret = ioctl(wd_fd, WDIOC_SETTIMEOUT, &tmp);
         if (ret != 0) {
