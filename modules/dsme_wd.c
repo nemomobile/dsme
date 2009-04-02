@@ -61,115 +61,117 @@ static sem_t dsme_wd_sem;
 
 void dsme_wd_kick(void)
 {
-	sem_post(&dsme_wd_sem);
-	dsme_log(LOG_DEBUG, "Got a permission to kick watchdog...");
+    sem_post(&dsme_wd_sem);
+    dsme_log(LOG_DEBUG, "Got a permission to kick watchdog...");
 }
 
 static void* dsme_wd_loop(void* param)
 {
-	/* This is not portable because it relies on the linux way of
-	 * implementing threads as different processes. On a different system
-	 * they could have the same PID of the father that spawned them. */
-	setpriority(PRIO_PROCESS, 0, IDLE_PRIORITY);
-	
-	while(1) {
-		sem_wait(&dsme_wd_sem);
+    /*
+     * This is not portable because it relies on the linux way of
+     * implementing threads as different processes. On a different system
+     * they could have the same PID of the father that spawned them.
+     */
+    setpriority(PRIO_PROCESS, 0, IDLE_PRIORITY);
 
-		if (wd_enabled) {
-			if (write(wd_fd, "*\n", 2) != 2)
-				dsme_log(LOG_CRIT, "error kicking watchdog!");
-			else
-				dsme_log(LOG_DEBUG, "WD kicked!");
-		}
-	}
-	return 0;
+    while(1) {
+        sem_wait(&dsme_wd_sem);
+
+        if (wd_enabled) {
+            if (write(wd_fd, "*\n", 2) != 2)
+                dsme_log(LOG_CRIT, "error kicking watchdog!");
+            else
+                dsme_log(LOG_DEBUG, "WD kicked!");
+        }
+    }
+    return 0;
 }
 
-static void read_cal_config(void) {
+static void read_cal_config(void)
+{
+    void*         vptr = NULL;
+    unsigned long len  = 0;
+    int           ret  = 0;
+    char*         p;
 
-	void*         vptr = NULL;
-	unsigned long len  = 0;
-	int           ret  = 0;
-	char*         p;
-	
-	ret = cal_read_block(0, "r&d_mode", &vptr, &len, CAL_FLAG_USER);
-	if (ret < 0) {
-		dsme_log(LOG_ERR, "Error reading R&D mode flags, watchdog enabled");
-		return;
-	}
-	p = vptr;
-	if (len >= 1 && *p) {
-		dsme_log(LOG_DEBUG, "R&D mode enabled");
+    ret = cal_read_block(0, "r&d_mode", &vptr, &len, CAL_FLAG_USER);
+    if (ret < 0) {
+        dsme_log(LOG_ERR, "Error reading R&D mode flags, watchdog enabled");
+        return;
+    }
+    p = vptr;
+    if (len >= 1 && *p) {
+        dsme_log(LOG_DEBUG, "R&D mode enabled");
 
-		if (len > 1) {
-			if (strstr(p, "no-omap-wd")) {
-				wd_enabled = 0;
-				dsme_log(LOG_NOTICE, "WD kicking disabled");
-			} else {
-				wd_enabled = 1;
-			}
-		} else {
-			wd_enabled = 1;
-			dsme_log(LOG_DEBUG, "No WD flags found, kicking enabled!");
-		}
-	}
+        if (len > 1) {
+            if (strstr(p, "no-omap-wd")) {
+                wd_enabled = 0;
+                dsme_log(LOG_NOTICE, "WD kicking disabled");
+            } else {
+                wd_enabled = 1;
+            }
+        } else {
+            wd_enabled = 1;
+            dsme_log(LOG_DEBUG, "No WD flags found, kicking enabled!");
+        }
+    }
 
-	free(vptr);
-	return;
+    free(vptr);
+    return;
 }
 
 int dsme_init_wd(void)
 {
-	pthread_attr_t tattr;
-	pthread_t tid;
-	int tmp;
-	int ret;
-	struct sched_param param;
+    pthread_attr_t tattr;
+    pthread_t tid;
+    int tmp;
+    int ret;
+    struct sched_param param;
 
-	ret = sem_init(&dsme_wd_sem, 0, 0);
-	if (ret != 0) {
-		dsme_log(LOG_CRIT, "Error initialising semaphore");
-		return ret;
-	}
+    ret = sem_init(&dsme_wd_sem, 0, 0);
+    if (ret != 0) {
+        dsme_log(LOG_CRIT, "Error initialising semaphore");
+        return ret;
+    }
 
-	read_cal_config();
-	if (!wd_enabled)
-		return -1;
+    read_cal_config();
+    if (!wd_enabled)
+        return -1;
 
-	if (wd_enabled) {
-		wd_fd = open(wd_file, O_RDWR);
-		if (wd_fd == 0) {
-			dsme_log(LOG_CRIT, "Error opening the watchdog device");
-			perror(wd_file);
-			return errno;
-		}
+    if (wd_enabled) {
+        wd_fd = open(wd_file, O_RDWR);
+        if (wd_fd == 0) {
+            dsme_log(LOG_CRIT, "Error opening the watchdog device");
+            perror(wd_file);
+            return errno;
+        }
 
-		/*tmp will be loaded by the ioctl with the time left*/
-		tmp = wd_period;
-		ret = ioctl(wd_fd, WDIOC_SETTIMEOUT, &tmp);
-		if (ret != 0) {
-			dsme_log(LOG_CRIT, "Error initialising watchdog");
-			return ret;
-		}
-	}
+        /*tmp will be loaded by the ioctl with the time left*/
+        tmp = wd_period;
+        ret = ioctl(wd_fd, WDIOC_SETTIMEOUT, &tmp);
+        if (ret != 0) {
+            dsme_log(LOG_CRIT, "Error initialising watchdog");
+            return ret;
+        }
+    }
 
-	ret = pthread_attr_init (&tattr);
-	if (ret != 0) {
-		dsme_log(LOG_CRIT, "Error getting thread attributes");
-		return ret;
-	}
+    ret = pthread_attr_init (&tattr);
+    if (ret != 0) {
+        dsme_log(LOG_CRIT, "Error getting thread attributes");
+        return ret;
+    }
 
-	ret = pthread_attr_getschedparam (&tattr, &param);
-	if (ret != 0) {
-		dsme_log(LOG_CRIT, "Error getting scheduling parameters");
-		return ret;
-	}
-	
-	ret = pthread_create (&tid, &tattr, dsme_wd_loop, NULL);
-	if (ret != 0) {
-		dsme_log(LOG_CRIT, "Error creating new thread");
-		return ret;
-	}
+    ret = pthread_attr_getschedparam (&tattr, &param);
+    if (ret != 0) {
+        dsme_log(LOG_CRIT, "Error getting scheduling parameters");
+        return ret;
+    }
 
-	return ret;
+    ret = pthread_create (&tid, &tattr, dsme_wd_loop, NULL);
+    if (ret != 0) {
+        dsme_log(LOG_CRIT, "Error creating new thread");
+        return ret;
+    }
+
+    return ret;
 }

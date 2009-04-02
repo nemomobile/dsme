@@ -63,7 +63,7 @@ static int protect_from_oom(void) {
               fprintf(stderr, "file: %s\n", filename);
               return -1;
       }
-      
+
       file = fopen(filename, "w");
       if (!file) {
               fprintf(stderr, "Kicker: failed to open file: %s\n", filename);
@@ -72,9 +72,9 @@ static int protect_from_oom(void) {
 
       ret = fprintf(file, "%i", OOM_ADJ_VALUE);
       fclose(file);
-      
+
       if (ret < 0) {
-              fprintf(stderr, "Kicker: failed to write to file: %s\n", filename); 
+              fprintf(stderr, "Kicker: failed to write to file: %s\n", filename);
               return -1;
       }
 
@@ -154,7 +154,6 @@ static int init_wd(void)
 }
 
 static int register_to_dsme(dsmesock_connection_t *conn) {
-      
       DSM_MSGTYPE_HWWD_KICKER msg =
         DSME_MSG_INIT(DSM_MSGTYPE_HWWD_KICKER);
 
@@ -176,7 +175,7 @@ int main(void) {
               fprintf(stderr, "Kicker: failed to connect to dsme, exiting...\n");
               return EXIT_FAILURE;
       }
-      
+
       /* Register to DSME */
       if (register_to_dsme(dsme_conn) < 0) {
               fprintf(stderr, "Kicker: failed to register to DSME, exiting...\n");
@@ -193,7 +192,7 @@ int main(void) {
               FD_ZERO(&rfds);
               FD_SET(dsme_conn->fd, &rfds);
               dsmemsg_generic_t *msg;
-              
+
               ret = select(dsme_conn->fd + 1, &rfds, NULL, NULL, NULL); 
               if (ret == -1) {
                   fprintf(stderr, "error in select()\n");
@@ -218,7 +217,7 @@ int main(void) {
                     free(msg);
 
                 }
-	}
+    }
 
-	return EXIT_FAILURE;
+    return EXIT_FAILURE;
 }
