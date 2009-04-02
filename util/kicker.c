@@ -135,13 +135,13 @@ static int init_wd(void)
 
       if (wd_enabled) {
               wd_fd = open(wd_file, O_RDWR);
-              if (wd_fd == 0) {
+              if (wd_fd == -1) {
                       fprintf(stderr, "Kicker: Error opening the watchdog device\n");
                       perror(wd_file);
                       return errno;
               }
 
-              /*tmp will be loaded by the ioctl with the time left*/
+              /* tmp will be loaded by the ioctl with the time left */
               tmp = wd_period;
               ret = ioctl(wd_fd, WDIOC_SETTIMEOUT, &tmp);
               if (ret != 0) {
@@ -209,7 +209,7 @@ int main(void)
                     {
 
                         if (wd_enabled) {
-                            /* Kicking WD */
+                            /* Kick WD */
                             if (write(wd_fd, "*\n", 2) != 2) {
                                 fprintf(stderr, "Kicker: error kicking watchdog!\n");
                             }
