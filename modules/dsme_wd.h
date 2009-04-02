@@ -25,12 +25,14 @@
 #ifndef DSME_WD_H
 #define DSME_WD_H
 
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 void dsme_wd_kick(void);
-int dsme_init_wd(void);
+bool dsme_wd_init(void);
 
 #ifdef __cplusplus
 }

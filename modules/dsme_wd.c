@@ -50,12 +50,19 @@
 
 #define IDLE_PRIORITY 0
 
-static const char wd_file[] = "/dev/watchdog";
-static const int  wd_period = 30;
+typedef struct wd_t {
+    const char* file;   /* pathname of the watchdog device */
+    int         period; /* watchdog timeout; 0 for keeping the default */
+} wd_t;
 
-static int wd_enabled =  1;
-static int wd_fd      = -1;
+static const wd_t wd[] = {
+    { "/dev/watchdog",    0 },
+    { "/dev/twl4030_wdt", 0 }
+};
+#define WD_COUNT (sizeof(wd) / sizeof(wd[0]))
+static int wd_fd[WD_COUNT];
 
+static bool  wd_enabled = true;
 static sem_t dsme_wd_sem;
 
 
@@ -74,14 +81,20 @@ static void* dsme_wd_loop(void* param)
      */
     setpriority(PRIO_PROCESS, 0, IDLE_PRIORITY);
 
-    while(1) {
+    while (true) {
         sem_wait(&dsme_wd_sem);
 
         if (wd_enabled) {
-            if (write(wd_fd, "*\n", 2) != 2)
-                dsme_log(LOG_CRIT, "error kicking watchdog!");
-            else
-                dsme_log(LOG_DEBUG, "WD kicked!");
+            int i;
+            for (i = 0; i < WD_COUNT; ++i) {
+                if (wd_fd[i] != -1) {
+                    if (write(wd_fd[i], "*", 1) != 1) {
+                        dsme_log(LOG_CRIT, "error kicking watchdog!");
+                    } else {
+                        dsme_log(LOG_DEBUG, "WD kicked!");
+                    }
+                }
+            }
         }
     }
     return 0;
@@ -105,13 +118,13 @@ static void read_cal_config(void)
 
         if (len > 1) {
             if (strstr(p, "no-omap-wd")) {
-                wd_enabled = 0;
+                wd_enabled = false;
                 dsme_log(LOG_NOTICE, "WD kicking disabled");
             } else {
-                wd_enabled = 1;
+                wd_enabled = true;
             }
         } else {
-            wd_enabled = 1;
+            wd_enabled = true;
             dsme_log(LOG_DEBUG, "No WD flags found, kicking enabled!");
         }
     }
@@ -120,58 +133,60 @@ static void read_cal_config(void)
     return;
 }
 
-int dsme_init_wd(void)
+bool dsme_wd_init(void)
 {
     pthread_attr_t tattr;
     pthread_t tid;
-    int tmp;
-    int ret;
+    int i;
     struct sched_param param;
 
-    ret = sem_init(&dsme_wd_sem, 0, 0);
-    if (ret != 0) {
+    for (i = 0; i < WD_COUNT; ++i) {
+        wd_fd[i] = -1;
+    }
+
+    if (sem_init(&dsme_wd_sem, 0, 0) != 0) {
         dsme_log(LOG_CRIT, "Error initialising semaphore");
-        return ret;
+        return false;
     }
 
     read_cal_config();
-    if (!wd_enabled)
-        return -1;
+    if (!wd_enabled) {
+        return false;
+    }
 
     if (wd_enabled) {
-        wd_fd = open(wd_file, O_RDWR);
-        if (wd_fd == -1) {
-            dsme_log(LOG_CRIT, "Error opening the watchdog device");
-            perror(wd_file);
-            return errno;
-        }
-
-        /* tmp will be loaded by the ioctl with the time left */
-        tmp = wd_period;
-        ret = ioctl(wd_fd, WDIOC_SETTIMEOUT, &tmp);
-        if (ret != 0) {
-            dsme_log(LOG_CRIT, "Error initialising watchdog");
-            return ret;
+        for (i = 0; i < WD_COUNT; ++i) {
+            wd_fd[i] = open(wd[i].file, O_RDWR);
+            if (wd_fd[i] == -1) {
+                dsme_log(LOG_CRIT, "Error opening watchdog %s", wd[i].file);
+                perror(wd[i].file);
+            } else if (wd[i].period != 0) {
+                /* set the wd period */
+                /* ioctl() will overwrite tmp with the time left */
+                int tmp = wd[i].period;
+                if (ioctl(wd_fd[i], WDIOC_SETTIMEOUT, &tmp) != 0) {
+                    dsme_log(LOG_CRIT,
+                             "Error initialising watchdog %s",
+                             wd[i].file);
+                }
+            }
         }
     }
 
-    ret = pthread_attr_init (&tattr);
-    if (ret != 0) {
+    if (pthread_attr_init (&tattr) != 0) {
         dsme_log(LOG_CRIT, "Error getting thread attributes");
-        return ret;
+        return false;
     }
 
-    ret = pthread_attr_getschedparam (&tattr, &param);
-    if (ret != 0) {
+    if (pthread_attr_getschedparam (&tattr, &param) != 0) {
         dsme_log(LOG_CRIT, "Error getting scheduling parameters");
-        return ret;
+        return false;
     }
 
-    ret = pthread_create (&tid, &tattr, dsme_wd_loop, NULL);
-    if (ret != 0) {
+    if (pthread_create (&tid, &tattr, dsme_wd_loop, NULL) != 0) {
         dsme_log(LOG_CRIT, "Error creating new thread");
-        return ret;
+        return false;
     }
 
-    return ret;
+    return true;
 }

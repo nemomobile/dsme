@@ -166,7 +166,7 @@ module_fn_info_t message_handlers[] = {
  */
 void module_init(module_t *handle)
 {
-        if (dsme_init_wd() < 0) {
+        if (!dsme_wd_init()) {
           dsme_log(LOG_ERR, "dsme_wd_init() failed, WD kicking disabled");
 	  dsme_log(LOG_DEBUG, "libhwwd.so: waiting for the kicker to register");
         } else {

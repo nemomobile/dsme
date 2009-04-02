@@ -23,8 +23,12 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "../modules/hwwd.h"
+#include "dsme/protocol.h"
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include <unistd.h>
 #include <sys/types.h>
@@ -39,19 +43,23 @@
 
 #include <cal.h>
 
-#include "../modules/hwwd.h"
-#include "dsme/protocol.h"
-
 #define OOM_ADJ_VALUE -17
 
 
-static const char wd_file[] = "/dev/watchdog";
-static const int wd_period  = 30;
+typedef struct wd_t {
+    const char* file;   /* pathname of the watchdog device */
+    int         period; /* watchdog timeout; 0 for keeping the default */
+} wd_t;
 
-static int wd_enabled = 1;
-static int wd_fd = -1;
+static const wd_t wd[] = {
+    { "/dev/watchdog",    0 },
+    { "/dev/twl4030_wdt", 0 }
+};
+#define WD_COUNT (sizeof(wd) / sizeof(wd[0]))
+static int wd_fd[WD_COUNT];
 
-static struct cal *kicker_cal;
+static bool wd_enabled = true;
+
 
 
 static int protect_from_oom(void)
@@ -84,6 +92,7 @@ static int protect_from_oom(void)
 
 static int read_cal_config(void)
 {
+      struct cal* kicker_cal;
       void *vptr = NULL;
       unsigned long len = 0;
       int ret = 0;
@@ -106,13 +115,13 @@ static int read_cal_config(void)
 
               if (len > 1) {
                       if (strstr(p, "no-omap-wd")) {
-                              wd_enabled = 0;
+                              wd_enabled = false;
                               fprintf(stderr, "WD kicking disabled\n");
                       } else {
-                              wd_enabled = 1;
+                              wd_enabled = true;
                       }
               } else {
-                      wd_enabled = 1;
+                      wd_enabled = true;
                       fprintf(stderr, "No WD flags found, kicking enabled!\n");
               }
       }
@@ -124,34 +133,42 @@ static int read_cal_config(void)
       return 0;
 }
 
-static int init_wd(void)
+static bool init_wd(void)
 {
-      int tmp;
-      int ret = 0;
-
-      read_cal_config();
-      if (!wd_enabled)
-              return -1;
-
-      if (wd_enabled) {
-              wd_fd = open(wd_file, O_RDWR);
-              if (wd_fd == -1) {
-                      fprintf(stderr, "Kicker: Error opening the watchdog device\n");
-                      perror(wd_file);
-                      return errno;
-              }
-
-              /* tmp will be loaded by the ioctl with the time left */
-              tmp = wd_period;
-              ret = ioctl(wd_fd, WDIOC_SETTIMEOUT, &tmp);
-              if (ret != 0) {
-                      fprintf(stderr, "Kicker: Error initialising watchdog\n");
-                      return ret;
-              }
-              fprintf(stderr, "Kicker: wd period set to %d s\n", tmp);
+      int i;
+      for (i = 0; i < WD_COUNT; ++i) {
+          wd_fd[i] = -1;
       }
 
-      return ret;
+      read_cal_config();
+      if (!wd_enabled) {
+          return false;
+      }
+
+      if (wd_enabled) {
+          for (i = 0; i < WD_COUNT; ++i) {
+              wd_fd[i] = open(wd[i].file, O_RDWR);
+              if (wd_fd[i] == -1) {
+                      fprintf(stderr,
+                              "Kicker: Error opening watchdog %s\n",
+                              wd[i].file);
+                      perror(wd[i].file);
+              } else if (wd[i].period != 0) {
+                  /* set the wd period */
+                  /* ioctl() will overwrite tmp with the time left */
+                  int tmp = wd[i].period;
+                  if (ioctl(wd_fd[i], WDIOC_SETTIMEOUT, &tmp) != 0) {
+                      fprintf(stderr,
+                              "Kicker: Error initialising watchdog %s\n",
+                              wd[i].file);
+                  } else {
+                      fprintf(stderr, "Kicker: wd period set to %d s\n", tmp);
+                  }
+              }
+          }
+      }
+
+      return true;
 }
 
 static int register_to_dsme(dsmesock_connection_t *conn)
@@ -185,12 +202,12 @@ int main(void)
       }
 
       /* Init WDs */
-      if (init_wd() < 0) {
+      if (!init_wd()) {
               fprintf(stderr, "Kicker: failed to init WDs, exiting...\n");
               return EXIT_FAILURE;
       }
 
-      while (1) {
+      while (true) {
               FD_ZERO(&rfds);
               FD_SET(dsme_conn->fd, &rfds);
               dsmemsg_generic_t *msg;
@@ -209,9 +226,16 @@ int main(void)
                     {
 
                         if (wd_enabled) {
-                            /* Kick WD */
-                            if (write(wd_fd, "*\n", 2) != 2) {
-                                fprintf(stderr, "Kicker: error kicking watchdog!\n");
+                            int i;
+                            for (i = 0; i < WD_COUNT; ++i) {
+                                if (wd_fd[i] != -1) {
+                                    /* Kick WD */
+                                    if (write(wd_fd[i], "*", 1) != 1) {
+                                        fprintf(
+                                            stderr,
+                                            "Kicker: error kicking watchdog!\n");
+                                    }
+                                }
                             }
                         }
                     }
