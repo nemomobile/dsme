@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/ash
 
 trap 'exit_handler' INT QUIT TERM EXIT ABRT SEGV
 
