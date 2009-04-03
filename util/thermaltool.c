@@ -36,6 +36,7 @@ static bool print_thermal_cal_flags(struct cal* cal)
   /* TODO: use the right block name when it becomes available */
   if (cal_read_block(cal, "r&d_mode", &p, &len, CAL_FLAG_USER) == 0 && len > 1) {
       printf("%s", (char*)p);
+      free(p);
       done = true;
   }
 
