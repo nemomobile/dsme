@@ -56,8 +56,8 @@ typedef struct wd_t {
 } wd_t;
 
 static const wd_t wd[] = {
-    { "/dev/watchdog",    0 },
-    { "/dev/twl4030_wdt", 0 }
+    { "/dev/watchdog",    14 }, /* set the omap wd timeout to 14 seconds */
+    { "/dev/twl4030_wdt",  0 }  /* use the default timeout for twl wd */
 };
 #define WD_COUNT (sizeof(wd) / sizeof(wd[0]))
 static int wd_fd[WD_COUNT];
