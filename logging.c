@@ -236,6 +236,7 @@ int dsme_log_open(log_method method, int verbosity, int usetime,
 	switch (method) {
 		case LOG_METHOD_NONE:
 			dsme_log_routine = log_to_null;
+			break;
 		case LOG_METHOD_STI: {
 								 struct sockaddr_nl snl;
 								 int ret;
