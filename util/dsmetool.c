@@ -166,8 +166,8 @@ static int get_version(void)
 }
 
 static int send_process_start_request(const char*       command,
-				      process_actions_t action,
-				      int               maxcount,
+                                      process_actions_t action,
+                                      int               maxcount,
                                       int               maxperiod,
                                       uid_t             uid,
                                       gid_t             gid,
@@ -209,7 +209,10 @@ static int send_process_start_request(const char*       command,
 
       /* printf("PID=%d, startval=%d\n", retmsg->pid, retmsg->return_value); */
 
-      return retmsg->status;
+      ret = retmsg->status;
+      free(retmsg);
+
+      return ret;
   }
 }
 
