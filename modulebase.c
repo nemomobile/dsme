@@ -480,39 +480,44 @@ static int handle_message(endpoint_t*              from,
 }
 
 
-int unload_module(module_t* module)
+bool unload_module(module_t* module)
 {
-    GSList*           node;
-    module_fini_fn_t* finifunc;
+    bool    unloaded = false;
+    GSList* node;
 
-    node = g_slist_find(modules, module);
-    if (node == 0) return -1;
+    if (module && (node = g_slist_find(modules, module))) {
+        if (node == 0) return -1;
 
-    remove_msghandlers(module);
+        remove_msghandlers(module);
 
-    if (module->handle) {
-        /* Call module_fini() -function if it exists */
-        currently_handling_module = module;
-        finifunc = (module_fini_fn_t *)dlsym(module->handle, "module_fini");
-	if (finifunc) {
-	    finifunc();
+        if (module->handle) {
+            /* Call module_fini() function if it exists */
+            module_fini_fn_t* finifunc =
+                (module_fini_fn_t *)dlsym(module->handle, "module_fini");
+
+            if (finifunc) {
+                currently_handling_module = module;
+                finifunc();
+                currently_handling_module = 0;
+            }
+
+            dlclose(module->handle);
         }
-        currently_handling_module = 0;
 
-	dlclose(module->handle);
+        if (module->name) {
+            free(module->name);
+            module->name = NULL;
+        }
+
+        free(module);
+        module = NULL;
+
+        modules = g_slist_delete_link(modules, node);
+
+        unloaded = true;
     }
 
-	if (module->name) {
-		free(module->name); 
-		module->name = NULL;
-	}
-    if (module) {
-		free(module);
-		module = NULL;
-	}
-    modules = g_slist_delete_link(modules, node);
-
-    return 0;
+    return unloaded;
 }
 
 

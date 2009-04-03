@@ -72,9 +72,9 @@ module_t* load_module(const char* filename, int priority);
    and called before module is unloaded.
 
    @param module  Module handle returned by call to load_module.
-   @return On success, 0 is returned. On error, non-0 value is returned.
+   @return On success, true; on error false.
 */
-int unload_module(module_t* module);
+bool unload_module(module_t* module);
 
 /**
    Passes messages in queue to message handlers.

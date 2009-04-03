@@ -260,7 +260,7 @@ static module_t* load_module_under_test(const char* path)
 static void unload_module_under_test(module_t* module)
 {
   fprintf(stderr, "\n[UNLOADING MODULE]\n");
-  if (unload_module(module) != 0) {
+  if (!unload_module(module)) {
       fatal("unload_module() failed");
   }
 }
