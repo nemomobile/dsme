@@ -1,3 +1,10 @@
+dsme (0.60.5) unstable; urgency=low
+
+  * Fixes: NB#102069 - kick both omap and twl wd's
+  * Fix a bunch of Coverity findings
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Fri, 03 Apr 2009 15:22:03 +0000
+
 dsme (0.60.4) unstable; urgency=low
 
   * Add /usr/sbin/dsmetool-session
