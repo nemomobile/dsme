@@ -62,11 +62,12 @@ dsmesock_connection_t* dsmesock_connect(void)
           (ret = dsmesock_init(fd)) == 0)
       {
         close(fd);
+        fd = -1;
       }
 
   }
 
-  if (fd) {
+  if (fd != -1) {
     struct linger linger;
 
     linger.l_onoff  = 1;
