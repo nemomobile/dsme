@@ -340,11 +340,14 @@ static bool filter_handle_message(Filter* filter, DBusMessage* msg)
     DBusError error;
 
     dbus_error_init(&error);
-    dbus_set_error_from_message(&error, msg);
-    dsme_log(LOG_DEBUG,
-             "D-Bus: %s: %s",
-             dbus_message_get_error_name(msg),
-             error.message);
+    if (dbus_set_error_from_message(&error, msg)) {
+        dsme_log(LOG_DEBUG,
+                 "D-Bus: %s: %s",
+                 dbus_message_get_error_name(msg),
+                 error.message);
+    } else {
+        dsme_log(LOG_DEBUG, "D-Bus: could not get error message");
+    }
     dbus_error_free(&error);
   }
   break;
