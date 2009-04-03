@@ -79,7 +79,7 @@ typedef struct {
 
 static int add_msghandlers(module_t* module);
 
-static int remove_msghandlers(module_t* module);
+static void remove_msghandlers(module_t* module);
 
 /** 
    Comparison function; matches messages with handlers by message type.
@@ -228,30 +228,28 @@ static int add_msghandlers(module_t* module)
 }
 
 
-/** 
+/**
    This function is called when some module is unloaded.
    This removes all registered message callbacks of gimes module.
 
    @param module Module whose callbacks will be removed
-   @return 0
 */
-static int remove_msghandlers(module_t* module)
+static void remove_msghandlers(module_t* module)
 {
-  GSList* node;
-  GSList* next;
+    GSList* node;
+    GSList* next;
 
-  for (node = callbacks; node != 0; node = next) {
-    next = g_slist_next(node);
-    if (((msg_handler_info_t *)(node->data))->owner == module) {
-      if (node->data) {
-        free(node->data);
-	node->data = NULL;
-      }
-      callbacks = g_slist_delete_link(callbacks, node);
+    for (node = callbacks; node != 0; node = next) {
+        next = g_slist_next(node);
+        if (node->data &&
+            ((msg_handler_info_t *)(node->data))->owner == module)
+        {
+            free(node->data);
+            node->data = NULL;
+
+            callbacks = g_slist_delete_link(callbacks, node);
+        }
     }
-  }
-  
-  return 0;
 }
 
 
