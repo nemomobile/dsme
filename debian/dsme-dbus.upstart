@@ -1,0 +1,11 @@
+description "Connect dsme to dbus"
+author "Riku Voipio"
+
+start on starting hal
+
+console output
+
+script
+        /usr/sbin/waitdbus system
+        /usr/sbin/dsmetool --start-dbus
+end script
