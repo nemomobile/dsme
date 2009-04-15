@@ -145,7 +145,8 @@ static gboolean accept_client(GIOChannel*  source,
 
   optlen = sizeof(newconn->ucred);
   if(getsockopt(newfd, SOL_SOCKET, SO_PEERCRED,
-                &newconn->ucred, &optlen) == -1) {
+                &newconn->ucred, &optlen) == -1)
+  {
     /* if that fails, fill some bogus values */
     newconn->ucred.pid =  0;
     newconn->ucred.uid = -1;

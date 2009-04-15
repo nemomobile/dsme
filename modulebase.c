@@ -64,6 +64,7 @@ typedef struct {
 struct endpoint_t {
     const module_t*        module;
     dsmesock_connection_t* conn;
+    struct ucred           ucred; // only valid when conn != 0
 };
 
 
@@ -120,6 +121,12 @@ static int handle_message(endpoint_t*              from,
 static GSList*     modules       = 0;
 static GSList*     callbacks     = 0;
 static GSList*     message_queue = 0;
+
+static const struct ucred bogus_ucred = {
+    .pid =  0,
+    .uid = -1,
+    .gid = -1
+};
 
 
 static int msg_comparator(gconstpointer a, gconstpointer b)
@@ -294,7 +301,8 @@ void broadcast_internally(const void* msg)
 {
   endpoint_t from = {
     .module = currently_handling_module,
-    .conn   = 0
+    .conn   = 0,
+    .ucred  = bogus_ucred
   };
 
   /* use 0 as recipient for broadcasting */
@@ -306,8 +314,15 @@ void broadcast_internally_from_socket(const void*            msg,
 {
   endpoint_t from = {
     .module = 0,
-    .conn   = conn
+    .conn   = conn,
   };
+
+  const struct ucred* ucred = dsmesock_getucred(conn);
+  if (ucred) {
+      from.ucred = *ucred;
+  } else {
+      from.ucred = bogus_ucred;
+  }
 
   /* use 0 as recipient for broadcasting */
   queue_message(&from, 0, msg, 0, 0);
@@ -317,7 +332,8 @@ void broadcast_with_extra(const void* msg, size_t extra_size, const void* extra)
 {
   endpoint_t from = {
     .module = currently_handling_module,
-    .conn   = 0
+    .conn   = 0,
+    .ucred  = bogus_ucred
   };
 
   queue_message(&from, 0, msg, extra_size, extra);
@@ -336,7 +352,8 @@ static void queue_for_module_with_extra(const module_t* recipient,
 {
   endpoint_t from = {
     .module = currently_handling_module,
-    .conn   = 0
+    .conn   = 0,
+    .ucred  = bogus_ucred
   };
 
   queue_message(&from, recipient, msg, extra_size, extra);
@@ -380,16 +397,11 @@ const struct ucred* endpoint_ucred(endpoint_t* sender)
 
       u = &module_ucred;
     } else if (sender->conn) {
-      u = dsmesock_getucred(sender->conn);
+      u = &sender->ucred;
     }
   }
 
   if (!u) {
-    static const struct ucred bogus_ucred = {
-        .pid =  0,
-        .uid = -1,
-        .gid = -1
-    };
     u = &bogus_ucred;
   }
 

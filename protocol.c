@@ -123,7 +123,8 @@ void* dsmesock_receive(dsmesock_connection_t* conn)
 
   optlen = sizeof(conn->ucred);
   if(getsockopt(conn->fd, SOL_SOCKET, SO_PEERCRED,
-                &conn->ucred, &optlen) == -1) {
+                &conn->ucred, &optlen) == -1)
+  {
       /* that fails, fill some bogus values */
       conn->ucred.pid = 0;
       conn->ucred.uid = -1;
@@ -308,7 +309,9 @@ const struct ucred* dsmesock_getucred(dsmesock_connection_t* conn)
     GSList* node;
 
     node = g_slist_find(connections, conn);
-    if (node != 0) return &conn->ucred;
+    if (node != 0) {
+        return &conn->ucred;
+    }
 
     return 0;
 }

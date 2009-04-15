@@ -529,9 +529,12 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_STOP, client, msg)
          And restore original EUID.
          */
       oldeuid = geteuid();
-      seteuid(ucred->uid);
+      if (seteuid(ucred->uid) == -1) {
+          dsme_log(LOG_ERR, "seteuid(%d): %s", ucred->uid, strerror(errno));
+      }
+
       if ((ucred->uid != 0) && (geteuid() == 0)) {
-          dsme_log(LOG_ERR, "Someone tried to hack");
+          dsme_log(LOG_ERR, "Someone tried to hack? (uid: %d)", ucred->uid);
       } else {
           if (kill(proc->pid, msg->signal) == -1) {
               dsme_log(LOG_ERR, 
