@@ -22,6 +22,10 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "dsme/protocol.h"
+#include "dsme/messages.h"
+#include "../modules/state.h"
+
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -33,10 +37,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
-
-#include "dsme/messages.h"
-#include "dsme/protocol.h"
-#include "../modules/state.h"
 
 void usage(const char *name);
 void send_shutdown_req(bool battlow);

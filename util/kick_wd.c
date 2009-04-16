@@ -22,14 +22,14 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "dsme/protocol.h"
+#include "../modules/hwwd.h"
+
 #include <stdlib.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <stdio.h>
 #include <string.h>
-
-#include "dsme/protocol.h"
-#include "../modules/hwwd.h"
 
 void usage(const char *name);
 int send_kick_wd(void);

@@ -23,6 +23,10 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "dsme/protocol.h"
+#include "../modules/lifeguard.h"
+#include "../modules/dbusproxy.h"
+
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -37,10 +41,6 @@
 
 #include <pwd.h>
 #include <grp.h>
-
-#include "../modules/lifeguard.h"
-#include "../modules/dbusproxy.h"
-#include "dsme/protocol.h"
 
 #define STRINGIFY(x)  STRINGIFY2(x)
 #define STRINGIFY2(x) #x

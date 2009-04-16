@@ -22,6 +22,9 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "../modules/state.h"
+#include "dsme/protocol.h"
+
 #include <getopt.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -29,9 +32,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "../modules/state.h"
-#include "dsme/protocol.h"
 
 void usage(const char* name);
 

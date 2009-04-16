@@ -22,6 +22,10 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "../modules/state.h"
+#include "dsme/protocol.h"
+#include "dsme/messages.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -29,10 +33,6 @@
 #include <sys/types.h>
 #include <sys/select.h>
 #include <sys/time.h>
-
-#include <dsme/protocol.h>
-#include <dsme/messages.h>
-#include "../modules/state.h"
 
 #define DSME_STATE_TIMEOUT 40
 

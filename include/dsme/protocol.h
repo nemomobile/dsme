@@ -28,6 +28,14 @@
 #ifndef DSME_PROTOCOL_H
 #define DSME_PROTOCOL_H
 
+/*
+ * some glibc versions seems to mistakenly define ucred behind __USE_GNU;
+ * work around by #defining _GNU_SOURCE
+ */
+#ifndef __cplusplus
+#define _GNU_SOURCE
+#endif
+
 #include <sys/socket.h>
 #include <sys/un.h>
 

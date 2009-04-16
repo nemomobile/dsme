@@ -175,13 +175,6 @@ void signal_handler(int sig)
       break;
     case SIGINT:
     case SIGTERM:
-      dsme_log(LOG_INFO, "Stopping daemon");
-      if (remove(PID_FILE) < 0) {
-          dsme_log(LOG_ERR, "Couldn't remove lockfile");
-      }
-
-      // TODO: doing shutdowns is probably not safe in a signal handler:
-      dsmesock_shutdown();
       dsme_main_loop_quit();
       break;
   }
@@ -364,7 +357,15 @@ int main(int argc, char *argv[])
   /* set running directory */
   chdir("/");
 
+  dsme_log(LOG_DEBUG, "Entering main loop");
   dsme_main_loop_run(process_message_queue);
+  dsme_log(LOG_DEBUG, "Exiting main loop");
+
+  if (remove(PID_FILE) < 0) {
+      dsme_log(LOG_ERR, "Couldn't remove lockfile");
+  }
+
+  dsmesock_shutdown();
 
   modulebase_shutdown();
 

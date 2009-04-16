@@ -23,6 +23,8 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "dsme/protocol.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -30,8 +32,6 @@
 #include <sys/types.h>
 #include <sys/select.h>
 #include <sys/time.h>
-
-#include "dsme/protocol.h"
 
 #define DSME_START_TIMEOUT 5
 

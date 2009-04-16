@@ -22,8 +22,8 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dsme/dsmesock.h"
 #include "dsme/protocol.h"
+#include "dsme/dsmesock.h"
 #include "dsme/messages.h"
 #include "dsme/modulebase.h"
 #include "dsme/modules.h"

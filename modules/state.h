@@ -26,6 +26,10 @@
 #ifndef DSME_STATE_H
 #define DSME_STATE_H
 
+#ifndef __cplusplus
+#define _GNU_SOURCE
+#endif
+
 #include "dsme/messages.h"
 #include <stdbool.h>
 

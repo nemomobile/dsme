@@ -23,6 +23,10 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef __cplusplus
+#define _GNU_SOURCE
+#endif
+
 #include "dsme/modulebase.h"
 #include "dsme/messages.h"
 #include "dsme/protocol.h"
