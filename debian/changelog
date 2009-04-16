@@ -1,9 +1,10 @@
 dsme (0.60.5) unstable; urgency=low
 
   * Fixes: NB#102069 - kick both omap and twl wd's
+  * Fixes: NB#109854 - keep ucred even after client has disconnected
   * Fix a bunch of Coverity findings
 
- -- Semi Malinen <semi.malinen@nokia.com>  Fri, 03 Apr 2009 15:22:03 +0000
+ -- Semi Malinen <semi.malinen@nokia.com>  Thu, 16 Apr 2009 16:08:03 +0000
 
 dsme (0.60.4) unstable; urgency=low
 
