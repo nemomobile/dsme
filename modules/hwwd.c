@@ -105,9 +105,9 @@ static void start_kicking_now(void)
         (void)hwwd_kick_fn(NULL);
 
 	/* start kicking interval */
-	hwwd_kick_timer = dsme_create_timer(DSME_WD_PERIOD,
-                                            hwwd_kick_fn,
-			                    NULL);
+        hwwd_kick_timer = dsme_create_timer_high_priority(DSME_WD_PERIOD,
+                                                          hwwd_kick_fn,
+                                                          NULL);
 	if (!hwwd_kick_timer) {
 		dsme_log(LOG_CRIT, "Unable to create a timer for WD kicking.., expect reset..");
 	}

@@ -35,6 +35,14 @@ dsme_timer_t dsme_create_timer(unsigned               seconds,
 }
 
 
+dsme_timer_t dsme_create_timer_high_priority(unsigned               seconds,
+                                             dsme_timer_callback_t* callback,
+                                             void*                  data)
+{
+  return g_timeout_add_full(G_PRIORITY_HIGH, 1000*seconds, callback, data, 0);
+}
+
+
 void dsme_destroy_timer(dsme_timer_t timer)
 {
   g_source_remove(timer); // TODO: or g_source_destroy()?

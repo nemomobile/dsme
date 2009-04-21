@@ -47,6 +47,10 @@ dsme_timer_t dsme_create_timer(unsigned               seconds,
                                dsme_timer_callback_t* callback,
                                void*                  data);
 
+dsme_timer_t dsme_create_timer_high_priority(unsigned               seconds,
+                                             dsme_timer_callback_t* callback,
+                                             void*                  data);
+
 
 /**
    Deactivates and destroys an existing timer.
