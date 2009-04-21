@@ -1,3 +1,9 @@
+dsme (0.60.6) unstable; urgency=low
+
+  * Fixes: NB#102069 - use a high reloution high priority timer to kick hwwd's
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Tue, 21 Apr 2009 10:23:33 +0000
+
 dsme (0.60.5) unstable; urgency=low
 
   * Fixes: NB#102069 - kick both omap and twl wd's
