@@ -57,7 +57,7 @@ typedef struct wd_t {
 
 static const wd_t wd[] = {
     { "/dev/watchdog",    14 }, /* set the omap wd timeout to 14 seconds */
-    { "/dev/twl4030_wdt",  0 }  /* use the default timeout for twl wd */
+    { "/dev/twl4030_wdt", 30 }  /* set the twl wd timeout to 30 seconds */
 };
 #define WD_COUNT (sizeof(wd) / sizeof(wd[0]))
 static int wd_fd[WD_COUNT];
@@ -69,7 +69,7 @@ static sem_t dsme_wd_sem;
 void dsme_wd_kick(void)
 {
     sem_post(&dsme_wd_sem);
-    dsme_log(LOG_DEBUG, "Got a permission to kick watchdog...");
+    dsme_log(LOG_DEBUG, "Got a permission to kick watchdogs...");
 }
 
 static void* dsme_wd_loop(void* param)
@@ -89,9 +89,9 @@ static void* dsme_wd_loop(void* param)
             for (i = 0; i < WD_COUNT; ++i) {
                 if (wd_fd[i] != -1) {
                     if (write(wd_fd[i], "*", 1) != 1) {
-                        dsme_log(LOG_CRIT, "error kicking watchdog!");
+                        dsme_log(LOG_CRIT, "Error kicking WD %s", wd[i].file);
                     } else {
-                        dsme_log(LOG_DEBUG, "WD kicked!");
+                        dsme_log(LOG_DEBUG, "Kicked WD %s", wd[i].file);
                     }
                 }
             }
@@ -109,7 +109,7 @@ static void read_cal_config(void)
 
     ret = cal_read_block(0, "r&d_mode", &vptr, &len, CAL_FLAG_USER);
     if (ret < 0) {
-        dsme_log(LOG_ERR, "Error reading R&D mode flags, watchdog enabled");
+        dsme_log(LOG_ERR, "Error reading R&D mode flags, watchdogs enabled");
         return;
     }
     p = vptr;
@@ -158,15 +158,25 @@ bool dsme_wd_init(void)
         for (i = 0; i < WD_COUNT; ++i) {
             wd_fd[i] = open(wd[i].file, O_RDWR);
             if (wd_fd[i] == -1) {
-                dsme_log(LOG_CRIT, "Error opening watchdog %s", wd[i].file);
+                dsme_log(LOG_CRIT, "Error opening WD %s", wd[i].file);
                 perror(wd[i].file);
-            } else if (wd[i].period != 0) {
-                /* set the wd period */
-                /* ioctl() will overwrite tmp with the time left */
-                int tmp = wd[i].period;
-                if (ioctl(wd_fd[i], WDIOC_SETTIMEOUT, &tmp) != 0) {
-                    dsme_log(LOG_CRIT,
-                             "Error initialising watchdog %s",
+            } else {
+                if (wd[i].period != 0) {
+                    dsme_log(LOG_NOTICE,
+                             "Setting WD period to %d s for %s",
+                             wd[i].period,
+                             wd[i].file);
+                    /* set the wd period */
+                    /* ioctl() will overwrite tmp with the time left */
+                    int tmp = wd[i].period;
+                    if (ioctl(wd_fd[i], WDIOC_SETTIMEOUT, &tmp) != 0) {
+                        dsme_log(LOG_CRIT,
+                                 "Error setting WD period for %s",
+                                 wd[i].file);
+                    }
+                } else {
+                    dsme_log(LOG_NOTICE,
+                             "Keeping default WD period for %s",
                              wd[i].file);
                 }
             }
