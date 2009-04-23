@@ -6,7 +6,7 @@ A_LIBRARIES  := libdsme
 SO_LIBRARIES := libdsme libdsme_dbus_if
 SUBDIRS      := util modules
 
-VERSION := 0.60.6
+VERSION := 0.60.7
 
 #
 # Install files in this directory

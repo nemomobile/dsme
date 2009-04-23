@@ -1,3 +1,9 @@
+dsme (0.60.7) unstable; urgency=low
+
+  * Fixes: NB#102069 - lock all pages to RAM and use SCHED_RR at top priority
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Thu, 23 Apr 2009 09:21:38 +0000
+
 dsme (0.60.6) unstable; urgency=low
 
   * Fixes: NB#102069 - use a high reloution high priority timer to kick hwwd's
@@ -8,6 +14,7 @@ dsme (0.60.5) unstable; urgency=low
 
   * Fixes: NB#102069 - kick both omap and twl wd's
   * Fixes: NB#109854 - keep ucred even after client has disconnected
+  * Fixes: NB#103323 - take over /etc/event.d/dsme-dbus
   * Fix a bunch of Coverity findings
 
  -- Semi Malinen <semi.malinen@nokia.com>  Thu, 16 Apr 2009 16:08:03 +0000
