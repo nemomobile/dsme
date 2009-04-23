@@ -48,7 +48,8 @@
 #include <linux/types.h>
 #include <linux/watchdog.h>
 
-#define IDLE_PRIORITY 0
+#define DSME_WD_PRIORITY  (-20)
+#define DSME_WD_SCHEDULER SCHED_RR
 
 typedef struct wd_t {
     const char* file;   /* pathname of the watchdog device */
@@ -79,7 +80,19 @@ static void* dsme_wd_loop(void* param)
      * implementing threads as different processes. On a different system
      * they could have the same PID of the father that spawned them.
      */
-    setpriority(PRIO_PROCESS, 0, IDLE_PRIORITY);
+    dsme_log(LOG_NOTICE, "setting priority %d", DSME_WD_PRIORITY);
+    if (setpriority(PRIO_PROCESS, 0, DSME_WD_PRIORITY) == -1) {
+        dsme_log(LOG_CRIT, "setpriority(): %s", strerror(errno));
+    }
+
+    dsme_log(LOG_NOTICE, "setting scheduler %d", DSME_WD_SCHEDULER);
+    struct sched_param sch;
+    memset(&sch, 0, sizeof(sch));
+    sch.sched_priority = sched_get_priority_max(DSME_WD_SCHEDULER);
+    if (sched_setscheduler(0, DSME_WD_SCHEDULER, &sch) == -1) {
+        dsme_log(LOG_CRIT, "sched_get_priority_min(): %s", strerror(errno));
+    }
+
 
     while (true) {
         sem_wait(&dsme_wd_sem);

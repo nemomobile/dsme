@@ -43,9 +43,12 @@
 #include "dsme/modules.h"
 #include "dsme/timers.h"
 #include "dsme/logging.h"
+#include <sys/mman.h>
+#include <errno.h>
+#include <string.h>
 
-/* Period for kicking */
-#define DSME_WD_PERIOD 12
+/* Period for kicking; i.e. how often dsme wakes up to kick the watchdogs */
+#define DSME_WD_PERIOD 12 /* seconds */
 
 typedef enum {
   KICKER_TYPE_NONE,
@@ -108,9 +111,17 @@ static void start_kicking_now(void)
         hwwd_kick_timer = dsme_create_timer_high_priority(DSME_WD_PERIOD,
                                                           hwwd_kick_fn,
                                                           NULL);
-	if (!hwwd_kick_timer) {
-		dsme_log(LOG_CRIT, "Unable to create a timer for WD kicking.., expect reset..");
-	}
+        if (!hwwd_kick_timer) {
+            dsme_log(LOG_CRIT, "Unable to create a timer for WD kicking.., expect reset..");
+        }
+
+        static int locked = -1;
+        if (locked == -1) {
+            dsme_log(LOG_NOTICE, "locking current pages to RAM");
+            if ((locked = mlockall(MCL_CURRENT|MCL_FUTURE)) == -1) {
+                dsme_log(LOG_CRIT, "mlockall(): %s", strerror(errno));
+            }
+        }
 }
 
 
