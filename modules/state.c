@@ -206,20 +206,24 @@ static dsme_state_t select_state(void)
       } else if (device_overheated) {
           dsme_log(LOG_CRIT, "Thermal shutdown!");
           state = DSME_STATE_SHUTDOWN;
-      } else if (shutdown_requested) {
-          if (charger_state != CHARGER_DISCONNECTED || alarm_set) {
+      } else if (shutdown_requested || reboot_requested) {
+          /* favor normal shutdown over reboot over actdead */
+          if (shutdown_requested &&
+              charger_state == CHARGER_DISCONNECTED &&
+              !alarm_set)
+          {
+              dsme_log(LOG_CRIT, "Normal shutdown");
+              state = DSME_STATE_SHUTDOWN;
+          } else if (reboot_requested) {
+              dsme_log(LOG_CRIT, "Reboot");
+              state = DSME_STATE_REBOOT;
+          } else{
               dsme_log(LOG_CRIT,
                        "Actdead (charger: %s, alarm: %s)",
                        charger_state == CHARGER_CONNECTED ? "on"  : "off(?)",
                        alarm_set                          ? "set" : "not set");
               state = DSME_STATE_ACTDEAD;
-          } else {
-              dsme_log(LOG_CRIT, "Normal shutdown");
-              state = DSME_STATE_SHUTDOWN;
           }
-      } else if (reboot_requested) {
-          dsme_log(LOG_CRIT, "Reboot");
-          state = DSME_STATE_REBOOT;
       } else {
           state = DSME_STATE_USER;
       }
