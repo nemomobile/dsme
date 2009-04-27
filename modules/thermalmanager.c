@@ -52,6 +52,10 @@ static thermal_object_t* thermal_object_copy(
   const thermal_object_t* thermal_object);
 #endif
 
+#ifdef DSME_THERMAL_LOGGING
+static void log_temperature(int temperature, const thermal_object_t* thermal_object);
+#endif
+
 
 static GSList* thermal_objects = 0;
 
@@ -150,7 +154,9 @@ static void update_thermal_object_status(thermal_object_t* thermal_object)
       temp = temp - 273;
   }
 
+#ifndef DSME_THERMAL_LOGGING
   dsme_log(LOG_DEBUG, "%s temperature: %d", thermal_object->conf->name, temp);
+#endif
 
   /* figure out the new thermal object status based on the temperature */
   if        (temp < thermal_object->conf->state[new_status].min) {
@@ -179,16 +185,27 @@ static void update_thermal_object_status(thermal_object_t* thermal_object)
           send_thermal_indication();
       }
   }
+
+#ifdef DSME_THERMAL_LOGGING
+  log_temperature(temp, thermal_object);
+#endif
 }
 
 static void start_thermal_object_polling_interval(
   thermal_object_t* thermal_object)
 {
+  unsigned interval;
+
+#ifdef DSME_THERMAL_LOGGING
+  interval = 1; // always poll at 1 s interval when logging
+#else
+  interval = thermal_object->conf->state[thermal_object->status].interval;
+#endif
+
   thermal_object->timer =
-      dsme_create_timer(
-          thermal_object->conf->state[thermal_object->status].interval,
-          thermal_object_polling_interval_expired,
-          thermal_object);
+      dsme_create_timer(interval,
+                        thermal_object_polling_interval_expired,
+                        thermal_object);
   if (!thermal_object->timer) {
       dsme_log(LOG_CRIT, "Unable to create a timer for thermal object");
       exit(EXIT_FAILURE);
@@ -298,7 +315,7 @@ void module_fini(void)
 #ifdef DSME_THERMAL_TUNING
 #include <stdio.h>
 
-#define THERMAL_TUNING_CONF_PATH "/etc/dsme/temp_"
+#define DSME_THERMAL_TUNING_CONF_PATH "/etc/dsme/temp_"
 
 static FILE* thermal_tuning_file(const char* thermal_object_name)
 {
@@ -307,10 +324,12 @@ static FILE* thermal_tuning_file(const char* thermal_object_name)
   snprintf(name,
            sizeof(name),
            "%s%s",
-           THERMAL_TUNING_CONF_PATH,
+           DSME_THERMAL_TUNING_CONF_PATH,
            thermal_object_name);
 
+#ifndef DSME_THERMAL_LOGGING
   dsme_log(LOG_INFO, "trying to open %s for thermal tuning values", name);
+#endif
 
   return fopen(name, "r");
 }
@@ -364,10 +383,12 @@ static void thermal_object_try_to_read_config(thermal_object_t* thermal_object)
       }
 
       fclose(f);
+#ifndef DSME_THERMAL_LOGGING
   } else {
       dsme_log(LOG_INFO,
                "no thermal tuning file for %s; no change in thermal values",
                thermal_object->conf->name);
+#endif
   }
 }
 
@@ -392,5 +413,45 @@ static thermal_object_t* thermal_object_copy(
   }
 
   return copy_object;
+}
+#endif
+
+#ifdef DSME_THERMAL_LOGGING
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
+
+#define DSME_THERMAL_LOG_PATH "/var/lib/dsme/thermal.log"
+
+static const char* status_string(THERMAL_STATUS status)
+{
+  switch (status) {
+  case THERMAL_STATUS_NORMAL:  return "NORMAL";
+  case THERMAL_STATUS_WARNING: return "WARNING";
+  case THERMAL_STATUS_ALERT:   return "ALERT";
+  case THERMAL_STATUS_FATAL:   return "FATAL";
+  default:                     return "UNKNOWN";
+  }
+}
+
+static void log_temperature(int temperature, const thermal_object_t* thermal_object)
+{
+  static FILE* log_file = 0;
+
+  if (!log_file) {
+      if (!(log_file = fopen(DSME_THERMAL_LOG_PATH, "a"))) {
+          dsme_log(LOG_ERR,
+                   "Error opening thermal log " DSME_THERMAL_LOG_PATH ": %s",
+                   strerror(errno));
+          return;
+      }
+  }
+
+  fprintf(log_file,
+          "%d %d %s\n",
+          (int)time(0),
+          temperature,
+          status_string(thermal_object->status));
+  fflush(log_file);
 }
 #endif
