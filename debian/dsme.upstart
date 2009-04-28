@@ -7,19 +7,6 @@ stop on starting shutdown
 console output
 
 script
-        THERMALCONFIG=/etc/dsme/temp_surface
-        THERMALTOOL=/usr/sbin/thermaltool
-        rm -f $THERMALCONFIG
-        [ -x $THERMALTOOL ] \
-            && RDFLAGS=$($THERMALTOOL) \
-            && echo $RDFLAGS | grep -q cert-test \
-            && cat > $THERMALCONFIG <<-'EOF'
-		-99, 110, 60
-		110, 115, 60
-		115, 120, 30
-		120, 999, 30
-		EOF
-
         STATE=`getbootstate 2>/dev/null`
         touch /tmp/$STATE
         echo $STATE > /tmp/STATE
