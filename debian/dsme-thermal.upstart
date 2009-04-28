@@ -14,11 +14,12 @@ script
                      /com/nokia/SystemInfo \
                      com.nokia.SystemInfo.GetConfigValue \
                      string:/certs/ccc/pp/thermal-manager-raw"
+        THERMALPATTERN="byte 2"
 
         rm -f $THERMALCONFIG
         if [ -x $THERMALTOOL ] ; then
             if THERMALBITS=$($THERMALTOOL $THERMALARGS) 2> /dev/null ; then
-                if echo $THERMALBITS | grep -q "byte 2" ; then
+                if echo $THERMALBITS | grep -q "$THERMALPATTERN" ; then
                     cat > $THERMALCONFIG <<-'EOF'
 			-99, 110, 60
 			110, 115, 60
