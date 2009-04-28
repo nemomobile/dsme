@@ -447,9 +447,17 @@ static void log_temperature(int temperature, const thermal_object_t* thermal_obj
       }
   }
 
+  int now = time(0);
+  static int start_time = 0;
+
+  if (!start_time) {
+      start_time = now;
+  }
+
   fprintf(log_file,
-          "%d %d %s\n",
-          (int)time(0),
+          "%d %d %d %s\n",
+          now,
+          now - start_time,
           temperature,
           status_string(thermal_object->status));
   fflush(log_file);
