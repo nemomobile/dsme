@@ -1,0 +1,38 @@
+description "Select thermal limits"
+author "Semi Malinen"
+
+start on started sysinfod
+
+console output
+
+script
+        THERMALCONFIG=/etc/dsme/temp_surface
+        THERMALTOOL=/usr/bin/dbus-send
+        THERMALARGS="--system \
+                     --print-reply \
+                     --dest=com.nokia.SystemInfo \
+                     /com/nokia/SystemInfo \
+                     com.nokia.SystemInfo.GetConfigValue \
+                     string:/certs/ccc/pp/thermal-manager-raw"
+
+        rm -f $THERMALCONFIG
+        if [ -x $THERMALTOOL ] ; then
+            if THERMALBITS=$($THERMALTOOL $THERMALARGS) 2> /dev/null ; then
+                if echo $THERMALBITS | grep -q "byte 2" ; then
+                    cat > $THERMALCONFIG <<-'EOF'
+			-99, 110, 60
+			110, 115, 60
+			115, 120, 30
+			120, 999, 30
+			EOF
+                    echo "Using wide thermal limits"
+                else
+                    echo "Using normal thermal limits"
+                fi
+            else
+                echo "No thermal bits; using normal limits"
+            fi
+        else
+            echo "No thermal tool; using normal limits"
+        fi
+end script

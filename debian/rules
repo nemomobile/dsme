@@ -90,6 +90,7 @@ binary-arch: build install
 	dh_installinit -p dsme --name=dsme-dbus --no-start -- start 20 1 2 3 4 5 .
 	dh_installupstart
 	dh_installupstart --name=dsme-dbus
+	dh_installupstart --name=dsme-thermal
 	dh_installman
 	dh_link
 	dh_strip --dbg-package=libdsme0.2.0
