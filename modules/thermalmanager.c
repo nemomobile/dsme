@@ -44,6 +44,10 @@
 #include <stdlib.h>
 
 
+static void receive_temperature_response(thermal_object_t* thermal_object,
+                                         int               temperature);
+static void start_thermal_object_polling_interval(
+  thermal_object_t* thermal_object);
 static int thermal_object_polling_interval_expired(void* object);
 
 #ifdef DSME_THERMAL_TUNING
@@ -126,48 +130,68 @@ static void send_thermal_indication(void)
   }
 }
 
-static void update_thermal_object_status(thermal_object_t* thermal_object)
+static void send_temperature_request(thermal_object_t* thermal_object)
 {
+  if (!thermal_object->request_pending) {
+      dsme_log(LOG_DEBUG,
+               "requesting %s temperature",
+               thermal_object->conf->name);
+      thermal_object->request_pending = true;
+      if (!thermal_object->conf->request_temperature(
+               thermal_object,
+               receive_temperature_response))
+      {
+          thermal_object->request_pending = false;
+          dsme_log(LOG_DEBUG,
+                   "error requesting %s temperature",
+                   thermal_object->conf->name);
+      }
+  } else {
+      dsme_log(LOG_DEBUG,
+               "still waiting for %s temperature",
+               thermal_object->conf->name);
+  }
+}
+
+static void receive_temperature_response(thermal_object_t* thermal_object,
+                                         int               temperature)
+{
+  thermal_object->request_pending = false;
+
   THERMAL_STATUS previous_status = thermal_object->status;
   THERMAL_STATUS new_status      = thermal_object->status;
-  int            temp            = 0;
 
 #ifdef DSME_THERMAL_TUNING
   thermal_object_try_to_read_config(thermal_object);
 #endif
 
-  if (!thermal_object->conf->get_temperature(&temp)) {
-      dsme_log(LOG_CRIT,
-               "error getting %s temperature",
-               thermal_object->conf->name);
-      // TODO: WHAT IS THE SENSIBLE THING TO DO IF A SENSOR FAILS?
-      return;
-  }
-
-  if (temp > 1000) {
+  if (temperature > 1000) {
       /* convert from millidegrees to degrees */
-      temp = temp / 1000;
+      temperature = temperature / 1000;
   }
 
-  if (temp > 250) {
+  if (temperature > 250) {
       /* convert from kelvin to degrees celsius */
-      temp = temp - 273;
+      temperature = temperature - 273;
   }
 
 #ifndef DSME_THERMAL_LOGGING
-  dsme_log(LOG_DEBUG, "%s temperature: %d", thermal_object->conf->name, temp);
+  dsme_log(LOG_DEBUG,
+           "%s temperature: %d",
+           thermal_object->conf->name,
+           temperature);
 #endif
 
   /* figure out the new thermal object status based on the temperature */
-  if        (temp < thermal_object->conf->state[new_status].min) {
+  if        (temperature < thermal_object->conf->state[new_status].min) {
       while (new_status > THERMAL_STATUS_NORMAL &&
-             temp < thermal_object->conf->state[new_status].min)
+             temperature < thermal_object->conf->state[new_status].min)
       {
           --new_status;
       }
-  } else if (temp > thermal_object->conf->state[new_status].max) {
+  } else if (temperature > thermal_object->conf->state[new_status].max) {
       while (new_status < THERMAL_STATUS_FATAL &&
-             temp > thermal_object->conf->state[new_status].max)
+             temperature > thermal_object->conf->state[new_status].max)
       {
           ++new_status;
       }
@@ -175,14 +199,23 @@ static void update_thermal_object_status(thermal_object_t* thermal_object)
   thermal_object->status = new_status;
 
   if (new_status != previous_status) {
-      /* thermal object status has changed; see if it affects thermal status */
+      /* thermal object status has changed*/
 
+      /* see if the new status affects global thermal status */
       THERMAL_STATUS previously_indicated_status = current_status;
       current_status = worst_current_thermal_object_status();
 
       if (current_status != previously_indicated_status) {
-          /* thermal status has changed; send indication */
+          /* global thermal status has changed; send indication */
           send_thermal_indication();
+      }
+
+      /* see if interval has changed */
+      if (thermal_object->conf->state[previous_status].interval !=
+          thermal_object->conf->state[thermal_object->status].interval)
+      {
+          /* new status has a different polling interval; adopt it */
+          start_thermal_object_polling_interval(thermal_object);
       }
   }
 
@@ -202,6 +235,10 @@ static void start_thermal_object_polling_interval(
   interval = thermal_object->conf->state[thermal_object->status].interval;
 #endif
 
+  if (thermal_object->timer) {
+      dsme_destroy_timer(thermal_object->timer);
+  }
+
   thermal_object->timer =
       dsme_create_timer(interval,
                         thermal_object_polling_interval_expired,
@@ -216,25 +253,11 @@ static int thermal_object_polling_interval_expired(void* object)
 {
   thermal_object_t* thermal_object = object;
 
-  THERMAL_STATUS previous_status = thermal_object->status;
-  bool           keep_interval   = true;
+  send_temperature_request(thermal_object);
 
-  update_thermal_object_status(thermal_object);
-
-  if (thermal_object->status != previous_status) {
-      /* thermal object's status has changed; see if interval has changed */
-      if (thermal_object->conf->state[previous_status].interval !=
-          thermal_object->conf->state[thermal_object->status].interval)
-      {
-          /* new status has a different polling interval; adopt it */
-          start_thermal_object_polling_interval(thermal_object);
-
-          keep_interval = false; /* stop the previous interval */
-      }
-  }
-
-  return keep_interval;
+  return true;
 }
+
 
 void dsme_register_thermal_object(thermal_object_t* thermal_object)
 {
@@ -245,7 +268,7 @@ void dsme_register_thermal_object(thermal_object_t* thermal_object)
   thermal_objects = g_slist_append(thermal_objects, thermal_object);
 
   /* start polling the new thermal object */
-  update_thermal_object_status(thermal_object);
+  send_temperature_request(thermal_object);
   start_thermal_object_polling_interval(thermal_object);
 }
 

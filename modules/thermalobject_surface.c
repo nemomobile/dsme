@@ -30,7 +30,8 @@
 #include "dsme/logging.h"
 
 
-static bool get_surface_temperature(int* temperature);
+static bool get_surface_temperature(thermal_object_t*         thermal_object,
+                                    temperature_handler_fn_t* callback);
 
 static thermal_object_configuration_t surface_thermal_conf = {
   "surface",
@@ -47,15 +48,31 @@ static thermal_object_configuration_t surface_thermal_conf = {
 static thermal_object_t surface_thermal_object = {
   &surface_thermal_conf,
   THERMAL_STATUS_NORMAL,
-  0
+  0,
+  false
 };
 
+static temperature_handler_fn_t* handle_temperature;
 
-static bool get_surface_temperature(int* temperature)
+static void report_surface_temperature(void* object, int temperature)
 {
+
   /* This is where the thermal algorithm for surface temperature would go. */
   /* However, at the moment, there is none; we use battery temp directly. */
-  return dsme_get_battery_temperature(temperature);
+
+  if (handle_temperature) {
+      thermal_object_t* thermal_object = object;
+      handle_temperature(thermal_object, temperature);
+  }
+}
+
+static bool get_surface_temperature(thermal_object_t*         thermal_object,
+                                    temperature_handler_fn_t* callback)
+{
+  handle_temperature = callback;
+
+  return dsme_request_battery_temperature(thermal_object,
+                                          report_surface_temperature);
 }
 
 

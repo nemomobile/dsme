@@ -42,17 +42,25 @@ typedef struct thermal_status_configuration_t {
   int interval; /* temperature polling interval */
 } thermal_status_configuration_t;
 
+typedef struct thermal_object_t thermal_object_t;
+
+typedef void (temperature_handler_fn_t)(thermal_object_t* thermal_object,
+                                        int               temperature);
+
 typedef struct thermal_object_configuration_t {
   const char*                    name;
   thermal_status_configuration_t state[THERMAL_STATUS_COUNT];
-  bool                         (*get_temperature)(int* temperature);
+  bool                         (*request_temperature)(
+                                     thermal_object_t*         thermal_object,
+                                     temperature_handler_fn_t* callback);
 } thermal_object_configuration_t;
 
-typedef struct thermal_object_t {
+struct thermal_object_t {
   thermal_object_configuration_t* conf;
   THERMAL_STATUS                  status;
   dsme_timer_t                    timer;
-} thermal_object_t;
+  bool                            request_pending;
+};
 
 
 extern void dsme_register_thermal_object(thermal_object_t* thermal_object);

@@ -26,6 +26,8 @@
 
 #include <stdbool.h>
 
-extern bool dsme_get_battery_temperature(int* temperature);
+extern bool dsme_request_battery_temperature(
+                void* cookie,
+                void (callback)(void* cookie, int temperature));
 
 #endif
