@@ -100,12 +100,12 @@ static void* dsme_wd_loop(void* param)
         if (wd_enabled) {
             int i;
             for (i = 0; i < WD_COUNT; ++i) {
-                if (wd_fd[i] != -1) {
-                    if (write(wd_fd[i], "*", 1) != 1) {
-                        dsme_log(LOG_CRIT, "Error kicking WD %s", wd[i].file);
-                    } else {
-                        dsme_log(LOG_DEBUG, "Kicked WD %s", wd[i].file);
-                    }
+                if (wd_fd[i] != -1 && write(wd_fd[i], "*", 1) == 1) {
+                    dsme_log(LOG_DEBUG, "Kicked WD %s", wd[i].file);
+                } else {
+                    dsme_log(LOG_CRIT, "Error kicking WD %s", wd[i].file);
+                    /* must not kick later wd's if an earlier one fails */
+                    break;
                 }
             }
         }
