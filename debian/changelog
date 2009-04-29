@@ -1,3 +1,12 @@
+dsme (0.60.8) unstable; urgency=low
+
+  * Fixes: NB#102069 - poll battery temperature asynchronously
+  * Part of the potential fix for NB#102544: favor reboot over actdead
+  * Add support for logging temperature and thermal status to a file
+  * Add support for widening thermal limits based on product profile bits
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Fri, 24 Apr 2009 09:49:28 +0000
+
 dsme (0.60.7) unstable; urgency=low
 
   * Fixes: NB#102069 - lock all pages to RAM and use SCHED_RR at top priority
