@@ -91,6 +91,9 @@ static void disconnect_bme()
       request_fd = -1;
       dsme_log(LOG_DEBUG, "disconnected from bme");
   }
+
+  /* use temperature -1 to indicate that the request failed */
+  the_callback(the_cookie, -1);
 }
 
 extern bool dsme_request_battery_temperature(
