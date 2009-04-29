@@ -54,7 +54,7 @@ static gboolean read_temperature(void);
 
 
 void*       the_cookie;
-void      (*the_callback)(void* cookie, int temperature);
+void      (*report_temperature)(void* cookie, int temperature);
 
 static int  request_fd = -1;
 static bool got_status = false;
@@ -93,7 +93,7 @@ static void disconnect_bme()
   }
 
   /* use temperature -1 to indicate that the request failed */
-  the_callback(the_cookie, -1);
+  report_temperature(the_cookie, -1);
 }
 
 extern bool dsme_request_battery_temperature(
@@ -102,8 +102,8 @@ extern bool dsme_request_battery_temperature(
 {
   bool request_sent = false;
 
-  the_cookie   = cookie;
-  the_callback = callback;
+  the_cookie         = cookie;
+  report_temperature = callback;
 
   if (request_fd == -1) {
       connect_bme();
@@ -178,7 +178,7 @@ static gboolean read_temperature(void)
       keep_connection = true;
 
       /* report the temperature to the thermal manager */
-      the_callback(the_cookie, resp.temp);
+      report_temperature(the_cookie, resp.temp);
   }
 
   return keep_connection;
