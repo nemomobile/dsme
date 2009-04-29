@@ -54,6 +54,7 @@ alarmtracker.o : C_EXTRA_GENFLAGS := -fPIC
 
 libthermalmanager_C_OBJS := thermalmanager.o
 thermalmanager.o : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags glib-2.0) -DDSME_THERMAL_TUNING #-DDSME_THERMAL_LOGGING
+#libthermalmanager_EXTRA_LDFLAGS := -lrt
 
 ifdef DSME_BMEIPC
 libthermalobject_surface_C_OBJS := thermalobject_surface.o thermalsensor_battery.o

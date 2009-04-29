@@ -227,7 +227,7 @@ static void receive_temperature_response(thermal_object_t* thermal_object,
   }
 
 #ifdef DSME_THERMAL_LOGGING
-  log_temperature(temp, thermal_object);
+  log_temperature(temperature, thermal_object);
 #endif
 }
 
@@ -477,7 +477,10 @@ static void log_temperature(int temperature, const thermal_object_t* thermal_obj
       }
   }
 
-  int now = time(0);
+  struct timespec t;
+  clock_gettime(CLOCK_MONOTONIC, &t);
+
+  int now = t.tv_sec;
   static int start_time = 0;
 
   if (!start_time) {
@@ -486,7 +489,7 @@ static void log_temperature(int temperature, const thermal_object_t* thermal_obj
 
   fprintf(log_file,
           "%d %d %d %s\n",
-          now,
+          (int)time(0),
           now - start_time,
           temperature,
           status_string(thermal_object->status));
