@@ -52,6 +52,7 @@
 #include <grp.h>
 #include <pwd.h>
 #include <stdbool.h>
+#include <sched.h>
 
 
 static void announce_child_exit(GPid pid, gint status, gpointer unused)
