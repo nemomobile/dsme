@@ -115,6 +115,7 @@ static void start_kicking_now(void)
             dsme_log(LOG_CRIT, "Unable to create a timer for WD kicking.., expect reset..");
         }
 
+#if 0 /* TODO: camera daemon does not grok dsme mlockall()'ing */
         static int locked = -1;
         if (locked == -1) {
             dsme_log(LOG_NOTICE, "locking current pages to RAM");
@@ -122,6 +123,7 @@ static void start_kicking_now(void)
                 dsme_log(LOG_CRIT, "mlockall(): %s", strerror(errno));
             }
         }
+#endif
 }
 
 

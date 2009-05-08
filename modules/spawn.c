@@ -177,6 +177,14 @@ static void setup_child(gpointer setup_data)
       DLOG_ERR("failed to set session id");
   }
 
+  /* restore the default scheduler */
+  struct sched_param sch;
+  memset(&sch, 0, sizeof(sch));
+  sch.sched_priority = 0;
+  if (sched_setscheduler(0, SCHED_OTHER, &sch) == -1) {
+      DLOG_ERR("unable to set the scheduler for the spawned process");
+  }
+
   /* set the priority first to zero as dsme runs with -1,
    * then to the requested
    */
