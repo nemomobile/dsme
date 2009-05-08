@@ -1,3 +1,10 @@
+dsme (0.60.10) hardy; urgency=low
+
+  * Temporary fix: do not mlockall() until camerad can cope with it
+  * Restore the default scheduler for children
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Fri, 08 May 2009 11:10:12 +0000
+
 dsme (0.60.9) unstable; urgency=low
 
   * Temporary fix: do not kick hw wd's until glib supports monotonic timeouts
