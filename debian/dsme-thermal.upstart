@@ -16,6 +16,9 @@ script
                      string:/certs/ccc/pp/thermal-manager-raw"
         THERMALPATTERN="byte 2"
 
+# give sysinfod some time to get its D-Bus interface up
+        sleep 3
+
         rm -f $THERMALCONFIG
         if [ -x $THERMALTOOL ] ; then
             if THERMALBITS=$($THERMALTOOL $THERMALARGS) 2> /dev/null ; then
