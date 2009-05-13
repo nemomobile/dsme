@@ -1,4 +1,10 @@
-dsme (0.60.10) hardy; urgency=low
+dsme (0.60.11) unstable; urgency=low
+
+  * Fixes: NB#116394 - give sysinfod some time to get its D-Bus interface up
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Wed, 13 May 2009 05:53:53 +0000
+
+dsme (0.60.10) unstable; urgency=low
 
   * Temporary fix: do not mlockall() until camerad can cope with it
   * Restore the default scheduler for children
@@ -28,7 +34,7 @@ dsme (0.60.7) unstable; urgency=low
 
 dsme (0.60.6) unstable; urgency=low
 
-  * Fixes: NB#102069 - use a high reloution high priority timer to kick hwwd's
+  * Fixes: NB#102069 - use a high resolution high priority timer to kick hwwd's
 
  -- Semi Malinen <semi.malinen@nokia.com>  Tue, 21 Apr 2009 10:23:33 +0000
 
