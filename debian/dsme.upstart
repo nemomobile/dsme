@@ -28,6 +28,7 @@ script
         esac
         export RUNLEVEL=$def_runlevel
         export DSME_INIT=1
+        source /etc/resource_limits.conf
         exec /sbin/dsme -p /usr/lib/dsme/libstartup.so
         #exec /sbin/dsme -l stderr -v 7 -p /usr/lib/dsme/libstartup.so
 end script
