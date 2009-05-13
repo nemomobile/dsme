@@ -90,7 +90,7 @@ void usage(const char* name)
 "                                   for started process\n"
 "  -d --start-dbus                 Start DSME's D-Bus services\n"
 #if 0 // TODO
-"  -e --end-dbus                   End DSME's D-Bus services\n"
+"  -s --stop-dbus                  Stop DSME's D-Bus services\n"
 #endif
 "  -v --version                    Print the versions of DSME and dsmetool\n"
 "  -h --help                       Print usage\n"
@@ -237,7 +237,7 @@ static int send_dbus_service_start_request()
     return EXIT_SUCCESS;
 }
 
-static int send_dbus_service_end_request()
+static int send_dbus_service_stop_request()
 {
     DSM_MSGTYPE_DBUS_DISCONNECT msg =
       DSME_MSG_INIT(DSM_MSGTYPE_DBUS_DISCONNECT);
@@ -265,7 +265,7 @@ int main(int argc, char* argv[])
     enum { NONE, START, STOP } action = NONE;
     const char* program       = "";
     process_actions_t policy  = ONCE;
-    const char* short_options = "n:hr:f:t:o:c:T:k:S:u:g:U:G:dev";
+    const char* short_options = "n:hr:f:t:o:c:T:k:S:u:g:U:G:dsv";
     const struct option long_options[] = {
         {"help",               0, NULL, 'h'},
         {"start-reset",        1, NULL, 'r'},
@@ -344,8 +344,8 @@ int main(int argc, char* argv[])
             case 'd':
                 return send_dbus_service_start_request();
                 break;
-            case 'e':
-                return send_dbus_service_end_request();
+            case 's':
+                return send_dbus_service_stop_request();
                 break;
             case 'v':
                 return get_version();
