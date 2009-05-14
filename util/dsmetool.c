@@ -282,7 +282,7 @@ int main(int argc, char* argv[])
         {"group",              1, NULL, 'G'},
         {"nice",               1, NULL, 'n'},
         {"start-dbus",         0, NULL, 'd'},
-        {"stop-dbus",          0, NULL, 'e'},
+        {"stop-dbus",          0, NULL, 's'},
         {"version",            0, NULL, 'v'},
         {0, 0, 0, 0}
     };
