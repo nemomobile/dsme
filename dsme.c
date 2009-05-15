@@ -168,7 +168,9 @@ void signal_handler(int sig)
 {
   switch (sig) {
     case SIGPIPE:
+#if 0 /* must not syslog within a signal handler */
       dsme_log(LOG_ERR, "SIGPIPE received, some client exited before noticed?");
+#endif
       break;
     case SIGHUP:
       /*      DLOG_NOTICE, "Restarting..."); */
