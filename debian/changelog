@@ -1,3 +1,14 @@
+dsme (0.60.12) unstable; urgency=low
+
+  * Part of the fix for NB#102069: re-enable hw wd kicking
+  * Fixes: NB#100976 - do not write alarms to file if unchanged
+  * Fixes: NB#115416 - write fewer lines to console from lifeguard
+  * Part of the fix for NB#102544: add dsmetool flag -b to request reboot
+  * Potential fix for NB#116253: do not syslog in signal handler
+  * Fixes: NB#111827 - dsmetool now reports if -k fails
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Fri, 15 May 2009 07:16:05 +0000
+
 dsme (0.60.11) unstable; urgency=low
 
   * Fixes: NB#116394 - give sysinfod some time to get its D-Bus interface up
