@@ -381,7 +381,7 @@ static gint compare_commands(gconstpointer proc, gconstpointer command)
 DSME_HANDLER(DSM_MSGTYPE_PROCESS_START, client, msg)
 {
   DSM_MSGTYPE_PROCESS_STARTSTATUS returnmsg =
-    DSME_MSG_INIT(DSM_MSGTYPE_PROCESS_STARTSTATUS);
+      DSME_MSG_INIT(DSM_MSGTYPE_PROCESS_STARTSTATUS);
   dsme_process_t*     process = NULL;
   const struct ucred* ucred;
   int                 error   = -1;
@@ -492,6 +492,11 @@ cleanup:
 
 DSME_HANDLER(DSM_MSGTYPE_PROCESS_STOP, client, msg)
 {
+  DSM_MSGTYPE_PROCESS_STOPSTATUS returnmsg =
+      DSME_MSG_INIT(DSM_MSGTYPE_PROCESS_STOPSTATUS);
+  returnmsg.killed = false;
+  const char* info = "not found, not root or kill failed";
+
   GSList*             ptr;
   const struct ucred* ucred;
   const char*         command;
@@ -499,7 +504,8 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_STOP, client, msg)
 
   ucred = endpoint_ucred(client);
   if (!ucred) {
-      return;
+      info = "failed to get ucred";
+      goto cleanup;
   }
 
   /* make sure that command is null terminated */
@@ -509,7 +515,8 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_STOP, client, msg)
       command_size == 0 ||
       command[command_size-1] != '\0')
   {
-      return;
+      info = "non-terminated command string";
+      goto cleanup;
   }
   dsme_log(LOG_DEBUG, "request to stop process (%s)", command);
 
@@ -542,17 +549,22 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_STOP, client, msg)
                        proc->pid, msg->signal,
                        strerror(errno));
           } else {
+              proc->action = ONCE;
+              returnmsg.killed = true;
+              info             = "killed";
               dsme_log(LOG_DEBUG,
                        "process %d killed with signal %d",
                        proc->pid,
                        msg->signal);
-              proc->action = ONCE;
           }
       }
       seteuid(oldeuid);
 
       ptr = g_slist_next(ptr);
   }
+
+cleanup:
+  endpoint_send_with_extra(client, &returnmsg, strlen(info) + 1, info);
 }
 
 static void send_reset_request()

@@ -29,6 +29,7 @@
 #include "../modules/state.h"
 
 #include <stdlib.h>
+#include <stdbool.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/fcntl.h>
@@ -149,7 +150,7 @@ static int get_version(void)
 
     send_to_dsme(&req_msg);
 
-    while (1) {
+    while (true) {
         FD_ZERO(&rfds);
         FD_SET(conn->fd, &rfds);
         struct timeval tv;
@@ -199,7 +200,7 @@ static int send_process_start_request(const char*       command,
                                       int               nice)
 {
     DSM_MSGTYPE_PROCESS_START        msg =
-      DSME_MSG_INIT(DSM_MSGTYPE_PROCESS_START);
+        DSME_MSG_INIT(DSM_MSGTYPE_PROCESS_START);
     DSM_MSGTYPE_PROCESS_STARTSTATUS* retmsg;
     fd_set rfds;
     int    ret;
@@ -212,7 +213,7 @@ static int send_process_start_request(const char*       command,
     msg.nice           = nice;
     send_to_dsme_with_extra(&msg, strlen(command) + 1, command);
 
-    while (1) {
+    while (true) {
         FD_ZERO(&rfds);
         FD_SET(conn->fd, &rfds);
 
@@ -224,8 +225,7 @@ static int send_process_start_request(const char*       command,
 
         retmsg = (DSM_MSGTYPE_PROCESS_STARTSTATUS*)dsmesock_receive(conn);
 
-        if (DSMEMSG_CAST(DSM_MSGTYPE_PROCESS_STARTSTATUS, retmsg) == 0)
-        {
+        if (DSMEMSG_CAST(DSM_MSGTYPE_PROCESS_STARTSTATUS, retmsg) == 0) {
             printf("Received invalid message (type: %i)\n",
                    dsmemsg_id((dsmemsg_generic_t*)retmsg));
             free(retmsg);
@@ -243,12 +243,46 @@ static int send_process_start_request(const char*       command,
 
 static int send_process_stop_request(const char* command, int signal)
 {
-    DSM_MSGTYPE_PROCESS_STOP msg = DSME_MSG_INIT(DSM_MSGTYPE_PROCESS_STOP);
+    DSM_MSGTYPE_PROCESS_STOP        msg =
+        DSME_MSG_INIT(DSM_MSGTYPE_PROCESS_STOP);
+    DSM_MSGTYPE_PROCESS_STOPSTATUS* retmsg;
+    fd_set rfds;
+    int    ret;
 
     msg.signal = signal;
     send_to_dsme_with_extra(&msg, strlen(command) + 1, command);
 
-    return EXIT_SUCCESS;
+    while (true) {
+        FD_ZERO(&rfds);
+        FD_SET(conn->fd, &rfds);
+
+        ret = select(conn->fd+1, &rfds, NULL, NULL, NULL);
+        if (ret == -1) {
+            printf("Error in select()\n");
+            return -1;
+        }
+
+        retmsg = (DSM_MSGTYPE_PROCESS_STOPSTATUS*)dsmesock_receive(conn);
+
+        if (DSMEMSG_CAST(DSM_MSGTYPE_PROCESS_STOPSTATUS, retmsg) == 0) {
+            printf("Received invalid message (type: %i)\n",
+                   dsmemsg_id((dsmemsg_generic_t*)retmsg));
+            free(retmsg);
+            continue;
+        }
+
+        if (retmsg->killed) {
+            ret = EXIT_SUCCESS;
+        } else {
+            printf("Process not killed: %s\n",
+                   (const char*)DSMEMSG_EXTRA(retmsg));
+            ret = EXIT_FAILURE;
+        }
+
+        free(retmsg);
+
+        return ret;
+    }
 }
 
 static int send_dbus_service_start_request()
