@@ -60,11 +60,8 @@ static const wd_t wd[] = {
     { "/dev/twl4030_wdt", 30 }, /* set the twl wd timeout to 30 seconds */
     { "/dev/watchdog",    14 }  /* set the omap wd timeout to 14 seconds */
 };
-#if 0 /* disable hardware watchdogs until glib supports monotonic timeouts */
+
 #define WD_COUNT (sizeof(wd) / sizeof(wd[0]))
-#else
-#define WD_COUNT 0
-#endif
 static int wd_fd[WD_COUNT];
 
 static bool  wd_enabled = true;
