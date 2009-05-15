@@ -591,9 +591,6 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_EXITED, client, msg)
 {
   GSList* ptr;
   GSList* next;
-  int     signalled = 0;
-  int     ret_value;
-  int     signal;
 
   for (ptr = processes; ptr; ptr = next) {
       dsme_process_t *proc;
@@ -602,31 +599,35 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_EXITED, client, msg)
       proc = (dsme_process_t *)ptr->data;
 
       if (proc->pid == msg->pid) {
-          int status = msg->status;
+          const char* reason;
+          int         reason_value;
 
+          int status = msg->status;
           if (WIFSIGNALED(status)) {
-              signalled = 1;
-              signal = WTERMSIG(status);
-              dsme_log(LOG_CRIT,
-                       "process '%s' with pid %d exited with signal: %d", 
-                       proc->command,
-                       proc->pid,
-                       signal);
+              reason       = "signal";
+              reason_value = WTERMSIG(status);
           } else if (WIFEXITED(status)) {
-              ret_value = WEXITSTATUS(status);
-              dsme_log(LOG_CRIT,
-                       "process '%s' with pid %d exited with return value: %d", 
-                       proc->command,
-                       proc->pid,
-                       ret_value);
+              reason       = "return value";
+              reason_value = WEXITSTATUS(status);
+          } else {
+              reason       = "status";
+              reason_value = status;
           }
 
           switch (proc->action) {
-            case ONCE: 
+
+            case ONCE:
               /* If exited process was type ONCE, dump it */
+              dsme_log(LOG_CRIT,
+                       "Process '%s' with pid %d exited with %s %d",
+                       proc->command,
+                       proc->pid,
+                       reason,
+                       reason_value);
               deleteprocess(proc);
               break;
-            case RESPAWN:
+
+            case RESPAWN: /* FALLTHRU */
             case RESPAWN_FAIL:
               if (proc->first_restart_time +
                   proc->restart_period > time(NULL))
@@ -646,8 +647,11 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_EXITED, client, msg)
                   if (proc->uid == 0 || g_slist_find(uids, (void*)proc->uid)) {
                       if (proc->action == RESPAWN) {
                           dsme_log(LOG_CRIT,
-                                   "'%s' spawning too fast -> reset",
-                                   proc->command);
+                                   "Process '%s' with pid %d exited with %s %d; spawning too fast -> reset",
+                                   proc->command,
+                                   proc->pid,
+                                   reason,
+                                   reason_value);
                           update_reset_count(proc->command);
                           send_lifeguard_notice(DSM_LGNOTICE_RESET,
                                                 proc->command);
@@ -655,58 +659,82 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_EXITED, client, msg)
                       } else {
                           /* RESPAWN_FAIL */
                           dsme_log(LOG_CRIT,
-                                   "'%s' spawning too fast, stop trying", 
-                                   proc->command);
+                                   "Process '%s' with pid %d exited with %s %d; spawning too fast, stop trying",
+                                   proc->command,
+                                   proc->pid,
+                                   reason,
+                                   reason_value);
                           send_lifeguard_notice(DSM_LGNOTICE_PROCESS_FAILED,
                                                 proc->command);
                       }
-                    } else {
-                        dsme_log(LOG_ERR, 
-                                 "Non-root process '%s' spawning too fast -> remove it",
-                                 proc->command);
-                        send_lifeguard_notice(DSM_LGNOTICE_PROCESS_FAILED,
-                                              proc->command);
-                    }
+                  } else {
+                      dsme_log(LOG_CRIT,
+                               "Non-root process '%s' with pid %d exited with %s %d; spawning too fast, remove it",
+                               proc->command,
+                               proc->pid,
+                               reason,
+                               reason_value);
+                      send_lifeguard_notice(DSM_LGNOTICE_PROCESS_FAILED,
+                                            proc->command);
+                  }
                   /* delete the process since we are no longer restarting it */
                   deleteprocess(proc);
                   return;
               }
 
               /* restart proc */
+              pid_t old_pid = proc->pid;
               proc->pid = spawn_proc(proc->command,
                                      proc->uid,
                                      proc->gid,
                                      proc->nice,
                                      proc->env);
               dsme_log(LOG_CRIT,
-                       "process '%s' exited and restarted with pid %d",
+                       "Process '%s' with pid %d exited with %s %d and restarted with pid %d",
                        proc->command,
+                       old_pid,
+                       reason,
+                       reason_value,
                        proc->pid);
               update_restart_count(proc->command);
               send_lifeguard_notice(DSM_LGNOTICE_PROCESS_RESTART,
                                     proc->command);
               break;
+
             case RESET:
               if (proc->uid == 0 || g_slist_find(uids, (void*)proc->uid)) {
                   dsme_log(LOG_CRIT,
-                           "'%s' exited with RESET policy -> reset",
-                           proc->command);
+                           "Process '%s' with pid %d exited with %s %d; reset due to RESET policy",
+                           proc->command,
+                           proc->pid,
+                           reason,
+                           reason_value);
                   update_reset_count(proc->command);
                   send_lifeguard_notice(DSM_LGNOTICE_RESET, proc->command);
                   send_reset_request(client);
               } else {
-                  dsme_log(LOG_ERR, 
-                           "Non-root process '%s' exited with RESET policy -> Just remove it",
-                           proc->command);
+                  dsme_log(LOG_CRIT,
+                           "Non-root process '%s' with pid %d exited with %s %d; remove it and ignore RESET policy",
+                           proc->command,
+                           proc->pid,
+                           reason,
+                           reason_value);
                   send_lifeguard_notice(DSM_LGNOTICE_PROCESS_FAILED,
                                         proc->command);
               }
               /* delete the process since we are not restarting it anymore */
               deleteprocess(proc);
               break;
+
             default:
               /* Should not be here, but...
                  remove entry if this happens */
+              dsme_log(LOG_CRIT,
+                       "process '%s' with pid %d exited with %s %d",
+                       proc->command,
+                       proc->pid,
+                       reason,
+                       reason_value);
               deleteprocess(proc);
               break;
           }
