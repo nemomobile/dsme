@@ -49,12 +49,15 @@ static time_t active  = 0;       /* # of active alarms */
 static time_t desktop = INT_MAX; /* next desktop alarm */
 static time_t actdead = INT_MAX; /* next actdead alarm */
 
+static bool   alarm_state_file_up_to_date = false;
+
 static dsme_timer_t alarm_state_transition_timer = 0;
 
 
 static void save_alarm_queue_status(void)
 {
-  bool  alarm_queue_status_saved = false;
+  alarm_state_file_up_to_date = false;
+
   FILE* f;
 
   if ((f = fopen(ALARM_STATE_FILE_TMP, "w+")) == 0) {
@@ -76,12 +79,12 @@ static void save_alarm_queue_status(void)
           if (rename(ALARM_STATE_FILE_TMP, ALARM_STATE_FILE) != 0) {
               dsme_log(LOG_DEBUG, "Error writing file %s", ALARM_STATE_FILE);
           } else {
-              alarm_queue_status_saved = true;
+              alarm_state_file_up_to_date = true;
           }
       }
   }
 
-  if (alarm_queue_status_saved) {
+  if (alarm_state_file_up_to_date) {
       dsme_log(LOG_DEBUG,
       "Alarm queue status saved to file %s",
       ALARM_STATE_FILE);
@@ -92,7 +95,8 @@ static void save_alarm_queue_status(void)
 
 static void restore_alarm_queue_status(void)
 {
-  bool  alarm_queue_status_restored = false;
+  alarm_state_file_up_to_date = false;
+
   FILE* f;
 
   if ((f = fopen(ALARM_STATE_FILE, "r")) == 0) {
@@ -101,13 +105,13 @@ static void restore_alarm_queue_status(void)
       if (fscanf(f, "%ld, %ld, %ld", &active, &desktop, &actdead) != 3) {
           dsme_log(LOG_DEBUG, "Error reading file %s", ALARM_STATE_FILE);
       } else {
-          alarm_queue_status_restored = true;
+          alarm_state_file_up_to_date = true;
       }
 
       (void)fclose(f);
   }
 
-  if (alarm_queue_status_restored) {
+  if (alarm_state_file_up_to_date) {
       dsme_log(LOG_DEBUG,
                "Alarm queue status restored: %ld, %ld, %ld",
                active,
@@ -173,16 +177,29 @@ static int set_alarm_state(void* dummy)
 
 static void alarmd_queue_status_ind(const DsmeDbusMessage* ind)
 {
-  active  = dsme_dbus_message_get_int(ind);
-  desktop = dsme_dbus_message_get_int(ind);
-  actdead = dsme_dbus_message_get_int(ind);
+  time_t new_active  = dsme_dbus_message_get_int(ind);
+  time_t new_desktop = dsme_dbus_message_get_int(ind);
+  time_t new_actdead = dsme_dbus_message_get_int(ind);
 #if 0 /* non-booting alarms are not considered */
-  noboot  = dsme_dbus_message_get_int(ind);
+  time_t new_noboot  = dsme_dbus_message_get_int(ind);
 #endif
 
-  dsme_log(LOG_DEBUG, "new alarms: %ld, %ld, %ld", active, desktop, actdead);
+  if (!alarm_state_file_up_to_date ||
+      new_active  != active        ||
+      new_desktop != desktop       ||
+      new_actdead != actdead)
+  {
+      active  = new_active;
+      desktop = new_desktop;
+      actdead = new_actdead;
 
-  save_alarm_queue_status();
+      dsme_log(LOG_DEBUG, "got new alarms: %ld, %ld, %ld", active, desktop, actdead);
+
+      save_alarm_queue_status();
+  } else {
+      dsme_log(LOG_DEBUG, "got old alarms: %ld, %ld, %ld", active, desktop, actdead);
+  }
+
   set_alarm_state(0);
 }
 
