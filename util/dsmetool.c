@@ -26,6 +26,7 @@
 #include "dsme/protocol.h"
 #include "../modules/lifeguard.h"
 #include "../modules/dbusproxy.h"
+#include "../modules/state.h"
 
 #include <stdlib.h>
 #include <sys/types.h>
@@ -92,6 +93,7 @@ void usage(const char* name)
 #if 0 // TODO
 "  -s --stop-dbus                  Stop DSME's D-Bus services\n"
 #endif
+"  -b --reboot                     Reboot the device\n"
 "  -v --version                    Print the versions of DSME and dsmetool\n"
 "  -h --help                       Print usage\n"
 "\n"
@@ -109,6 +111,29 @@ static void connect_to_dsme(void)
     }
 }
 
+static void disconnect_from_dsme(void)
+{
+    dsmesock_close(conn);
+}
+
+static void send_to_dsme(const void* msg)
+{
+    if (dsmesock_send(conn, msg) == -1) {
+        perror("dsmesock_send");
+        exit(EXIT_FAILURE);
+    }
+}
+
+static void send_to_dsme_with_extra(const void* msg,
+                                    size_t      extra_size,
+                                    const void* extra)
+{
+    if (dsmesock_send_with_extra(conn, msg, extra_size, extra) == -1) {
+        perror("dsmesock_send_with_extra");
+        exit(EXIT_FAILURE);
+    }
+}
+
 static int get_version(void)
 {
     DSM_MSGTYPE_GET_VERSION   req_msg =
@@ -122,7 +147,7 @@ static int get_version(void)
 
     connect_to_dsme();
 
-    dsmesock_send(conn, &req_msg);
+    send_to_dsme(&req_msg);
 
     while (1) {
         FD_ZERO(&rfds);
@@ -139,7 +164,7 @@ static int get_version(void)
         }
         if (ret == 0) {
             fprintf(stderr, "Timeout when getting the DSME version\n");
-            dsmesock_close(conn);
+            disconnect_from_dsme();
             return -1;
         }
 
@@ -160,7 +185,7 @@ static int get_version(void)
     }
 
     free(p);
-    dsmesock_close(conn);
+    disconnect_from_dsme();
 
     return 0;
 }
@@ -185,7 +210,7 @@ static int send_process_start_request(const char*       command,
     msg.uid            = uid;
     msg.gid            = gid;
     msg.nice           = nice;
-    dsmesock_send_with_extra(conn, &msg, strlen(command) + 1, command);
+    send_to_dsme_with_extra(&msg, strlen(command) + 1, command);
 
     while (1) {
         FD_ZERO(&rfds);
@@ -221,7 +246,7 @@ static int send_process_stop_request(const char* command, int signal)
     DSM_MSGTYPE_PROCESS_STOP msg = DSME_MSG_INIT(DSM_MSGTYPE_PROCESS_STOP);
 
     msg.signal = signal;
-    dsmesock_send_with_extra(conn, &msg, strlen(command) + 1, command);
+    send_to_dsme_with_extra(&msg, strlen(command) + 1, command);
 
     return EXIT_SUCCESS;
 }
@@ -231,8 +256,8 @@ static int send_dbus_service_start_request()
     DSM_MSGTYPE_DBUS_CONNECT msg = DSME_MSG_INIT(DSM_MSGTYPE_DBUS_CONNECT);
 
     connect_to_dsme();
-    dsmesock_send(conn, &msg);
-    dsmesock_close(conn);
+    send_to_dsme(&msg);
+    disconnect_from_dsme();
 
     return EXIT_SUCCESS;
 }
@@ -243,7 +268,19 @@ static int send_dbus_service_stop_request()
       DSME_MSG_INIT(DSM_MSGTYPE_DBUS_DISCONNECT);
 
     connect_to_dsme();
-    dsmesock_send(conn, &msg);
+    send_to_dsme(&msg);
+    disconnect_from_dsme();
+
+    return EXIT_SUCCESS;
+}
+
+static int send_reboot_request()
+{
+    DSM_MSGTYPE_REBOOT_REQ msg = DSME_MSG_INIT(DSM_MSGTYPE_REBOOT_REQ);
+
+    connect_to_dsme();
+    send_to_dsme(&msg);
+    disconnect_from_dsme();
 
     return EXIT_SUCCESS;
 }
@@ -265,7 +302,7 @@ int main(int argc, char* argv[])
     enum { NONE, START, STOP } action = NONE;
     const char* program       = "";
     process_actions_t policy  = ONCE;
-    const char* short_options = "n:hr:f:t:o:c:T:k:S:u:g:U:G:dsv";
+    const char* short_options = "n:hr:f:t:o:c:T:k:S:u:g:U:G:dsbv";
     const struct option long_options[] = {
         {"help",               0, NULL, 'h'},
         {"start-reset",        1, NULL, 'r'},
@@ -283,6 +320,7 @@ int main(int argc, char* argv[])
         {"nice",               1, NULL, 'n'},
         {"start-dbus",         0, NULL, 'd'},
         {"stop-dbus",          0, NULL, 's'},
+        {"reboot",             0, NULL, 'b'},
         {"version",            0, NULL, 'v'},
         {0, 0, 0, 0}
     };
@@ -346,6 +384,9 @@ int main(int argc, char* argv[])
                 break;
             case 's':
                 return send_dbus_service_stop_request();
+                break;
+            case 'b':
+                return send_reboot_request();
                 break;
             case 'v':
                 return get_version();
@@ -420,7 +461,7 @@ int main(int argc, char* argv[])
         send_process_stop_request(program, signum);
     }
 
-    dsmesock_close(conn);
+    disconnect_from_dsme();
 
     return retval;
 }
