@@ -6,6 +6,7 @@ dsme (0.60.12) unstable; urgency=low
   * Part of the fix for NB#102544: add dsmetool flag -b to request reboot
   * Potential fix for NB#116253: do not syslog in signal handler
   * Fixes: NB#111827 - dsmetool now reports if -k fails
+  * Fixes: NB#103369 - dsme now sources system wide resource limits
 
  -- Semi Malinen <semi.malinen@nokia.com>  Fri, 15 May 2009 07:16:05 +0000
 
