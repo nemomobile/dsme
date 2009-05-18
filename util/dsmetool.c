@@ -341,7 +341,7 @@ int main(int argc, char* argv[])
     enum { NONE, START, STOP } action = NONE;
     const char* program       = "";
     process_actions_t policy  = ONCE;
-    const char* short_options = "n:hr:f:t:o:c:T:k:S:u:g:U:G:dsbv";
+    const char* short_options = "n:m:hr:f:t:o:c:T:k:S:u:g:U:G:dsbv";
     const struct option long_options[] = {
         {"help",               0, NULL, 'h'},
         {"start-reset",        1, NULL, 'r'},
