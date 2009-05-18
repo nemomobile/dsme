@@ -25,13 +25,17 @@
 #ifndef DSME_OOM_H
 #define DSME_OOM_H
 
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int protect_from_oom(void);
+bool protect_from_oom(void);
 
-int unprotect_from_oom(void);
+bool unprotect_from_oom(void);
+
+bool adjust_oom(int oom_adj);
 
 #ifdef __cplusplus
 }

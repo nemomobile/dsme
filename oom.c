@@ -33,36 +33,41 @@
 #define OOM_ADJ_PROTECT_VALUE   (-17)
 #define OOM_ADJ_UNPROTECT_VALUE 0
 
-static int set_oom_adj_value(int i)
+static bool set_oom_adj_value(int i)
 {
   FILE* file = 0;
 
   file = fopen(OOM_ADJ_PATH, "w");
   if (!file) {
       perror(OOM_ADJ_PATH);
-      return -1;
+      return false;
   }
 
   if (fprintf(file, "%i", i) < 0) {
       fprintf(stderr, "%s: Write failed\n", OOM_ADJ_PATH);
       fclose(file);
-      return -1;
+      return false;
   }
 
   if (fclose(file) < 0) {
       perror(OOM_ADJ_PATH);
-      return -1;
+      return false;
   }
 
-  return 0;
+  return true;
 }
 
-int protect_from_oom(void)
+bool protect_from_oom(void)
 {
   return set_oom_adj_value(OOM_ADJ_PROTECT_VALUE);
 }
 
-int unprotect_from_oom(void)
+bool unprotect_from_oom(void)
 {
   return set_oom_adj_value(OOM_ADJ_UNPROTECT_VALUE);
+}
+
+bool adjust_oom(int oom_adj)
+{
+  return set_oom_adj_value(oom_adj);
 }

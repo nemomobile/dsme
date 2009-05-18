@@ -96,6 +96,7 @@ typedef struct {
 	uid_t             uid;
 	gid_t             gid;
 	int               nice;
+	int               oom_adj;
 	time_t            starttime;
 	GSList*           node;
 	process_actions_t action;
@@ -461,8 +462,12 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_START, client, msg)
   }
 
   dsme_log(LOG_DEBUG, "Trying to start: %s", process->command);
-  process->pid =
-    spawn_proc(process->command, process->uid, process->gid, process->nice, process->env);
+  process->pid = spawn_proc(process->command,
+                            process->uid,
+                            process->gid,
+                            process->nice,
+                            process->oom_adj,
+                            process->env);
   if (!process->pid) {
       error = errno;
       returnmsg.pid = 0;
@@ -700,6 +705,7 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_EXITED, client, msg)
                                      proc->uid,
                                      proc->gid,
                                      proc->nice,
+                                     proc->oom_adj,
                                      proc->env);
               dsme_log(LOG_CRIT,
                        "Process '%s' with pid %d exited with %s %d and restarted with pid %d",

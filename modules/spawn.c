@@ -161,6 +161,7 @@ typedef struct child_setup {
   uid_t       uid;
   gid_t       gid;
   int         nice_val;
+  int         oom_adj;
 } child_setup;
 
 static void setup_child(gpointer setup_data)
@@ -199,10 +200,18 @@ static void setup_child(gpointer setup_data)
           DLOG_ERR("unable to nice the the spawned process to %i", p->nice_val);
       }
   }
-  if (p->nice_val >= 0) {
+  if (p->oom_adj != 0) {
+      DLOG_INFO("Setting OOM adj");
+      if (!adjust_oom(p->oom_adj)) {
+          DLOG_ERR("failed to set oom_adj; Unprotecting from OOM");
+          if (!unprotect_from_oom()) {
+              DLOG_ERR("failed to unprotect from OOM");
+          }
+      }
+  } else if (p->nice_val >= 0) {
       DLOG_INFO("Unprotecting from OOM");
-      if (unprotect_from_oom() != 0) {
-          DLOG_ERR("failed to unprotect from oom");
+      if (!unprotect_from_oom()) {
+          DLOG_ERR("failed to unprotect from OOM");
       }
   }
 
@@ -234,6 +243,7 @@ pid_t spawn_proc(const char* cmdline,
                  uid_t       uid,
                  gid_t       gid,
                  int         nice_val,
+                 int         oom_adj,
                  char*       env[])
 {
   int         retval  = 0;
@@ -241,7 +251,7 @@ pid_t spawn_proc(const char* cmdline,
   char*       cmdcopy = NULL;
   pid_t       pid;
   GError*     err     = NULL;
-  child_setup setup   = { cmdline, uid, gid, nice_val };
+  child_setup setup   = { cmdline, uid, gid, nice_val, oom_adj };
 
   if (make_argv(cmdline, &args, &cmdcopy) &&
       g_spawn_async(NULL,

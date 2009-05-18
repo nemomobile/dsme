@@ -66,6 +66,7 @@ pid_t spawn_proc(const char* cmdline,
                  uid_t       uid,
                  gid_t       gid,
                  int         nice_val,
+                 int         oom_adj,
                  char*       env[]);
 
 void spawn_shutdown(void);

@@ -53,6 +53,7 @@ typedef struct {
   uid_t             uid;
   gid_t             gid;
   int               nice;
+  int               oom_adj;
 } DSM_MSGTYPE_PROCESS_START;
 
 /**

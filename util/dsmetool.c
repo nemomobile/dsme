@@ -54,7 +54,8 @@ static int send_process_start_request(const char*       command,
                                       int               maxperiod,
                                       uid_t             uid,
                                       gid_t             gid,
-                                      int               nice);
+                                      int               nice,
+                                      int               oom_adj);
 static int send_process_stop_request(const char* command, int signal);
 static int get_version(void);
 
@@ -90,6 +91,7 @@ void usage(const char* name)
 "                                   from groupname\n"
 "  -n --nice=N                     Set used nice value (priority)\n"
 "                                   for started process\n"
+"  -m --oom-adj=N                  Set oom_adj value for started process\n"
 "  -d --start-dbus                 Start DSME's D-Bus services\n"
 #if 0 // TODO
 "  -s --stop-dbus                  Stop DSME's D-Bus services\n"
@@ -197,7 +199,8 @@ static int send_process_start_request(const char*       command,
                                       int               maxperiod,
                                       uid_t             uid,
                                       gid_t             gid,
-                                      int               nice)
+                                      int               nice,
+                                      int               oom_adj)
 {
     DSM_MSGTYPE_PROCESS_START        msg =
         DSME_MSG_INIT(DSM_MSGTYPE_PROCESS_START);
@@ -211,6 +214,7 @@ static int send_process_start_request(const char*       command,
     msg.uid            = uid;
     msg.gid            = gid;
     msg.nice           = nice;
+    msg.oom_adj        = oom_adj;
     send_to_dsme_with_extra(&msg, strlen(command) + 1, command);
 
     while (true) {
@@ -333,6 +337,7 @@ int main(int argc, char* argv[])
     const char* username      = 0;
     const char* group         = 0;
     int         nice          = 0;
+    int         oom_adj       = 0;
     enum { NONE, START, STOP } action = NONE;
     const char* program       = "";
     process_actions_t policy  = ONCE;
@@ -352,6 +357,7 @@ int main(int argc, char* argv[])
         {"user",               1, NULL, 'U'},
         {"group",              1, NULL, 'G'},
         {"nice",               1, NULL, 'n'},
+        {"oom-adj",            1, NULL, 'm'},
         {"start-dbus",         0, NULL, 'd'},
         {"stop-dbus",          0, NULL, 's'},
         {"reboot",             0, NULL, 'b'},
@@ -386,6 +392,9 @@ int main(int argc, char* argv[])
                 break;
             case 'n':
                 nice = atoi(optarg);
+                break;
+            case 'm':
+                oom_adj = atoi(optarg);
                 break;
             case 'c':
                 maxcount = atoi(optarg);
@@ -490,7 +499,8 @@ int main(int argc, char* argv[])
                                             countperiod,
                                             uid,
                                             gid,
-                                            nice);
+                                            nice,
+                                            oom_adj);
     } else if (action == STOP) {
         send_process_stop_request(program, signum);
     }

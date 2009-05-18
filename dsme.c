@@ -333,7 +333,7 @@ int main(int argc, char *argv[])
   /* protect DSME from oom; notice that this must be done before any
    * calls to pthread_create() in order to have all threads protected
    */
-  if (protect_from_oom() != 0) {
+  if (!protect_from_oom()) {
       dsme_log(LOG_ERR, "Couldn't protect from oom");
   }
 
