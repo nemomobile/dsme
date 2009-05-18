@@ -429,21 +429,31 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_START, client, msg)
   process->restart_period = msg->restart_period;
 
   /* set uid */
-  if (msg->uid != ucred->uid && ucred->uid == 0)
+  if (msg->uid != ucred->uid && ucred->uid == 0) {
       process->uid = msg->uid;
-  else
+  } else {
       process->uid = ucred->uid;
+  }
   /* set gid */
-  if (msg->gid != ucred->gid && ucred->uid == 0)
+  if (msg->gid != ucred->gid && ucred->uid == 0) {
       process->gid = msg->gid;
-  else
+  } else {
       process->gid = ucred->gid;
+  }
 
   /* set nice */
-  if (msg->nice >= -1 || ucred->uid == 0)
+  if (msg->nice >= -1 || ucred->uid == 0) {
       process->nice = msg->nice;
-  else
+  } else {
       process->nice = 0;
+  }
+
+  /* set oom_adj */
+  if (msg->oom_adj != 0 && ucred->uid == 0) {
+      process->oom_adj = msg->oom_adj;
+  } else {
+      process->oom_adj = 0;
+  }
 
   if (process->action == RESET && ucred->uid != 0) {
       if (g_slist_find(uids, (void*)process->uid)) {
