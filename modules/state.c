@@ -25,6 +25,7 @@
 
 #include "state.h"
 #include "runlevel.h"
+#include "hwwd.h"
 #include "dsme/timers.h"
 #include "dsme/modules.h"
 #include "dsme/logging.h"
@@ -347,6 +348,10 @@ static void start_delayed_shutdown_timer(unsigned seconds)
           exit(EXIT_FAILURE);
       }
       dsme_log(LOG_CRIT, "Shutdown in %i seconds", seconds);
+
+      DSM_MSGTYPE_HWWD_KICK msg = DSME_MSG_INIT(DSM_MSGTYPE_HWWD_KICK);
+      /* kick WDs once */
+      broadcast_internally(&msg);
   }
 }
 
@@ -381,7 +386,6 @@ static void stop_delayed_runlevel_timers(void)
 static int delayed_shutdown_fn(void* unused)
 {
   DSM_MSGTYPE_SHUTDOWN msg = DSME_MSG_INIT(DSM_MSGTYPE_SHUTDOWN);
-
   msg.runlevel = state2runlevel(current_state);
   broadcast_internally(&msg);
 

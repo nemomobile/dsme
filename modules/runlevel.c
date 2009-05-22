@@ -74,8 +74,6 @@ static bool change_runlevel(dsme_runlevel_t runlevel)
  */
 static void shutdown(dsme_runlevel_t runlevel)
 {
-  DSM_MSGTYPE_HWWD_KICK msg2 = DSME_MSG_INIT(DSM_MSGTYPE_HWWD_KICK);
-
   if ((runlevel != DSME_RUNLEVEL_REBOOT)   &&
       (runlevel != DSME_RUNLEVEL_SHUTDOWN) &&
       (runlevel != DSME_RUNLEVEL_MALF))
@@ -84,9 +82,6 @@ static void shutdown(dsme_runlevel_t runlevel)
       return;
   }
   dsme_log(LOG_CRIT, "Shutdown/reboot");
-
-  /* kick WDs once */
-  broadcast_internally(&msg2);
 
   /* If runlevel change fails, handle the shutdown/reboot by DSME */
   if (access("/sbin/telinit", X_OK) != 0 || !change_runlevel(runlevel))
