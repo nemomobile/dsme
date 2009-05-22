@@ -1,3 +1,11 @@
+dsme (0.60.13) unstable; urgency=low
+
+  * Fixes: NB#117923 - kick watchdogs 2 s before running 'telinit 0'
+  * Fixes: NB#101783 - dsmetool supports -m for setting oom_adj
+  * Estimate surface temperature as (BTEMP - 7)
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Mon, 18 May 2009 14:29:41 +0000
+
 dsme (0.60.12) unstable; urgency=low
 
   * Part of the fix for NB#102069: re-enable hw wd kicking
