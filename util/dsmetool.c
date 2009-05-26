@@ -259,10 +259,19 @@ static int send_process_stop_request(const char* command, int signal)
     while (true) {
         FD_ZERO(&rfds);
         FD_SET(conn->fd, &rfds);
+        struct timeval tv;
 
-        ret = select(conn->fd+1, &rfds, NULL, NULL, NULL);
+        tv.tv_sec  = 5;
+        tv.tv_usec = 0;
+
+        ret = select(conn->fd+1, &rfds, NULL, NULL, &tv);
         if (ret == -1) {
             printf("Error in select()\n");
+            return -1;
+        }
+        if (ret == 0) {
+            printf("Timeout waiting for process stop status from DSME\n");
+            disconnect_from_dsme();
             return -1;
         }
 
