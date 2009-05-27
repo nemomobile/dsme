@@ -1,3 +1,13 @@
+dsme (0.60.14) unstable; urgency=low
+
+  * Fixes: NB#112871: lock all pages to RAM
+  * Fixes: NB#118702: lock all pages to RAM
+  * Fixes: NB#118399: add a timeout to dsmetool
+  * /etc/event.d/dsme: do not respawn dsme
+  * /etc/event.d/dsme: waitfordsme in post-start script
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Wed, 27 May 2009 08:40:10 +0000
+
 dsme (0.60.13) unstable; urgency=low
 
   * Fixes: NB#117923 - kick watchdogs 2 s before running 'telinit 0'
