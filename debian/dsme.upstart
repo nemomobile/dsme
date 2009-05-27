@@ -14,7 +14,7 @@ script
         echo "Entering state '$STATE'."
         case $STATE in
         BOOT)
-                def_runlevel=6
+            def_runlevel=6
             ;;
         USER)
             def_runlevel=2
@@ -33,4 +33,8 @@ script
         #exec /sbin/dsme -l stderr -v 7 -p /usr/lib/dsme/libstartup.so
 end script
 
-respawn
+post-start script
+        until waitfordsme; do
+            sleep 1
+        done
+end script
