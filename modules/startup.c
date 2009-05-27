@@ -104,6 +104,8 @@ module_fn_info_t message_handlers[] = {
 
 void module_init(module_t *handle)
 {
+    dsme_log(LOG_CRIT, "DSME %s starting up", STRINGIFY(PRG_VERSION));
+
     char * modulename;
     char * path;
     char name[1024];  /* TODO more dynamic length */

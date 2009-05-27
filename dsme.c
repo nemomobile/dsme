@@ -354,8 +354,6 @@ int main(int argc, char *argv[])
       dsme_log_close();
 #endif
       return EXIT_FAILURE;
-  } else {
-      dsme_log(LOG_CRIT, "listening for clients");
   }
 
   /* set running directory */
