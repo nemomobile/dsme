@@ -34,6 +34,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 
 /**
@@ -149,40 +150,6 @@ static dsme_runlevel_t state2runlevel(dsme_state_t state)
   }
 
   return runlevel;
-}
-
-static void set_initial_state_bits(int runlevel)
-{
-  switch (runlevel) {
-      case 0: /* DSME_STATE_SHUTDOWN */
-          /*
-           * charger must be considered disconnected;
-           * otherwise we end up in actdead
-           */
-          charger_state      = CHARGER_DISCONNECTED;
-          shutdown_requested = true;
-          break;
-
-      case 2:  /* DSME_STATE_USER */
-          /* NOP */
-          break;
-
-      case 3:  /* DSME_STATE_TEST */
-          test = true;
-          break;
-
-      case 5:  /* DSME_STATE_ACTDEAD */
-          shutdown_requested = true;
-          break;
-
-      case 6:  /* DSME_STATE_REBOOT */
-          reboot_requested = true;
-          break;
-
-      default: /* DSME_STATE_MALF */
-          malf = true;
-          break;
-  }
 }
 
 
@@ -664,20 +631,56 @@ module_fn_info_t message_handlers[] = {
 };
 
 
+static void set_initial_state_bits(const char* bootstate)
+{
+  if (strcmp(bootstate, "SHUTDOWN") == 0) {
+      /*
+       * DSME_STATE_SHUTDOWN:
+       * charger must be considered disconnected;
+       * otherwise we end up in actdead
+       */
+      charger_state      = CHARGER_DISCONNECTED;
+      shutdown_requested = true;
+
+  } else if (strcmp(bootstate, "USER") == 0) {
+      /* DSME_STATE_USER: NOP */
+
+  } else if (strcmp(bootstate, "ACT_DEAD") == 0) {
+      /* DSME_STATE_ACTDEAD */
+      shutdown_requested = true;
+
+  } else if (strcmp(bootstate, "BOOT") == 0) {
+      /* DSME_STATE_REBOOT */
+      /* TODO: does getbootstate ever return "BOOT"? */
+      reboot_requested = true;
+
+  } else if (strcmp(bootstate, "LOCAL") == 0 ||
+             strcmp(bootstate, "TEST")  == 0)
+  {
+      /* DSME_STATE_TEST */
+      test = true;
+
+  } else {
+      /* DSME_STATE_MALF */
+      malf = true;
+  }
+}
+
 void module_init(module_t* handle)
 {
-  const char* runlevel;
-
   dsme_log(LOG_DEBUG, "libstate.so started");
 
-  runlevel = getenv("RUNLEVEL");
-  if (!runlevel) {
-      malf = true;
-      dsme_log(LOG_CRIT, "$RUNLEVEL: No such environment variable");
+  const char* bootstate = getenv("BOOTSTATE");
+  if (!bootstate) {
+      bootstate = "MALF";
+      dsme_log(LOG_CRIT,
+               "BOOTSTATE: No such environment variable, using '%s'",
+               bootstate);
   } else {
-      set_initial_state_bits(atoi(runlevel));
+      dsme_log(LOG_CRIT, "BOOTSTATE: '%s'", bootstate);
   }
 
+  set_initial_state_bits(bootstate);
   change_state_if_necessary();
 
   dsme_log(LOG_CRIT, "Startup state: %s", state_name(current_state));

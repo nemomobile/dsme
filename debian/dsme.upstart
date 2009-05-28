@@ -7,28 +7,13 @@ stop on starting shutdown
 console output
 
 script
-        STATE=`getbootstate 2>/dev/null`
-        touch /tmp/$STATE
-        echo $STATE > /tmp/STATE
+        export BOOTSTATE=`getbootstate 2>/dev/null`
+        touch /tmp/$BOOTSTATE
+        echo $BOOTSTATE > /tmp/STATE
 
-        echo "Entering state '$STATE'."
-        case $STATE in
-        BOOT)
-            def_runlevel=6
-            ;;
-        USER)
-            def_runlevel=2
-            ;;
-        ACT_DEAD)
-            def_runlevel=5
-            ;;
-        LOCAL|TEST)
-            def_runlevel=3
-            ;;
-        esac
-        export RUNLEVEL=$def_runlevel
-        export DSME_INIT=1
         source /etc/resource_limits.conf
+
+        echo "About to exec dsme in state '$BOOTSTATE'."
         exec /sbin/dsme -p /usr/lib/dsme/libstartup.so
         #exec /sbin/dsme -l stderr -v 7 -p /usr/lib/dsme/libstartup.so
 end script
