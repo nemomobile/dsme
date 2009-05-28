@@ -130,16 +130,6 @@ static void start_kicking_now(void)
  */
 static int hwwd_kick_fn(void* unused)
 {
-#ifdef DSME_WD_SYNC
-        {
-	/* Kick ProcessWD */
-	const DSM_MSGTYPE_PROCESSWD_MANUAL_PING ping =
-          DSME_MSG_INIT(DSM_MSGTYPE_PROCESSWD_MANUAL_PING);
-	broadcast_internally(&ping);
-	dsme_log(LOG_DEBUG, "hwwd: Manual processwd ping requested");
-        }
-#endif
-
 	/* Let the kicker process or thread kick */
         switch (kicker_type) {
 
@@ -158,6 +148,16 @@ static int hwwd_kick_fn(void* unused)
             /* do nothing */
             break;
         }
+
+#ifdef DSME_WD_SYNC
+        {
+	/* Kick ProcessWD */
+	const DSM_MSGTYPE_PROCESSWD_MANUAL_PING ping =
+          DSME_MSG_INIT(DSM_MSGTYPE_PROCESSWD_MANUAL_PING);
+	broadcast_internally(&ping);
+	dsme_log(LOG_DEBUG, "hwwd: Manual processwd ping requested");
+        }
+#endif
 
         return 1; /* keep the interval going */
 }

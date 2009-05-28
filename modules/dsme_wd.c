@@ -1,8 +1,7 @@
 /**
    @file dsme_wd.c
 
-   This file implements hardware watchdog kicker thread.
-   The kicking is done in another, low-priority thread.
+   This file implements hardware watchdog kicker.
    <p>
    Copyright (C) 2004-2009 Nokia Corporation.
 
@@ -42,9 +41,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <pthread.h>
 #include <sched.h>
-#include <semaphore.h>
 #include <linux/types.h>
 #include <linux/watchdog.h>
 
@@ -65,53 +62,24 @@ static const wd_t wd[] = {
 static int wd_fd[WD_COUNT];
 
 static bool  wd_enabled = true;
-static sem_t dsme_wd_sem;
 
 
 void dsme_wd_kick(void)
 {
-    sem_post(&dsme_wd_sem);
-    dsme_log(LOG_DEBUG, "Got a permission to kick watchdogs...");
-}
+  dsme_log(LOG_DEBUG, "Got permission to kick watchdogs.");
 
-static void* dsme_wd_loop(void* param)
-{
-    /*
-     * This is not portable because it relies on the linux way of
-     * implementing threads as different processes. On a different system
-     * they could have the same PID of the father that spawned them.
-     */
-    dsme_log(LOG_NOTICE, "setting priority %d", DSME_WD_PRIORITY);
-    if (setpriority(PRIO_PROCESS, 0, DSME_WD_PRIORITY) == -1) {
-        dsme_log(LOG_CRIT, "setpriority(): %s", strerror(errno));
-    }
-
-    dsme_log(LOG_NOTICE, "setting scheduler %d", DSME_WD_SCHEDULER);
-    struct sched_param sch;
-    memset(&sch, 0, sizeof(sch));
-    sch.sched_priority = sched_get_priority_max(DSME_WD_SCHEDULER);
-    if (sched_setscheduler(0, DSME_WD_SCHEDULER, &sch) == -1) {
-        dsme_log(LOG_CRIT, "sched_get_priority_min(): %s", strerror(errno));
-    }
-
-
-    while (true) {
-        sem_wait(&dsme_wd_sem);
-
-        if (wd_enabled) {
-            int i;
-            for (i = 0; i < WD_COUNT; ++i) {
-                if (wd_fd[i] != -1 && write(wd_fd[i], "*", 1) == 1) {
-                    dsme_log(LOG_DEBUG, "Kicked WD %s", wd[i].file);
-                } else {
-                    dsme_log(LOG_CRIT, "Error kicking WD %s", wd[i].file);
-                    /* must not kick later wd's if an earlier one fails */
-                    break;
-                }
-            }
-        }
-    }
-    return 0;
+  if (wd_enabled) {
+      int i;
+      for (i = 0; i < WD_COUNT; ++i) {
+          if (wd_fd[i] != -1 && write(wd_fd[i], "*", 1) == 1) {
+              dsme_log(LOG_DEBUG, "Kicked WD %s", wd[i].file);
+          } else {
+              dsme_log(LOG_CRIT, "Error kicking WD %s", wd[i].file);
+              /* must not kick later wd's if an earlier one fails */
+              break;
+          }
+      }
+  }
 }
 
 static void read_cal_config(void)
@@ -149,26 +117,33 @@ static void read_cal_config(void)
 
 bool dsme_wd_init(void)
 {
-    pthread_attr_t tattr;
-    pthread_t tid;
     int i;
-    struct sched_param param;
 
     for (i = 0; i < WD_COUNT; ++i) {
         wd_fd[i] = -1;
     }
 
-    if (sem_init(&dsme_wd_sem, 0, 0) != 0) {
-        dsme_log(LOG_CRIT, "Error initialising semaphore");
-        return false;
+    /* set process priority */
+    dsme_log(LOG_NOTICE, "setting priority %d", DSME_WD_PRIORITY);
+    if (setpriority(PRIO_PROCESS, 0, DSME_WD_PRIORITY) == -1) {
+        dsme_log(LOG_CRIT, "setpriority(): %s", strerror(errno));
+    }
+
+    dsme_log(LOG_NOTICE, "setting scheduler %d", DSME_WD_SCHEDULER);
+    struct sched_param sch;
+    memset(&sch, 0, sizeof(sch));
+    sch.sched_priority = sched_get_priority_max(DSME_WD_SCHEDULER);
+    if (sched_setscheduler(0, DSME_WD_SCHEDULER, &sch) == -1) {
+        dsme_log(LOG_CRIT, "sched_get_priority_min(): %s", strerror(errno));
     }
 
     read_cal_config();
     if (!wd_enabled) {
-        return false;
-    }
 
-    if (wd_enabled) {
+        return false;
+
+    } else {
+        /* open watchdog devices */
         for (i = 0; i < WD_COUNT; ++i) {
             wd_fd[i] = open(wd[i].file, O_RDWR);
             if (wd_fd[i] == -1) {
@@ -195,22 +170,7 @@ bool dsme_wd_init(void)
                 }
             }
         }
-    }
 
-    if (pthread_attr_init (&tattr) != 0) {
-        dsme_log(LOG_CRIT, "Error getting thread attributes");
-        return false;
+        return true;
     }
-
-    if (pthread_attr_getschedparam (&tattr, &param) != 0) {
-        dsme_log(LOG_CRIT, "Error getting scheduling parameters");
-        return false;
-    }
-
-    if (pthread_create (&tid, &tattr, dsme_wd_loop, NULL) != 0) {
-        dsme_log(LOG_CRIT, "Error creating new thread");
-        return false;
-    }
-
-    return true;
 }

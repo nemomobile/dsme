@@ -42,7 +42,7 @@ processwd.o : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags glib-2.0)
 libhwwd_C_OBJS               := hwwd.o dsme_wd.o
 hwwd.o    : C_EXTRA_GENFLAGS := -fPIC
 dsme_wd.o : C_EXTRA_GENFLAGS := -fPIC
-libhwwd_EXTRA_LDFLAGS        := -lpthread
+#libhwwd_EXTRA_LDFLAGS        := -lpthread
 
 libdbusproxy_C_OBJS := dbusproxy.o dsme_dbus.o
 dbusproxy.o : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags glib-2.0)
