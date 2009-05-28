@@ -322,6 +322,15 @@ static void start_delayed_shutdown_timer(unsigned seconds)
   }
 }
 
+static int delayed_shutdown_fn(void* unused)
+{
+  DSM_MSGTYPE_SHUTDOWN msg = DSME_MSG_INIT(DSM_MSGTYPE_SHUTDOWN);
+  msg.runlevel = state2runlevel(current_state);
+  broadcast_internally(&msg);
+
+  return 0; /* stop the interval */
+}
+
 static void start_delayed_actdead_timer(unsigned seconds)
 {
   if (!delayed_shutdown_timer && !delayed_actdead_timer) {
@@ -334,29 +343,6 @@ static void start_delayed_actdead_timer(unsigned seconds)
       }
       dsme_log(LOG_CRIT, "Reboot for actdead in %i seconds", seconds);
   }
-}
-
-static void stop_delayed_runlevel_timers(void)
-{
-    if (delayed_shutdown_timer) {
-        dsme_destroy_timer(delayed_shutdown_timer);
-        delayed_shutdown_timer = 0;
-        dsme_log(LOG_CRIT, "Delayed shutdown timer stopped");
-    }
-    if (delayed_actdead_timer) {
-        dsme_destroy_timer(delayed_actdead_timer);
-        delayed_actdead_timer = 0;
-        dsme_log(LOG_CRIT, "Delayed actdead timer stopped");
-    }
-}
-
-static int delayed_shutdown_fn(void* unused)
-{
-  DSM_MSGTYPE_SHUTDOWN msg = DSME_MSG_INIT(DSM_MSGTYPE_SHUTDOWN);
-  msg.runlevel = state2runlevel(current_state);
-  broadcast_internally(&msg);
-
-  return 0; /* stop the interval */
 }
 
 static int delayed_actdead_fn(void* unused)
@@ -374,6 +360,20 @@ static void change_runlevel(dsme_state_t state)
 
   msg.runlevel = state2runlevel(state);
   broadcast_internally(&msg);
+}
+
+static void stop_delayed_runlevel_timers(void)
+{
+    if (delayed_shutdown_timer) {
+        dsme_destroy_timer(delayed_shutdown_timer);
+        delayed_shutdown_timer = 0;
+        dsme_log(LOG_CRIT, "Delayed shutdown timer stopped");
+    }
+    if (delayed_actdead_timer) {
+        dsme_destroy_timer(delayed_actdead_timer);
+        delayed_actdead_timer = 0;
+        dsme_log(LOG_CRIT, "Delayed actdead timer stopped");
+    }
 }
 
 
@@ -399,6 +399,14 @@ static void start_overheat_timer(void)
   }
 }
 
+static int delayed_overheat_fn(void* unused)
+{
+  device_overheated = true;
+  change_state_if_necessary();
+
+  return 0; /* stop the interval */
+}
+
 static void stop_overheat_timer(void)
 {
   if (overheat_timer) {
@@ -406,14 +414,6 @@ static void stop_overheat_timer(void)
       overheat_timer = 0;
       dsme_log(LOG_CRIT, "Thermal shutdown timer stopped");
   }
-}
-
-static int delayed_overheat_fn(void* unused)
-{
-  device_overheated = true;
-  change_state_if_necessary();
-
-  return 0; /* stop the interval */
 }
 
 
@@ -436,6 +436,14 @@ static void start_charger_disconnect_timer(void)
   }
 }
 
+static int  delayed_charger_disconnect_fn(void* unused)
+{
+  charger_state = CHARGER_DISCONNECTED;
+  change_state_if_necessary();
+
+  return 0; /* stop the interval */
+}
+
 static void stop_charger_disconnect_timer(void)
 {
   if (charger_disconnect_timer) {
@@ -446,14 +454,6 @@ static void stop_charger_disconnect_timer(void)
       /* the last we heard, the charger had just been disconnected */
       charger_state = CHARGER_DISCONNECTED;
   }
-}
-
-static int  delayed_charger_disconnect_fn(void* unused)
-{
-  charger_state = CHARGER_DISCONNECTED;
-  change_state_if_necessary();
-
-  return 0; /* stop the interval */
 }
 
 
