@@ -28,6 +28,7 @@
 #include "dsme/modulebase.h"
 #include "dsme/modules.h"
 #include "dsme/mainloop.h"
+#include "../modules/hwwd.h"
 
 #include <unistd.h>
 #include <errno.h>
@@ -56,6 +57,12 @@ static bool message_queue_is_empty(void)
       fprintf(stderr, "[=> %d more messages queued]\n", count);
   } else {
       fprintf(stderr, "[=> no more messages]\n");
+  }
+
+  if (count != 0) {
+      for (node = message_queue; node; node = node->next) {
+          fprintf(stderr, "[%x]\n", ((queued_msg_t*)(node->data))->data->type_);
+      }
   }
 
   return count == 0;
@@ -311,14 +318,14 @@ static void disconnect_charger(module_t* state)
   set_charger_state(state, false);
 }
 
-static module_t* load_state_module(const char*  runlevel,
+static module_t* load_state_module(const char*  bootstate,
                                    dsme_state_t expected_state)
 {
   module_t* module;
 
-  setenv("RUNLEVEL", runlevel, true);
+  setenv("BOOTSTATE", bootstate, true);
   module = load_module_under_test("../modules/libstate.so");
-  unsetenv("RUNLEVEL");
+  unsetenv("BOOTSTATE");
 
   DSM_MSGTYPE_STATE_CHANGE_IND* ind;
   assert((ind = queued(DSM_MSGTYPE_STATE_CHANGE_IND)));
@@ -377,6 +384,10 @@ static void expect_shutdown_or_reboot(module_t*    module,
   assert((ind2 = queued(DSM_MSGTYPE_SAVE_DATA_IND)));
   free(ind2);
 
+  DSM_MSGTYPE_HWWD_KICK* ind3;
+  assert((ind3 = queued(DSM_MSGTYPE_HWWD_KICK)));
+  free(ind3);
+
   assert(message_queue_is_empty());
   assert(timer_exists());
 
@@ -416,7 +427,7 @@ static void testcase1(void)
 {
   /* request shutdown right after starting in user state */
 
-  module_t* state = load_state_module("2", DSME_STATE_USER);
+  module_t* state = load_state_module("USER", DSME_STATE_USER);
   assert(!timer_exists());
 
   request_shutdown_expecting_reboot(state);
@@ -430,7 +441,7 @@ static void testcase2(void)
    * 1. request shutdown when charger is known to be plugged in
    */
   // boot to user state
-  module_t* state = load_state_module("2", DSME_STATE_USER);
+  module_t* state = load_state_module("USER", DSME_STATE_USER);
   assert(!timer_exists());
 
   // request shutdown when charger connected
@@ -450,7 +461,7 @@ static void testcase2b(void)
    * 2. unplug a known to be plugged in charger
    * 3. wait for the shutdown to happen
    */
-  module_t* state = load_state_module("5", DSME_STATE_ACTDEAD);
+  module_t* state = load_state_module("ACT_DEAD", DSME_STATE_ACTDEAD);
   assert(!timer_exists());
 
   // unplug charger
@@ -487,7 +498,7 @@ static void testcase3(void)
    * 5. wait for the shutdown to happen
    */
   // boot to user state
-  module_t* state = load_state_module("2", DSME_STATE_USER);
+  module_t* state = load_state_module("USER", DSME_STATE_USER);
   assert(!timer_exists());
 
   // request shutdown when charger connected
@@ -505,7 +516,7 @@ static void testcase4(void)
   /* request shutdown when charger is known to be unplugged */
 
   // boot to user state
-  module_t* state = load_state_module("2", DSME_STATE_USER);
+  module_t* state = load_state_module("USER", DSME_STATE_USER);
   assert(!timer_exists());
 
   disconnect_charger(state);
@@ -522,7 +533,7 @@ static void testcase5(void)
    * 2. plug in charger before timer runs out
    * => expect shutdown
    */
-  module_t* state = load_state_module("2", DSME_STATE_USER);
+  module_t* state = load_state_module("USER", DSME_STATE_USER);
   assert(!timer_exists());
 
   // unplug charger
@@ -542,6 +553,10 @@ static void testcase5(void)
   DSM_MSGTYPE_SAVE_DATA_IND* ind2;
   assert((ind2 = queued(DSM_MSGTYPE_SAVE_DATA_IND)));
   free(ind2);
+
+  DSM_MSGTYPE_HWWD_KICK* ind3;
+  assert((ind3 = queued(DSM_MSGTYPE_HWWD_KICK)));
+  free(ind3);
 
   assert(message_queue_is_empty());
   assert(timer_exists());
@@ -564,7 +579,7 @@ static void testcase5(void)
 
 static void testcase6(void)
 {
-  module_t* state = load_state_module("2", DSME_STATE_USER);
+  module_t* state = load_state_module("USER", DSME_STATE_USER);
   assert(!timer_exists());
 
   // plug and unplug charger
@@ -583,7 +598,7 @@ static void testcase6(void)
 static void testcase7(void)
 {
   /* start in actdead */
-  module_t* state = load_state_module("5", DSME_STATE_ACTDEAD);
+  module_t* state = load_state_module("ACT_DEAD", DSME_STATE_ACTDEAD);
   assert(!timer_exists());
 
   assert(message_queue_is_empty());
@@ -595,7 +610,7 @@ static void testcase7(void)
 static void testcase8(void)
 {
   /* start in actdead and unplug the charger */
-  module_t* state = load_state_module("5", DSME_STATE_ACTDEAD);
+  module_t* state = load_state_module("ACT_DEAD", DSME_STATE_ACTDEAD);
   assert(!timer_exists());
 
   // unplug charger
@@ -608,7 +623,7 @@ static void testcase8(void)
 static void testcase9(void)
 {
   /* start in actdead and plug and uplug the charger */
-  module_t* state = load_state_module("5", DSME_STATE_ACTDEAD);
+  module_t* state = load_state_module("ACT_DEAD", DSME_STATE_ACTDEAD);
   assert(!timer_exists());
 
   // plug charger
@@ -632,7 +647,7 @@ static void testcase9(void)
 static void testcase10(void)
 {
   /* try to shut down when an emergency call is ongoing */
-  module_t* state = load_state_module("2", DSME_STATE_USER);
+  module_t* state = load_state_module("USER", DSME_STATE_USER);
   assert(!timer_exists());
 
   // unplug charger
@@ -663,7 +678,7 @@ static void testcase10(void)
 static void testcase11(void)
 {
   /* reboot */
-  module_t* state = load_state_module("2", DSME_STATE_USER);
+  module_t* state = load_state_module("USER", DSME_STATE_USER);
   assert(!timer_exists());
 
   // unplug charger
@@ -682,7 +697,7 @@ static void testcase11(void)
 static void testcase12(void)
 {
   /* shutdown on empty battery */
-  module_t* state = load_state_module("2", DSME_STATE_USER);
+  module_t* state = load_state_module("USER", DSME_STATE_USER);
   assert(!timer_exists());
 
   // unplug charger
@@ -709,6 +724,9 @@ static void testcase12(void)
   assert((msg2 = queued(DSM_MSGTYPE_SHUTDOWN)));
   assert(msg2->runlevel == 0);
   free(msg2);
+  DSM_MSGTYPE_HWWD_KICK* ind3;
+  assert((ind3 = queued(DSM_MSGTYPE_HWWD_KICK)));
+  free(ind3);
   assert(!timer_exists());
   assert(message_queue_is_empty());
 
@@ -722,7 +740,7 @@ static void testcase13(void)
    * 2. start emergency call before timer runs out
    * 3. stop emergency call
    */
-  module_t* state = load_state_module("2", DSME_STATE_USER);
+  module_t* state = load_state_module("USER", DSME_STATE_USER);
   assert(!timer_exists());
 
   // unplug charger
@@ -742,6 +760,10 @@ static void testcase13(void)
   DSM_MSGTYPE_SAVE_DATA_IND* ind2;
   assert((ind2 = queued(DSM_MSGTYPE_SAVE_DATA_IND)));
   free(ind2);
+
+  DSM_MSGTYPE_HWWD_KICK* ind3;
+  assert((ind3 = queued(DSM_MSGTYPE_HWWD_KICK)));
+  free(ind3);
 
   assert(message_queue_is_empty());
   assert(timer_exists());
@@ -772,7 +794,7 @@ static void testcase14(void)
    * 2. start emergency call before timer runs out
    * 3. stop emergency call
    */
-  module_t* state = load_state_module("2", DSME_STATE_USER);
+  module_t* state = load_state_module("USER", DSME_STATE_USER);
   assert(!timer_exists());
 
   // plug in charger
@@ -820,7 +842,7 @@ static void testcase14(void)
 static void testcase15(void)
 {
   /* emergency call */
-  module_t* state = load_state_module("2", DSME_STATE_USER);
+  module_t* state = load_state_module("USER", DSME_STATE_USER);
   assert(!timer_exists());
 
   // start emergency call
@@ -845,7 +867,7 @@ static void testcase15(void)
 static void testcase16(void)
 {
   /* thermal shutdown due to overheating */
-  module_t* state = load_state_module("2", DSME_STATE_USER);
+  module_t* state = load_state_module("USER", DSME_STATE_USER);
   assert(!timer_exists());
 
   DSM_MSGTYPE_SET_THERMAL_STATE msg =
@@ -871,6 +893,10 @@ static void testcase16(void)
   assert((ind3 = queued(DSM_MSGTYPE_SAVE_DATA_IND)));
   free(ind3);
 
+  DSM_MSGTYPE_HWWD_KICK* ind4;
+  assert((ind4 = queued(DSM_MSGTYPE_HWWD_KICK)));
+  free(ind4);
+
   assert(message_queue_is_empty());
   assert(timer_exists());
 
@@ -892,7 +918,7 @@ static void testcase17(void)
    * 1. overheat
    * 2. cool down before shutdown
    */
-  module_t* state = load_state_module("2", DSME_STATE_USER);
+  module_t* state = load_state_module("USER", DSME_STATE_USER);
   assert(!timer_exists());
 
   // overheat
@@ -926,7 +952,7 @@ static void testcase18(void)
    * 1. start in actdead
    * 2. request startup
    */
-  module_t* state = load_state_module("5", DSME_STATE_ACTDEAD);
+  module_t* state = load_state_module("ACT_DEAD", DSME_STATE_ACTDEAD);
   assert(!timer_exists());
   assert(message_queue_is_empty());
 
@@ -968,7 +994,7 @@ static void testcase19(void)
   /* request shutdown when an alarm is about to happen */
 
   // boot to user state
-  module_t* state = load_state_module("2", DSME_STATE_USER);
+  module_t* state = load_state_module("USER", DSME_STATE_USER);
   assert(!timer_exists());
   disconnect_charger(state);
 
@@ -984,9 +1010,9 @@ static void testcase19(void)
 
 static void testcase20(void)
 {
-  /* weird $RUNLEVEL cases */
+  /* weird $BOOTSTATE cases */
 
-  // do not specify $RUNLEVEL
+  // do not specify $BOOTSTATE
   module_t* state = load_module_under_test("../modules/libstate.so");
   DSM_MSGTYPE_STATE_CHANGE_IND* ind;
   assert((ind = queued(DSM_MSGTYPE_STATE_CHANGE_IND)));
@@ -996,30 +1022,30 @@ static void testcase20(void)
   assert(!timer_exists());
   unload_module_under_test(state);
 
-  // specify a bad $RUNLEVEL
-  state = load_state_module("39", DSME_STATE_MALF);
+  // specify a bad $BOOTSTATE
+  state = load_state_module("DIIBADAABA", DSME_STATE_MALF);
   assert(!timer_exists());
   assert(message_queue_is_empty());
   unload_module_under_test(state);
 
   // specify SHUTDOWN
-  setenv("RUNLEVEL", "0", true);
+  setenv("BOOTSTATE", "SHUTDOWN", true);
   state = load_module_under_test("../modules/libstate.so");
-  unsetenv("RUNLEVEL");
+  unsetenv("BOOTSTATE");
   expect_shutdown(state);
   unload_module_under_test(state);
 
   // specify SHUTDOWN
-  setenv("RUNLEVEL", "0", true);
+  setenv("BOOTSTATE", "SHUTDOWN", true);
   state = load_module_under_test("../modules/libstate.so");
-  unsetenv("RUNLEVEL");
+  unsetenv("BOOTSTATE");
   expect_shutdown(state);
   unload_module_under_test(state);
 
-  // specify REBOOT
-  setenv("RUNLEVEL", "6", true);
+  // specify BOOT
+  setenv("BOOTSTATE", "BOOT", true);
   state = load_module_under_test("../modules/libstate.so");
-  unsetenv("RUNLEVEL");
+  unsetenv("BOOTSTATE");
   expect_reboot(state);
   unload_module_under_test(state);
 }
@@ -1030,7 +1056,16 @@ static void testcase21(void)
 
   // non-rd_mode
   rd_mode = "";
-  module_t* state = load_state_module("39", DSME_STATE_MALF);
+  setenv("BOOTSTATE", "DIIBADAABA", true);
+  module_t* state = load_module_under_test("../modules/libstate.so");
+  unsetenv("BOOTSTATE");
+  DSM_MSGTYPE_STATE_CHANGE_IND* ind;
+  assert((ind = queued(DSM_MSGTYPE_STATE_CHANGE_IND)));
+  assert(ind->state == DSME_STATE_MALF);
+  free(ind);
+  DSM_MSGTYPE_HWWD_KICK* ind3;
+  assert((ind3 = queued(DSM_MSGTYPE_HWWD_KICK)));
+  free(ind3);
   assert(message_queue_is_empty());
   assert(timer_exists());
   trigger_timer();
@@ -1044,7 +1079,14 @@ static void testcase21(void)
 
   // cal problem
   rd_mode = 0;
-  state = load_state_module("39", DSME_STATE_MALF);
+  setenv("BOOTSTATE", "DIIBADAABA", true);
+  state = load_module_under_test("../modules/libstate.so");
+  unsetenv("BOOTSTATE");
+  assert((ind = queued(DSM_MSGTYPE_STATE_CHANGE_IND)));
+  assert(ind->state == DSME_STATE_MALF);
+  free(ind);
+  assert((ind3 = queued(DSM_MSGTYPE_HWWD_KICK)));
+  free(ind3);
   assert(message_queue_is_empty());
   assert(timer_exists());
   trigger_timer();
@@ -1061,7 +1103,7 @@ static void testcase22(void)
   /* TEST/LOCAL mode */
 
   // boot to TEST state
-  module_t* state = load_state_module("3", DSME_STATE_TEST);
+  module_t* state = load_state_module("TEST", DSME_STATE_TEST);
   assert(!timer_exists());
   unload_module_under_test(state);
 }
@@ -1072,7 +1114,7 @@ static void testcase23(void)
 
   // thermal shutdown when not able to create a timer
   dsme_create_timer_fails = 1;
-  module_t* state = load_state_module("2", DSME_STATE_USER);
+  module_t* state = load_state_module("USER", DSME_STATE_USER);
   assert(!timer_exists());
 
   DSM_MSGTYPE_SET_THERMAL_STATE msg =
@@ -1093,6 +1135,10 @@ static void testcase23(void)
   assert((ind3 = queued(DSM_MSGTYPE_SAVE_DATA_IND)));
   free(ind3);
 
+  DSM_MSGTYPE_HWWD_KICK* ind4;
+  assert((ind4 = queued(DSM_MSGTYPE_HWWD_KICK)));
+  free(ind4);
+
   assert(message_queue_is_empty());
   assert(timer_exists());
 
@@ -1108,7 +1154,7 @@ static void testcase23(void)
 
   // start in actdead and plug and unplug the charger, but timer fails
   dsme_create_timer_fails = 1;
-  state = load_state_module("5", DSME_STATE_ACTDEAD);
+  state = load_state_module("ACT_DEAD", DSME_STATE_ACTDEAD);
   assert(!timer_exists());
 
   connect_charger(state);
