@@ -2,6 +2,7 @@ description "Connect dsme to dbus"
 author "Semi Malinen"
 
 start on started dbus
+start on started dbus-actdead
 
 console output
 
