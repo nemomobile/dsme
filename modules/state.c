@@ -90,19 +90,20 @@ static void try_to_change_state(dsme_state_t new_state);
 static void change_state(dsme_state_t new_state);
 
 static void start_delayed_shutdown_timer(unsigned seconds);
-static void start_delayed_actdead_timer(unsigned seconds);
-static void stop_delayed_runlevel_timers(void);
 static int  delayed_shutdown_fn(void* unused);
+static void start_delayed_actdead_timer(unsigned seconds);
 static int  delayed_actdead_fn(void* unused);
+static void stop_delayed_runlevel_timers(void);
 static void change_runlevel(dsme_state_t state);
+static void kick_wds(void);
 
 static void start_overheat_timer(void);
-static void stop_overheat_timer(void);
 static int  delayed_overheat_fn(void* unused);
+static void stop_overheat_timer(void);
 
 static void start_charger_disconnect_timer(void);
-static void stop_charger_disconnect_timer(void);
 static int  delayed_charger_disconnect_fn(void* unused);
+static void stop_charger_disconnect_timer(void);
 
 static bool rd_mode_enabled(void);
 
@@ -315,15 +316,15 @@ static void start_delayed_shutdown_timer(unsigned seconds)
           exit(EXIT_FAILURE);
       }
       dsme_log(LOG_CRIT, "Shutdown in %i seconds", seconds);
-
-      DSM_MSGTYPE_HWWD_KICK msg = DSME_MSG_INIT(DSM_MSGTYPE_HWWD_KICK);
-      /* kick WDs once */
-      broadcast_internally(&msg);
   }
 }
 
 static int delayed_shutdown_fn(void* unused)
 {
+  /* first kick WD's for the last time */
+  kick_wds();
+
+  /* then do the shutdown */
   DSM_MSGTYPE_SHUTDOWN msg = DSME_MSG_INIT(DSM_MSGTYPE_SHUTDOWN);
   msg.runlevel = state2runlevel(current_state);
   broadcast_internally(&msg);
@@ -356,9 +357,18 @@ static int delayed_actdead_fn(void* unused)
 
 static void change_runlevel(dsme_state_t state)
 {
-  DSM_MSGTYPE_CHANGE_RUNLEVEL msg = DSME_MSG_INIT(DSM_MSGTYPE_CHANGE_RUNLEVEL);
+  /* first kick WD's for the last time */
+  kick_wds();
 
+  /* then change the runlevel */
+  DSM_MSGTYPE_CHANGE_RUNLEVEL msg = DSME_MSG_INIT(DSM_MSGTYPE_CHANGE_RUNLEVEL);
   msg.runlevel = state2runlevel(state);
+  broadcast_internally(&msg);
+}
+
+static void kick_wds(void)
+{
+  DSM_MSGTYPE_HWWD_KICK msg = DSME_MSG_INIT(DSM_MSGTYPE_HWWD_KICK);
   broadcast_internally(&msg);
 }
 
