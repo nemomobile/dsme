@@ -117,7 +117,7 @@ static void start_kicking_now(void)
 
         static int locked = -1;
         if (locked == -1) {
-            dsme_log(LOG_NOTICE, "locking current pages to RAM");
+            dsme_log(LOG_NOTICE, "locking to RAM");
             if ((locked = mlockall(MCL_CURRENT|MCL_FUTURE)) == -1) {
                 dsme_log(LOG_CRIT, "mlockall(): %s", strerror(errno));
             }
