@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
 		conn = dsmesock_connect();
 		if (conn > 0) {
 			dsmesock_close(conn);
-			printf("OK: DSME socket exists\n");
+			printf("%s: OK: DSME socket exists\n", argv[0]);
 			return EXIT_SUCCESS;
 		}
 		
@@ -58,7 +58,8 @@ int main(int argc, char* argv[]) {
 		
 		if (now.tv_sec >= (start.tv_sec + DSME_START_TIMEOUT)) {
 			fprintf(stderr,
-				    "ERROR: Timeout waiting for DSME socket\n");
+				    "%s: ERROR: Timeout waiting for DSME socket\n",
+				    argv[0]);
 			return EXIT_FAILURE;
 		}
 		usleep(20000);
