@@ -412,49 +412,49 @@ const struct ucred* endpoint_ucred(const endpoint_t* sender)
   return u;
 }
 
+char* endpoint_name_by_pid(pid_t pid)
+{
+  char* name = 0;
+
+  char* filename;
+  if (asprintf(&filename, "/proc/%u/cmdline", pid) != -1) {
+      int   ret;
+      FILE* f = fopen(filename, "r");
+      free(filename);
+      if (f) {
+          char*  cmdline = 0;
+          size_t n;
+          ssize_t l = getline(&cmdline, &n, f);
+          fclose(f);
+          if (l > 0) {
+              cmdline[l - 1] = '\0';
+              ret = asprintf(&name, "pid %u: %s", pid, cmdline);
+          } else {
+              ret = asprintf(&name, "pid %u: (no name)", pid);
+          }
+          free(cmdline);
+      } else {
+          ret = asprintf(&name, "pid %u: (no such process)", pid);
+      }
+
+      if (ret == -1) {
+          name = 0;
+      }
+  }
+
+  return name;
+}
+
 char* endpoint_name(const endpoint_t* sender)
 {
   char* name = 0;
 
-  int ret = -1;
   if (!sender) {
-      ret = asprintf(&name, "(null endpoint)");
+      name = strdup("(null endpoint)");
   } else if (!sender->conn) {
-      ret = asprintf(&name, "dsme");
+      name = strdup("dsme");
   } else {
-      char* filename;
-      ret = asprintf(&filename, "/proc/%u/cmdline", sender->conn->ucred.pid);
-      if (ret != -1) {
-          FILE* f = fopen(filename, "r");
-          if (f) {
-              char*  cmdline = 0;
-              size_t n;
-              ssize_t l = getline(&cmdline, &n, f);
-              if (l > 0) {
-                  cmdline[l - 1] = '\0';
-                  ret = asprintf(&name,
-                                 "pid %u: %s",
-                                 sender->conn->ucred.pid,
-                                 cmdline);
-              } else {
-                  ret = asprintf(&name,
-                                 "pid %u: (no name)",
-                                 sender->conn->ucred.pid);
-              }
-              free(cmdline);
-              fclose(f);
-          } else {
-              ret = asprintf(&name,
-                             "pid %u: (no such process)",
-                             sender->conn->ucred.pid);
-          }
-          free(filename);
-      }
-  }
-
-  if (ret == -1) {
-      free(name);
-      name = 0;
+      name = endpoint_name_by_pid(sender->conn->ucred.pid);
   }
 
   return name;

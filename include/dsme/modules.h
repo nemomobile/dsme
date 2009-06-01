@@ -113,6 +113,7 @@ void endpoint_send_with_extra(endpoint_t* recipient,
 void endpoint_send(endpoint_t* recipient, const void* msg);
 
 const struct ucred* endpoint_ucred(const endpoint_t* sender);
+char* endpoint_name_by_pid(pid_t pid);
 char* endpoint_name(const endpoint_t* sender);
 bool endpoint_same(const endpoint_t* a, const endpoint_t* b);
 endpoint_t* endpoint_copy(const endpoint_t* endpoint);
