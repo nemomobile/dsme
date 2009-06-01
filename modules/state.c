@@ -502,7 +502,11 @@ DSME_HANDLER(DSM_MSGTYPE_SET_CHARGER_STATE, conn, msg)
  */
 DSME_HANDLER(DSM_MSGTYPE_SHUTDOWN_REQ, conn, msg)
 {
-  dsme_log(LOG_CRIT, "shutdown request received");
+  char* sender = endpoint_name(conn);
+  dsme_log(LOG_CRIT,
+           "shutdown request received from %s",
+           (sender ? sender : "(unknown)"));
+  free(sender);
 
   shutdown_requested = true;
   change_state_if_necessary();
@@ -514,7 +518,11 @@ DSME_HANDLER(DSM_MSGTYPE_SHUTDOWN_REQ, conn, msg)
  */
 DSME_HANDLER(DSM_MSGTYPE_POWERUP_REQ, conn, msg)
 {
-  dsme_log(LOG_CRIT, "powerup request received");
+  char* sender = endpoint_name(conn);
+  dsme_log(LOG_CRIT,
+           "powerup request received from %s",
+           (sender ? sender : "(unknown)"));
+  free(sender);
 
   shutdown_requested = false;
   change_state_if_necessary();
@@ -523,7 +531,11 @@ DSME_HANDLER(DSM_MSGTYPE_POWERUP_REQ, conn, msg)
 
 DSME_HANDLER(DSM_MSGTYPE_REBOOT_REQ, conn, msg)
 {
-  dsme_log(LOG_CRIT, "reboot request received");
+  char* sender = endpoint_name(conn);
+  dsme_log(LOG_CRIT,
+           "reboot request received from %s",
+           (sender ? sender : "(unknown)"));
+  free(sender);
 
   reboot_requested = true;
   change_state_if_necessary();

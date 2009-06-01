@@ -387,7 +387,7 @@ void endpoint_send(endpoint_t* recipient, const void* msg)
 }
 
 
-const struct ucred* endpoint_ucred(endpoint_t* sender)
+const struct ucred* endpoint_ucred(const endpoint_t* sender)
 {
   const struct ucred* u = 0;
 
@@ -410,6 +410,54 @@ const struct ucred* endpoint_ucred(endpoint_t* sender)
   }
 
   return u;
+}
+
+char* endpoint_name(const endpoint_t* sender)
+{
+  char* name = 0;
+
+  int ret = -1;
+  if (!sender) {
+      ret = asprintf(&name, "(null endpoint)");
+  } else if (!sender->conn) {
+      ret = asprintf(&name, "dsme");
+  } else {
+      char* filename;
+      ret = asprintf(&filename, "/proc/%u/cmdline", sender->conn->ucred.pid);
+      if (ret != -1) {
+          FILE* f = fopen(filename, "r");
+          if (f) {
+              char*  cmdline = 0;
+              size_t n;
+              ssize_t l = getline(&cmdline, &n, f);
+              if (l > 0) {
+                  cmdline[l - 1] = '\0';
+                  ret = asprintf(&name,
+                                 "pid %u: %s",
+                                 sender->conn->ucred.pid,
+                                 cmdline);
+              } else {
+                  ret = asprintf(&name,
+                                 "pid %u: (no name)",
+                                 sender->conn->ucred.pid);
+              }
+              free(cmdline);
+              fclose(f);
+          } else {
+              ret = asprintf(&name,
+                             "pid %u: (no such process)",
+                             sender->conn->ucred.pid);
+          }
+          free(filename);
+      }
+  }
+
+  if (ret == -1) {
+      free(name);
+      name = 0;
+  }
+
+  return name;
 }
 
 bool endpoint_same(const endpoint_t* a, const endpoint_t* b)
