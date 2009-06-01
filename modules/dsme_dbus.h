@@ -76,4 +76,6 @@ const char* dsme_dbus_message_get_string(const DsmeDbusMessage* msg);
 // NOTE: frees the signal; hence not const
 void dsme_dbus_signal_emit(DsmeDbusMessage* sig);
 
+char* dsme_dbus_endpoint_name(const DsmeDbusMessage* request);
+
 #endif

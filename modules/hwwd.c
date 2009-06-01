@@ -111,8 +111,10 @@ static void start_kicking_now(void)
         hwwd_kick_timer = dsme_create_timer_high_priority(DSME_WD_PERIOD,
                                                           hwwd_kick_fn,
                                                           NULL);
-        if (!hwwd_kick_timer) {
-            dsme_log(LOG_CRIT, "Unable to create a timer for WD kicking.., expect reset..");
+        if (hwwd_kick_timer) {
+            dsme_log(LOG_NOTICE, "Setting WD timeout to %d", DSME_WD_PERIOD);
+        } else {
+            dsme_log(LOG_CRIT, "Unable to create a timeout for WD kicking");
         }
 
         static int locked = -1;

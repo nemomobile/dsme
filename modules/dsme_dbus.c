@@ -27,6 +27,7 @@
 #include "dsme_dbus.h"
 
 #include "dsme/logging.h"
+#include "dsme/modules.h"
 
 #include <glib.h>
 #include <dbus/dbus.h>
@@ -187,6 +188,89 @@ static bool method_dispatcher_can_dispatch(const Dispatcher*  d,
 {
   /* const-cast-away due to silly D-Bus interface */
   return dbus_message_is_method_call((DBusMessage*)msg, d->interface, d->name);
+}
+
+static dbus_bool_t dbus_bus_get_unix_process_id(DBusConnection* conn,
+                                                const char*     name,
+                                                pid_t*          pid)
+{
+  DBusMessage*  msg;
+  DBusMessage*  reply;
+  DBusError     err;
+  dbus_uint32_t pid_arg;
+
+  msg = dbus_message_new_method_call("org.freedesktop.DBus",
+                                     "/org/freedesktop/DBus",
+                                     "org.freedesktop.DBus",
+                                     "GetConnectionUnixProcessID");
+  if (!msg) {
+      dsme_log(LOG_DEBUG, "Unable to allocate new message");
+      return FALSE;
+  }
+
+  if (!dbus_message_append_args(msg,
+                                DBUS_TYPE_STRING,
+                                &name,
+                                DBUS_TYPE_INVALID))
+  {
+      dsme_log(LOG_DEBUG, "Unable to append arguments to message");
+      dbus_message_unref(msg);
+      return FALSE;
+  }
+
+  // TODO: it is risky that we are blocking
+  dbus_error_init(&err);
+  reply = dbus_connection_send_with_reply_and_block(conn, msg, -1, &err);
+  if (dbus_error_is_set(&err)) {
+      dsme_log(LOG_DEBUG,
+               "Sending GetConnectionUnixProcessID failed: %s",
+               err.message);
+      dbus_error_free(&err);
+      dbus_message_unref(msg);
+      return FALSE;
+  }
+
+  dbus_error_init(&err);
+  dbus_message_get_args(reply,
+                        &err,
+                        DBUS_TYPE_UINT32,
+                        &pid_arg,
+                        DBUS_TYPE_INVALID);
+  if (dbus_error_is_set(&err)) {
+      dsme_log(LOG_DEBUG,
+               "Getting GetConnectionUnixProcessID args failed: %s",
+               err.message);
+      dbus_error_free(&err);
+      dbus_message_unref(msg);
+      dbus_message_unref(reply);
+      return FALSE;
+  }
+
+  *pid = pid_arg;
+
+  dbus_message_unref(msg);
+  dbus_message_unref(reply);
+
+  return TRUE;
+}
+
+char* dsme_dbus_endpoint_name(const DsmeDbusMessage* request)
+{
+  char* name = 0;
+
+  if (!request) {
+      name = strdup("(null request)");
+  } else {
+      pid_t pid;
+      char* sender = strdup(dbus_message_get_sender(request->msg));
+      if (!dbus_bus_get_unix_process_id(request->connection, sender, &pid)) {
+          name = strdup("(could not get pid)");
+      } else {
+          name = endpoint_name_by_pid(pid);
+      }
+  }
+
+  return name;
 }
 
 static void method_dispatcher_dispatch(const Dispatcher* dispatcher,
