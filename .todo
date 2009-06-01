@@ -12,6 +12,9 @@
             remove DSM_MSGTYPE_PROCESS_CLEAR
         </note>
     </note>
+    <note priority="medium" time="1229678796" done="1237213146">
+        remove field 'state' from DSM_MSGTYPE_SHUTDOWN_REQ
+    </note>
     <note priority="medium" time="1228210816">
         Thermal Manager: do not poll at NORMAL level
     </note>
@@ -23,12 +26,6 @@
     </note>
     <note priority="medium" time="1228294688">
         stop using runlevels; use bootstates instead
-    </note>
-    <note priority="medium" time="1229419447">
-        remove non-reentrant stuff from signal_handler()
-    </note>
-    <note priority="medium" time="1229678796" done="1237213146">
-        remove field 'state' from DSM_MSGTYPE_SHUTDOWN_REQ
     </note>
     <note priority="medium" time="1234964310">
         wait 2 s for alarm count to go 0 before actdead-&gt;user
