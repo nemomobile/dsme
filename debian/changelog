@@ -1,5 +1,6 @@
 dsme (0.60.15) unstable; urgency=low
 
+  * make wd kick period only 5 seconds as a temporary workaround
   * remove separate hw wd thread and kick wd's from the main thread
   * kick hw wd's before sending process wd pings
   * log bootstate at startup
