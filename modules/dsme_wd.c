@@ -134,7 +134,7 @@ bool dsme_wd_init(void)
     memset(&sch, 0, sizeof(sch));
     sch.sched_priority = sched_get_priority_max(DSME_WD_SCHEDULER);
     if (sched_setscheduler(0, DSME_WD_SCHEDULER, &sch) == -1) {
-        dsme_log(LOG_CRIT, "sched_get_priority_min(): %s", strerror(errno));
+        dsme_log(LOG_CRIT, "sched_setscheduler(): %s", strerror(errno));
     }
 
     read_cal_config();
