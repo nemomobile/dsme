@@ -60,12 +60,14 @@ static void get_version(const DsmeDbusMessage* request, DsmeDbusMessage** reply)
 
 static void req_powerup(const DsmeDbusMessage* request, DsmeDbusMessage** reply)
 {
+  dsme_log(LOG_CRIT, "powerup request received from D-Bus");
   DSM_MSGTYPE_POWERUP_REQ req = DSME_MSG_INIT(DSM_MSGTYPE_POWERUP_REQ);
   broadcast_internally(&req);
 }
 
 static void req_reboot(const DsmeDbusMessage* request, DsmeDbusMessage** reply)
 {
+  dsme_log(LOG_CRIT, "reboot request received from D-Bus");
   DSM_MSGTYPE_REBOOT_REQ req = DSME_MSG_INIT(DSM_MSGTYPE_REBOOT_REQ);
   broadcast_internally(&req);
 }
@@ -73,6 +75,7 @@ static void req_reboot(const DsmeDbusMessage* request, DsmeDbusMessage** reply)
 static void req_shutdown(const DsmeDbusMessage* request,
                          DsmeDbusMessage**      reply)
 {
+  dsme_log(LOG_CRIT, "shutdown request received from D-Bus");
   DSM_MSGTYPE_SHUTDOWN_REQ req = DSME_MSG_INIT(DSM_MSGTYPE_SHUTDOWN_REQ);
 
   broadcast_internally(&req);
