@@ -40,6 +40,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include <sched.h>
 #include <linux/types.h>
@@ -78,6 +79,25 @@ void dsme_wd_kick(void)
               /* must not kick later wd's if an earlier one fails */
               break;
           }
+      }
+
+      static struct timespec previous_timestamp = { 0, 0 };
+      struct timespec timestamp;
+
+      if (clock_gettime(CLOCK_MONOTONIC, &timestamp) != -1) {
+          if (previous_timestamp.tv_sec != 0) {
+              long ms;
+
+              ms = (timestamp.tv_sec - previous_timestamp.tv_sec) * 1000;
+              ms += (timestamp.tv_nsec - previous_timestamp.tv_nsec) / 1000000;
+
+              if (ms > (DSME_WD_PERIOD + 1) * 1000) {
+                  dsme_log(LOG_CRIT, "took %ld ms between WD kicks", ms);
+              } else {
+                  dsme_log(LOG_DEBUG, "Time since previous WD kick: %ld ms", ms);
+              }
+          }
+          previous_timestamp = timestamp;
       }
   }
 }
