@@ -6,6 +6,7 @@
    Copyright (C) 2004-2009 Nokia Corporation.
 
    @author Yuri Zaporogets
+   @author Semi Malinen <semi.malinen@nokia.com>
 
    This file is part of Dsme.
 
@@ -35,6 +36,9 @@
 #include <asm/types.h>
 #include <linux/netlink.h>
 
+#include <pthread.h>
+#include <semaphore.h>
+
 /* Logging is only enabled if this is defined */
 #ifdef DSME_LOG_ENABLE
 
@@ -42,11 +46,11 @@
 #define DSME_STI_CHANNEL 44
 
 /* Function prototypes */
-static void log_to_null(int prio, const char* fmt, va_list ap);
-static void log_to_stderr(int prio, const char* fmt, va_list ap);
+static void log_to_null(int prio, const char* message);
+static void log_to_stderr(int prio, const char* message);
 
 /* This variable holds the address of the logging functions */
-static void (*dsme_log_routine)(int prio, const char* fmt, va_list ap) =
+static void (*dsme_log_routine)(int prio, const char* message) =
   log_to_stderr;
 
 static struct {
@@ -58,6 +62,23 @@ static struct {
     int         sock;      /* Netlink socket for STI method */
     int         channel;   /* Channel number for STI method */
 } logopt = { LOG_METHOD_STDERR, LOG_INFO, 0, "DSME", NULL };
+
+
+#define DSME_MAX_LOG_MESSAGE_LENGTH 123
+#define DSME_MAX_LOG_BUFFER_ENTRIES  64 /* must be a power of 2! */
+
+typedef struct log_entry {
+    int  prio;
+    char message[DSME_MAX_LOG_MESSAGE_LENGTH + 1];
+} log_entry;
+
+/* ring buffer for log entries */
+static log_entry ring_buffer[DSME_MAX_LOG_BUFFER_ENTRIES];
+
+/* ring buffer access counters */
+
+/* ring buffer semaphore */
+static sem_t ring_buffer_sem;
 
 
 
@@ -91,7 +112,7 @@ static const char* log_prio_str(int prio)
 /*
  * Empty routine for suppressing all log messages
  */
-static void log_to_null(int prio, const char* fmt, va_list ap)
+static void log_to_null(int prio, const char* message)
 {
 }
 
@@ -99,7 +120,7 @@ static void log_to_null(int prio, const char* fmt, va_list ap)
 /*
  * This routine is used when STI logging method is set
  */
-static void log_to_sti(int prio, const char* fmt, va_list ap)
+static void log_to_sti(int prio, const char* message)
 {
     if (logopt.sock != -1) {
         if (logopt.verbosity >= prio) {
@@ -116,7 +137,7 @@ static void log_to_sti(int prio, const char* fmt, va_list ap)
                          log_prio_str(prio));
             }
             len = strlen(buf);
-            vsnprintf(buf+len, sizeof(buf)-len, fmt, ap);
+            snprintf(buf+len, sizeof(buf)-len, "%s", message);
             len = strlen(buf);
 
             struct iovec iov[2];
@@ -142,7 +163,7 @@ static void log_to_sti(int prio, const char* fmt, va_list ap)
         }
     } else {
         fprintf(stderr, "dsme trace: ");
-        vfprintf(stderr, fmt, ap);
+        fprintf(stderr, "%s", message);
     }
 }
 
@@ -150,13 +171,13 @@ static void log_to_sti(int prio, const char* fmt, va_list ap)
 /*
  * This routine is used when stdout logging method is set
  */
-static void log_to_stdout(int prio, const char* fmt, va_list ap)
+static void log_to_stdout(int prio, const char* message)
 {
     if (logopt.verbosity >= prio) {
-        if (prio >= 0)
-            printf("%s %s: ", logopt.prefix, log_prio_str(prio));
-        vfprintf(stdout, fmt, ap);
-        fprintf(stdout, "\n");
+        if (prio >= 0) {
+            fprintf(stdout, "%s %s: ", logopt.prefix, log_prio_str(prio));
+        }
+        fprintf(stdout, "%s\n", message);
     }
 }
 
@@ -164,13 +185,13 @@ static void log_to_stdout(int prio, const char* fmt, va_list ap)
 /*
  * This routine is used when stderr logging method is set
  */
-static void log_to_stderr(int prio, const char* fmt, va_list ap)
+static void log_to_stderr(int prio, const char* message)
 {
     if (logopt.verbosity >= prio) {
-        if (prio >= 0)
+        if (prio >= 0) {
             fprintf(stderr, "%s %s: ", logopt.prefix, log_prio_str(prio));
-        vfprintf(stderr, fmt, ap);
-        fprintf(stderr, "\n");
+        }
+        fprintf(stderr, "%s\n", message);
     }
 }
 
@@ -178,11 +199,11 @@ static void log_to_stderr(int prio, const char* fmt, va_list ap)
 /*
  * This routine is used when syslog logging method is set
  */
-static void log_to_syslog(int prio, const char* fmt, va_list ap)
+static void log_to_syslog(int prio, const char* message)
 {
     if (logopt.verbosity >= prio) {
         if (prio < 0) prio = LOG_DEBUG;
-        vsyslog(prio, fmt, ap);
+        syslog(prio, message);
     }
 }
 
@@ -190,32 +211,76 @@ static void log_to_syslog(int prio, const char* fmt, va_list ap)
 /*
  * This routine is used when file logging method is set
  */
-static void log_to_file(int prio, const char* fmt, va_list ap)
+static void log_to_file(int prio, const char* message)
 {
     if (logopt.verbosity >= prio) {
         if (prio >= 0)
             fprintf(logopt.filep, "%s %s: ", logopt.prefix, log_prio_str(prio));
-        vfprintf(logopt.filep, fmt, ap);
-        fprintf(logopt.filep, "\n");
+        fprintf(logopt.filep, "%s\n", message);
         fflush(logopt.filep);
     }
 }
 
 
 /*
- * This function is for "system" log messages.
+ * This function is the main entry point for logging.
+ * It writes log entries to a ring buffer that the logging thread reads.
  */
-int dsme_log_txt(int level, const char* fmt, ...)
+void dsme_log_txt(int level, const char* fmt, ...)
 {
-    va_list ap;
+    static unsigned write_count = 0;
+    va_list         ap;
+
     va_start(ap, fmt);
-    dsme_log_routine(level, fmt, ap);
-    /* also output to console for critical errors and more important */
+
+    if (logopt.verbosity >= level) {
+        /* buffer for the logging thread to log */
+        log_entry* entry =
+            &ring_buffer[write_count % DSME_MAX_LOG_BUFFER_ENTRIES];
+
+        entry->prio = level;
+        vsnprintf(entry->message,
+                  DSME_MAX_LOG_MESSAGE_LENGTH + 1,
+                  fmt,
+                  ap);
+        entry->message[DSME_MAX_LOG_MESSAGE_LENGTH] = '\0';
+
+        ++write_count;
+
+        /* wake up the logging thread */
+        sem_post(&ring_buffer_sem);
+    }
+
+    /* always output critical messages to console */
     if (level <= LOG_CRIT) {
         vfprintf(stderr, fmt, ap);
         fprintf(stderr, "\n");
     }
+
     va_end(ap);
+}
+
+/*
+ * This is the logging thread that reads log entries from
+ * the ring buffer and writes them to their final destination.
+ */
+static void* logging_thread(void* param)
+{
+    static unsigned read_count = 0;
+
+    while (true) {
+        while (sem_wait(&ring_buffer_sem) == -1) {
+            continue;
+        }
+
+        log_entry* entry =
+            &ring_buffer[read_count % DSME_MAX_LOG_BUFFER_ENTRIES];
+
+        dsme_log_routine(entry->prio, entry->message);
+
+        ++read_count;
+    }
+
     return 0;
 }
 
@@ -230,13 +295,13 @@ int dsme_log_txt(int level, const char* fmt, ...)
  *
  * Returns 0 upon successfull initialization, a negative value otherwise.
  */
-int dsme_log_open(log_method  method,
-                  int         verbosity,
-                  int         usetime,
-                  const char* prefix,
-                  int         facility,
-                  int         option,
-                  const char* filename)
+bool dsme_log_open(log_method  method,
+                   int         verbosity,
+                   int         usetime,
+                   const char* prefix,
+                   int         facility,
+                   int         option,
+                   const char* filename)
 {
     logopt.method = method;
     logopt.verbosity = (verbosity > LOG_DEBUG) ? LOG_DEBUG :
@@ -297,15 +362,40 @@ out:
                         "Can't create log file %s (%s)\n",
                         filename,
                         strerror(errno));
-                return -1;
+                return false;
             }
             dsme_log_routine = log_to_file;
             break;
 
         default:
-            return -1;
+            return false;
     }
-    return 0;
+
+    /* initialize the ring buffer semaphore */
+    if (sem_init(&ring_buffer_sem, 0, 0) == -1) {
+        fprintf(stderr, "sem_init: %s\n", strerror(errno));
+        return false;
+    }
+
+    /* create the logging thread */
+    pthread_attr_t     tattr;
+    pthread_t          tid;
+    struct sched_param param;
+
+    if (pthread_attr_init(&tattr) != 0) {
+        fprintf(stderr, "Error getting thread attributes\n");
+        return false;
+    }
+    if (pthread_attr_getschedparam(&tattr, &param) != 0) {
+        fprintf(stderr, "Error gettint scheduling parameters\n");
+        return false;
+    }
+    if (pthread_create(&tid, &tattr, logging_thread, 0) != 0) {
+        fprintf(stderr, "Error creating the logging thread\n");
+        return false;
+    }
+
+    return true;
 }
 
 

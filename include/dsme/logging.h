@@ -27,6 +27,7 @@
 
 /* Even if syslog is not used, use the message levels therein */
 #include <syslog.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -62,7 +63,7 @@ typedef enum {
 /* Function prototypes */
 #ifdef DSME_LOG_ENABLE
 /* Function prototypes */
-int dsme_log_txt(int level, const char *fmt, ...);
+void dsme_log_txt(int level, const char *fmt, ...);
 /* Macros */
 #define dsme_log(level, fmt...) dsme_log_txt(level, fmt)
 #else
@@ -74,7 +75,7 @@ int dsme_log_txt(int level, const char *fmt, ...);
 /** 
    Initializes the logging subsystem.
 */
-int dsme_log_open(log_method method, int verbosity, int usetime, 
+bool dsme_log_open(log_method method, int verbosity, int usetime, 
 		     const char *prefix, int facility, int option,
 		     const char *filename);
 

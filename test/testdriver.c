@@ -274,7 +274,7 @@ static void unload_module_under_test(module_t* module)
 
 static void initialize(void)
 {
-  if (dsme_log_open(LOG_METHOD_STDOUT, 7, false, "    ", 0, 0, "") != 0) {
+  if (!dsme_log_open(LOG_METHOD_STDOUT, 7, false, "    ", 0, 0, "")) {
       fatal("dsme_log_open() failed");
   }
 }
