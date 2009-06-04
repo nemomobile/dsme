@@ -120,16 +120,16 @@ static void log_to_sti(int prio, const char* fmt, va_list ap)
             len = strlen(buf);
 
             struct iovec iov[2];
-            iov[0].iov_base	= &nlh;
-            iov[0].iov_len	= sizeof(struct nlmsghdr);
-            iov[1].iov_base	= buf;
-            iov[1].iov_len	= len;
+            iov[0].iov_base = &nlh;
+            iov[0].iov_len  = sizeof(struct nlmsghdr);
+            iov[1].iov_base = buf;
+            iov[1].iov_len  = len;
 
             struct msghdr msg;
-            msg.msg_name	= (void *)&snl;
-            msg.msg_namelen	= sizeof(struct sockaddr_nl);
-            msg.msg_iov	= iov;
-            msg.msg_iovlen	= sizeof(iov)/sizeof(*iov);
+            msg.msg_name    = (void *)&snl;
+            msg.msg_namelen = sizeof(struct sockaddr_nl);
+            msg.msg_iov     = iov;
+            msg.msg_iovlen  = sizeof(iov)/sizeof(*iov);
 
             memset(&snl, 0, sizeof(struct sockaddr_nl));
 
@@ -256,8 +256,8 @@ int dsme_log_open(log_method  method,
                 int ret;
 
                 memset(&snl, 0, sizeof(struct sockaddr_nl));
-                snl.nl_family	= AF_NETLINK;
-                snl.nl_pid	= getpid();
+                snl.nl_family = AF_NETLINK;
+                snl.nl_pid    = getpid();
 
                 logopt.sock = ret = socket(PF_NETLINK,
                                            SOCK_RAW,
