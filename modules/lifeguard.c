@@ -449,7 +449,7 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_START, client, msg)
   }
 
   /* set oom_adj */
-  if (msg->oom_adj != 0 && ucred->uid == 0) {
+  if (msg->oom_adj != 0) {
       process->oom_adj = msg->oom_adj;
   } else {
       process->oom_adj = 0;
