@@ -1,3 +1,10 @@
+dsme (0.60.17) unstable; urgency=low
+
+  * off-load logging to a separate thread to prevent main thread from blocking
+  * attempt to posixify dsmetool-session
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Thu, 04 Jun 2009 14:40:42 +0000
+
 dsme (0.60.16) unstable; urgency=low
 
   * log if wd's are kicked 1 s or more later than anticipated
