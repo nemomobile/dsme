@@ -358,7 +358,7 @@ static FILE* thermal_tuning_file(const char* thermal_object_name)
            thermal_object_name);
 
 #ifndef DSME_THERMAL_LOGGING
-  dsme_log(LOG_INFO, "trying to open %s for thermal tuning values", name);
+  dsme_log(LOG_DEBUG, "trying to open %s for thermal tuning values", name);
 #endif
 
   return fopen(name, "r");
@@ -415,7 +415,7 @@ static void thermal_object_try_to_read_config(thermal_object_t* thermal_object)
       fclose(f);
 #ifndef DSME_THERMAL_LOGGING
   } else {
-      dsme_log(LOG_INFO,
+      dsme_log(LOG_DEBUG,
                "no thermal tuning file for %s; no change in thermal values",
                thermal_object->conf->name);
 #endif
