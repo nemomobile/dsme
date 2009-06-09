@@ -1,3 +1,9 @@
+dsme (0.60.19) unstable; urgency=low
+
+  * revert the botched attempt at posixifying dsmetool-session
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Tue, 09 Jun 2009 10:31:37 +0000
+
 dsme (0.60.18) unstable; urgency=low
 
   * NB#101783: allow setting of oom_adj for non-root users of dsmetool
