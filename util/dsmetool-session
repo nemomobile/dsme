@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/ash
 
 trap 'exit_handler' INT QUIT TERM EXIT ABRT SEGV
 
@@ -15,7 +15,7 @@ usage()
   echo "                  then stop trying)"
   echo "-o <cmd>          Start a process only once"
   echo "-c <num>          Restart process only maximum N times"
-  echo "-S <signal name>  Set (initial) termination signal"
+  echo "-S <signal>       Set (initial) termination signal"
   echo "-O                Mark for OOM protection (if permitted)"
   echo "-U <username>     Set used uid for started process from"
   echo "                  username"
@@ -28,9 +28,9 @@ usage()
 exit_handler()
 {
   echo "`basename $0`: exiting"
-  kill -s $SIGNAL $PID > /dev/null 2>&1
+  kill -$SIGNAL $PID > /dev/null 2>&1
   sleep 2
-  kill -s KILL $PID > /dev/null 2>&1
+  kill -9 $PID > /dev/null 2>&1
 
   # FIXME: this _should_ exit instantly within trap handler, but doesn't.
   exit 0
@@ -112,7 +112,7 @@ start_noncritical_with_retries()
   done
 }
 
-SIGNAL=TERM
+SIGNAL=15
 RETRIES=3
 ARGUMENTS=$@
 
