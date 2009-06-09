@@ -1,3 +1,9 @@
+dsme (0.60.18) unstable; urgency=low
+
+  * NB#101783: allow setting of oom_adj for non-root users of dsmetool
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Tue, 09 Jun 2009 06:59:48 +0000
+
 dsme (0.60.17) unstable; urgency=low
 
   * off-load logging to a separate thread to prevent main thread from blocking
