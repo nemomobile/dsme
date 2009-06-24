@@ -1,3 +1,9 @@
+dsme (0.60.20) unstable; urgency=low
+
+  * Fixes: NB#124471: fix K to degrees C conversion heuristics
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Wed, 24 Jun 2009 19:04:45 +0000
+
 dsme (0.60.19) unstable; urgency=low
 
   * revert the botched attempt at posixifying dsmetool-session
