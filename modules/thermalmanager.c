@@ -172,12 +172,12 @@ static void receive_temperature_response(thermal_object_t* thermal_object,
   thermal_object_try_to_read_config(thermal_object);
 #endif
 
+  /* heuristics to convert to degrees C */
   if (temperature > 1000) {
       /* convert from millidegrees to degrees */
       temperature = temperature / 1000;
   }
-
-  if (temperature > 250) {
+  if (temperature > 223) { /* 223 K ~ -50 degrees C */
       /* convert from kelvin to degrees celsius */
       temperature = temperature - 273;
   }
@@ -314,6 +314,9 @@ DSME_HANDLER(DSM_MSGTYPE_DBUS_DISCONNECT, client, msg)
 module_fn_info_t message_handlers[] = {
   DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_CONNECT),
   DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_DISCONNECT),
+#if 0 // TODO
+  DSME_HANDLER_BINDING(DSM_MSGTYPE_ENABLE_THERMAL_LOGGING),
+#endif
   { 0 }
 };
 
