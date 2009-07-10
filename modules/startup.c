@@ -8,6 +8,7 @@
 
    @author Ari Saastamoinen
    @author Ismo Laitinen <ismo.laitinen@nokia.com>
+   @author Semi Malinen <semi.malinen@nokia.com>
 
    This file is part of Dsme.
 
@@ -72,6 +73,7 @@ const char *modules[] = {
     "libstate.so",
     "liblifeguard.so",
     "libprocesswd.so",
+    "libusbtracker.so",
     "libdbusproxy.so",
     "libalarmtracker.so",
     "libthermalmanager.so",

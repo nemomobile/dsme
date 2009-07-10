@@ -9,6 +9,7 @@ SO_LIBRARIES    := libstartup              \
                    libhwwd                 \
                    libdbusproxy            \
                    libalarmtracker         \
+                   libusbtracker           \
                    libthermalmanager       \
                    libemergencycalltracker
 
@@ -52,6 +53,9 @@ libdbusproxy_EXTRA_LDFLAGS := $$(pkg-config --libs dbus-glib-1) ../libdsme_dbus_
 libalarmtracker_C_OBJS := alarmtracker.o
 alarmtracker.o : C_EXTRA_GENFLAGS := -fPIC
 
+libusbtracker_C_OBJS := usbtracker.o
+usbtracker.o : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags glib-2.0)
+
 libthermalmanager_C_OBJS := thermalmanager.o
 thermalmanager.o : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags glib-2.0) -DDSME_THERMAL_TUNING #-DDSME_THERMAL_LOGGING
 #libthermalmanager_EXTRA_LDFLAGS := -lrt
@@ -83,12 +87,15 @@ INSTALL_GROUP   :=      $(shell id -g)
 
 $(INSTALL_BINARIES): INSTALL_PERM   :=  755
 $(INSTALL_BINARIES): INSTALL_DIR    :=  $(DESTDIR)/sbin
-INSTALL_SO_LIBRARIES    :=  libstartup.so libprocesswd.so \
-                            libhwwd.so liblifeguard.so \
-                            libstate.so \
-                            librunlevel.so \
-                            libdbusproxy.so \
-                            libalarmtracker.so \
+INSTALL_SO_LIBRARIES    :=  libstartup.so        \
+                            libprocesswd.so      \
+                            libhwwd.so           \
+                            liblifeguard.so      \
+                            libstate.so          \
+                            librunlevel.so       \
+                            libdbusproxy.so      \
+                            libalarmtracker.so   \
+                            libusbtracker.so     \
                             libthermalmanager.so \
                             libemergencycalltracker.so
 ifdef DSME_BMEIPC

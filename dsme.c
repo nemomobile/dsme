@@ -27,7 +27,6 @@
 
 /*
  * TODO: - things to glibify:
- *         -- sockets to use g_io_channels
  *         -- plug-ins
  */
 
