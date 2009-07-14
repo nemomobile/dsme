@@ -68,6 +68,7 @@ static bool     alarm_set              = false;
 static bool     device_overheated      = false;
 static bool     emergency_call_ongoing = false;
 static bool     battery_empty          = false;
+static bool     connected_to_pc        = false;
 static bool     shutdown_requested     = false;
 static bool     reboot_requested       = false;
 static bool     test                   = false;
@@ -304,6 +305,17 @@ static void change_state(dsme_state_t new_state)
 }
 
 
+static void deny_state_change(dsme_state_t denied_state, const char* reason)
+{
+  DSM_MSGTYPE_STATE_REQ_DENIED_IND ind =
+      DSME_MSG_INIT(DSM_MSGTYPE_STATE_REQ_DENIED_IND);
+
+  ind.state = denied_state;
+  broadcast_with_extra(&ind, strlen(reason) + 1, reason);
+  dsme_log(LOG_CRIT, "shutdown or reboot denied due to: %s", reason);
+}
+
+
 static void start_delayed_shutdown_timer(unsigned seconds)
 {
   if (!delayed_shutdown_timer) {
@@ -496,6 +508,16 @@ DSME_HANDLER(DSM_MSGTYPE_SET_CHARGER_STATE, conn, msg)
 }
 
 
+DSME_HANDLER(DSM_MSGTYPE_SET_USB_STATE, conn, msg)
+{
+    connected_to_pc = msg->connected_to_pc;
+
+    dsme_log(LOG_DEBUG,
+             "USB %s",
+             connected_to_pc ? "connected" : "disconnected");
+}
+
+
 /**
  * Shutdown requested.
  * We go to actdead state if alarm is set (or snoozed) or charger connected.
@@ -508,8 +530,12 @@ DSME_HANDLER(DSM_MSGTYPE_SHUTDOWN_REQ, conn, msg)
            (sender ? sender : "(unknown)"));
   free(sender);
 
-  shutdown_requested = true;
-  change_state_if_necessary();
+  if (!connected_to_pc) {
+      shutdown_requested = true;
+      change_state_if_necessary();
+  } else {
+      deny_state_change(DSME_STATE_SHUTDOWN, "usb");
+  }
 }
 
 /**
@@ -524,8 +550,12 @@ DSME_HANDLER(DSM_MSGTYPE_POWERUP_REQ, conn, msg)
            (sender ? sender : "(unknown)"));
   free(sender);
 
-  shutdown_requested = false;
-  change_state_if_necessary();
+  if (!connected_to_pc) {
+      shutdown_requested = false;
+      change_state_if_necessary();
+  } else {
+      deny_state_change(DSME_STATE_REBOOT, "usb");
+  }
 }
 
 
@@ -537,8 +567,12 @@ DSME_HANDLER(DSM_MSGTYPE_REBOOT_REQ, conn, msg)
            (sender ? sender : "(unknown)"));
   free(sender);
 
-  reboot_requested = true;
-  change_state_if_necessary();
+  if (!connected_to_pc) {
+      reboot_requested = true;
+      change_state_if_necessary();
+  } else {
+      deny_state_change(DSME_STATE_REBOOT, "usb");
+  }
 }
 
 
@@ -649,6 +683,7 @@ module_fn_info_t message_handlers[] = {
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_THERMAL_STATE),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_EMERGENCY_CALL_STATE),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_BATTERY_STATE),
+      DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_USB_STATE),
       {0}
 };
 

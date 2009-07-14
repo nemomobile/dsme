@@ -135,6 +135,18 @@ DSME_HANDLER(DSM_MSGTYPE_SAVE_DATA_IND, server, msg)
   emit_dsme_dbus_signal(dsme_save_unsaved_data_ind);
 }
 
+DSME_HANDLER(DSM_MSGTYPE_STATE_REQ_DENIED_IND, server, msg)
+{
+    DsmeDbusMessage* sig = dsme_dbus_signal_new(sig_path,
+                                                sig_interface,
+                                                dsme_state_req_denied_ind);
+    dsme_dbus_message_append_string(sig, (msg->state == DSME_STATE_SHUTDOWN ?
+                                          "shutdown" : "reboot"));
+    dsme_dbus_message_append_string(sig, DSMEMSG_EXTRA(msg));
+
+    dsme_dbus_signal_emit(sig);
+}
+
 DSME_HANDLER(DSM_MSGTYPE_DBUS_CONNECT, client, msg)
 {
   dsme_log(LOG_DEBUG, "DBUS_CONNECT");
@@ -159,6 +171,7 @@ module_fn_info_t message_handlers[] = {
   DSME_HANDLER_BINDING(DSM_MSGTYPE_STATE_CHANGE_IND),
   DSME_HANDLER_BINDING(DSM_MSGTYPE_THERMAL_SHUTDOWN_IND),
   DSME_HANDLER_BINDING(DSM_MSGTYPE_SAVE_DATA_IND),
+  DSME_HANDLER_BINDING(DSM_MSGTYPE_STATE_REQ_DENIED_IND),
   DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_CONNECT),
   DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_DISCONNECT),
   DSME_HANDLER_BINDING(DSM_MSGTYPE_DSME_VERSION),

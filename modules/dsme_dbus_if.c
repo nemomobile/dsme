@@ -35,6 +35,7 @@ const char dsme_req_powerup[]           = "req_powerup";
 const char dsme_req_reboot[]            = "req_reboot";
 const char dsme_req_shutdown[]          = "req_shutdown";
 
+const char dsme_state_req_denied_ind[]  = "denied_req_ind";
 const char dsme_shutdown_ind[]          = "shutdown_ind";
 const char dsme_thermal_shutdown_ind[]  = "thermal_shutdown_ind";
 const char dsme_save_unsaved_data_ind[] = "save_unsaved_data_ind";
