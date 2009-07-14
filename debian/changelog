@@ -1,3 +1,11 @@
+dsme (0.60.21) unstable; urgency=low
+
+  * Fixes: NB#127619: kick hwwd's every 12 s, process wd's every 24 s
+  * Fixes: NB#126749: same as above
+  * Part of the fix for NB#123145: deny shutdown/reboot when connected to PC
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Tue, 14 Jul 2009 08:21:08 +0000
+
 dsme (0.60.20) unstable; urgency=low
 
   * Fixes: NB#124471: fix K to degrees C conversion heuristics
