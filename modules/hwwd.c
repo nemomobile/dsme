@@ -47,6 +47,10 @@
 #include <errno.h>
 #include <string.h>
 
+#ifdef DSME_WD_SYNC
+#  define DSME_WD_SYNC_PROCESSWD_DIVISOR 2
+#endif
+
 typedef enum {
   KICKER_TYPE_NONE,
   KICKER_TYPE_THREAD,
@@ -150,11 +154,17 @@ static int hwwd_kick_fn(void* unused)
 
 #ifdef DSME_WD_SYNC
         {
-	/* Kick ProcessWD */
-	const DSM_MSGTYPE_PROCESSWD_MANUAL_PING ping =
-          DSME_MSG_INIT(DSM_MSGTYPE_PROCESSWD_MANUAL_PING);
-	broadcast_internally(&ping);
-	dsme_log(LOG_DEBUG, "hwwd: Manual processwd ping requested");
+            static unsigned kick_counter = 0;
+
+            if (kick_counter % DSME_WD_SYNC_PROCESSWD_DIVISOR == 0) {
+                /* Kick ProcessWD */
+                const DSM_MSGTYPE_PROCESSWD_MANUAL_PING ping =
+                    DSME_MSG_INIT(DSM_MSGTYPE_PROCESSWD_MANUAL_PING);
+                broadcast_internally(&ping);
+                dsme_log(LOG_DEBUG, "hwwd: manual processwd ping requested");
+            }
+
+            ++kick_counter;
         }
 #endif
 

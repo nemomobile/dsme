@@ -28,7 +28,7 @@
 #include <stdbool.h>
 
 /* Period for kicking; i.e. how often dsme wakes up to kick the watchdogs */
-#define DSME_WD_PERIOD 5 /* seconds */
+#define DSME_WD_PERIOD 12 /* seconds */
 
 #ifdef __cplusplus
 extern "C" {
