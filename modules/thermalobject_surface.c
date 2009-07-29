@@ -25,6 +25,7 @@
 
 #include "thermalsensor_battery.h"
 #include "thermalmanager.h"
+#include "hwwd.h"
 
 #include "dsme/modules.h"
 #include "dsme/logging.h"
@@ -37,10 +38,10 @@ static thermal_object_configuration_t surface_thermal_conf = {
   "surface",
   {
       /* (min, max], interval */
-      {    -1,  52,        60 }, /* NORMAL  */
-      {    52,  58,        60 }, /* WARNING */
-      {    58,  65,        30 }, /* ALERT   */
-      {    65,  99,        30 }, /* FATAL   */
+      {    -1,  52,        60 / DSME_HEARTBEAT_INTERVAL }, /* NORMAL  */
+      {    52,  58,        60 / DSME_HEARTBEAT_INTERVAL }, /* WARNING */
+      {    58,  65,        30 / DSME_HEARTBEAT_INTERVAL }, /* ALERT   */
+      {    65,  99,        30 / DSME_HEARTBEAT_INTERVAL }, /* FATAL   */
   },
   get_surface_temperature
 };
@@ -48,7 +49,6 @@ static thermal_object_configuration_t surface_thermal_conf = {
 static thermal_object_t surface_thermal_object = {
   &surface_thermal_conf,
   THERMAL_STATUS_NORMAL,
-  0,
   false
 };
 

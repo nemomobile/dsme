@@ -39,6 +39,7 @@
 #include "dsme/modules.h"
 #include "dsme/logging.h"
 #include "state.h"
+#include "hwwd.h"
 
 #include <glib.h>
 #include <stdlib.h>
@@ -46,9 +47,7 @@
 
 static void receive_temperature_response(thermal_object_t* thermal_object,
                                          int               temperature);
-static void start_thermal_object_polling_interval(
-  thermal_object_t* thermal_object);
-static int thermal_object_polling_interval_expired(void* object);
+static void thermal_object_polling_interval_expired(void* object);
 
 #ifdef DSME_THERMAL_TUNING
 static void thermal_object_try_to_read_config(thermal_object_t* thermal_object);
@@ -216,14 +215,6 @@ static void receive_temperature_response(thermal_object_t* thermal_object,
           /* global thermal status has changed; send indication */
           send_thermal_indication();
       }
-
-      /* see if interval has changed */
-      if (thermal_object->conf->state[previous_status].interval !=
-          thermal_object->conf->state[thermal_object->status].interval)
-      {
-          /* new status has a different polling interval; adopt it */
-          start_thermal_object_polling_interval(thermal_object);
-      }
   }
 
 #ifdef DSME_THERMAL_LOGGING
@@ -231,38 +222,11 @@ static void receive_temperature_response(thermal_object_t* thermal_object,
 #endif
 }
 
-static void start_thermal_object_polling_interval(
-  thermal_object_t* thermal_object)
-{
-  unsigned interval;
-
-#ifdef DSME_THERMAL_LOGGING
-  interval = 1; // always poll at 1 s interval when logging
-#else
-  interval = thermal_object->conf->state[thermal_object->status].interval;
-#endif
-
-  if (thermal_object->timer) {
-      dsme_destroy_timer(thermal_object->timer);
-  }
-
-  thermal_object->timer =
-      dsme_create_timer(interval,
-                        thermal_object_polling_interval_expired,
-                        thermal_object);
-  if (!thermal_object->timer) {
-      dsme_log(LOG_CRIT, "Unable to create a timer for thermal object");
-      exit(EXIT_FAILURE);
-  }
-}
-
-static int thermal_object_polling_interval_expired(void* object)
+static void thermal_object_polling_interval_expired(void* object)
 {
   thermal_object_t* thermal_object = object;
 
   send_temperature_request(thermal_object);
-
-  return true;
 }
 
 
@@ -273,10 +237,6 @@ void dsme_register_thermal_object(thermal_object_t* thermal_object)
 #endif
 
   thermal_objects = g_slist_append(thermal_objects, thermal_object);
-
-  /* start polling the new thermal object */
-  send_temperature_request(thermal_object);
-  start_thermal_object_polling_interval(thermal_object);
 }
 
 void dsme_unregister_thermal_object(thermal_object_t* thermal_object)
@@ -300,6 +260,33 @@ static const dsme_dbus_binding_t methods[] = {
 static bool bound = false;
 
 
+DSME_HANDLER(DSM_MSGTYPE_HEARTBEAT, client, msg)
+{
+    static unsigned heartbeat_counter = 0;
+    GSList*         node;
+
+    /*
+     * walk through thermal objects and see if their
+     * polling interval has been reached
+     */
+    for (node = thermal_objects; node != 0; node = g_slist_next(node)) {
+        thermal_object_t* thermal_object = (thermal_object_t*)(node->data);
+
+        int interval =
+            thermal_object->conf->state[thermal_object->status].interval;
+
+        if (heartbeat_counter % interval == 0) {
+            dsme_log(LOG_DEBUG,
+                     "check thermal object '%s' every %d heartbeats",
+                     thermal_object->conf->name,
+                     interval);
+            thermal_object_polling_interval_expired(thermal_object);
+        }
+    }
+
+    ++heartbeat_counter;
+}
+
 DSME_HANDLER(DSM_MSGTYPE_DBUS_CONNECT, client, msg)
 {
   dsme_dbus_bind_methods(&bound, methods, service, interface);
@@ -312,6 +299,7 @@ DSME_HANDLER(DSM_MSGTYPE_DBUS_DISCONNECT, client, msg)
 
 // TODO: rename module_fn_info_t to dsme_binding_t
 module_fn_info_t message_handlers[] = {
+  DSME_HANDLER_BINDING(DSM_MSGTYPE_HEARTBEAT),
   DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_CONNECT),
   DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_DISCONNECT),
 #if 0 // TODO
@@ -328,16 +316,6 @@ void module_init(module_t* handle)
 
 void module_fini(void)
 {
-  GSList* node;
-
-  /* stop thermal object polling timers */
-  for (node = thermal_objects; node != 0; node = g_slist_next(node)) {
-      if (((thermal_object_t*)(node->data))->timer) {
-          dsme_destroy_timer(((thermal_object_t*)(node->data))->timer);
-          ((thermal_object_t*)(node->data))->timer = 0;
-      }
-  }
-
   g_slist_free(thermal_objects);
 
   dsme_dbus_unbind_methods(&bound, methods, service, interface);

@@ -1,7 +1,7 @@
 #
 # Build targets
 #
-BINARIES	:=	batttest dsmetool dsmetest bootstate kick_wd waitfordsme kicker dsmereboot
+BINARIES	:=	batttest dsmetool dsmetest bootstate kick_wd waitfordsme dsmereboot
 
 #
 # Target composition and overrides
@@ -33,7 +33,7 @@ INSTALL_OWNER   :=      $(shell id -u)
 INSTALL_GROUP   :=      $(shell id -g)
 
 
-INSTALL_BINARIES                        :=      batttest dsmetool bootstate waitfordsme dsmetest kicker dsmetool-session
+INSTALL_BINARIES                        :=      batttest dsmetool bootstate waitfordsme dsmetest dsmetool-session
 $(INSTALL_BINARIES): INSTALL_PERM       :=      755
 $(INSTALL_BINARIES): INSTALL_DIR        :=      $(DESTDIR)/usr/sbin
 

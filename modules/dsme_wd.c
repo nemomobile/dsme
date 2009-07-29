@@ -67,8 +67,6 @@ static bool  wd_enabled = true;
 
 void dsme_wd_kick(void)
 {
-  dsme_log(LOG_DEBUG, "Got permission to kick watchdogs.");
-
   if (wd_enabled) {
       int i;
       for (i = 0; i < WD_COUNT; ++i) {

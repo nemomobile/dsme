@@ -38,6 +38,7 @@
 
 #include "processwd.h"
 #include "spawn.h"
+#include "hwwd.h"
 
 #include "dsme/messages.h"
 #include "dsme/modules.h"
@@ -51,23 +52,13 @@
 #include <sys/types.h>
 #include <signal.h>
 
+#define PING_HEARTBEAT_DIVISOR 2 /* ping every 2 heartbeats */
+
 /**
  * @ingroup processwd
  * Defines how may pings need to be ignored before the process is killed.
  */
 #define MAXPING 3  /* Process wil be killed at ping #3 */
-
-/**
- * @ingroup processwd
- * Defines the maximum value for ping interval in seconds.
- */
-#define MAX_INTERVAL 360
-
-/**
- * @ingroup processwd
- * Defines the minimum value for ping interval in seconds.
- */
-#define MIN_INTERVAL 10
 
 /**
  * @ingroup processwd
@@ -77,19 +68,7 @@
 
 
 static void ping_all(void);
-#ifndef DSME_WD_SYNC
-static int timeout_func(void * data);
-#endif
 
-#ifndef DSME_WD_SYNC
-static dsme_timer_t * timer = NULL;
-
-/**
- * @ingroup processwd
- * The interval how often pings are sent to processes. The default is 10s.
- */
-static int interval = 10;
-#endif
 
 typedef struct {
     pid_t        pid;
@@ -142,20 +121,6 @@ static gint compare_endpoints(gconstpointer proc, gconstpointer client)
   return !endpoint_same(((dsme_swwd_entry_t*)proc)->client, client);
 }
 
-#ifndef DSME_WD_SYNC
-/**
- * Function called when timeout occurs. Increments the ping count for the
- * process and kills it if MAXPING is reached. If not, sends a new ping.
- * @param data Pointer to the process node.
- */
-static int timeout_func(void* data)
-{
-  /* Ping all registered processes */
-  ping_all();
-
-  return 1; /* keep the interval going */
-}
-#endif
 
 static int abort_timeout_func(void* data)
 {
@@ -179,12 +144,18 @@ static int abort_timeout_func(void* data)
   return 0; /* stop the interval */
 }
 
-DSME_HANDLER(DSM_MSGTYPE_PROCESSWD_MANUAL_PING, conn, msg)
+DSME_HANDLER(DSM_MSGTYPE_HEARTBEAT, conn, msg)
 {
-    dsme_log(LOG_DEBUG, "Processwd: manual ping");
+    static unsigned heartbeat_counter = 0;
 
-    /* Ping all registered processes */
-    ping_all();
+    if (heartbeat_counter % PING_HEARTBEAT_DIVISOR == 0) {
+        dsme_log(LOG_DEBUG,
+                 "processwd: ping every %d heartbeats",
+                 PING_HEARTBEAT_DIVISOR);
+        ping_all();
+    }
+
+    ++heartbeat_counter;
 }
 
 static void ping_all(void)
@@ -233,29 +204,6 @@ static void ping_all(void)
 }
 
 /**
- * Sets the new value for ping interval. Only affects the new timers set after
- * this function. The value must be between MIN_INTERVAL and MAX_INTERVAL.
- */
-DSME_HANDLER(DSM_MSGTYPE_PROCESSWD_SET_INTERVAL, conn, msg)
-{
-#ifdef DSME_WD_SYNC
-    dsme_log(LOG_ERR, "Processwd: compiled with DSME_WD_SYNC, setting interval not possible");
-#else
-    /* set new timeout */
-    if (msg->timeout >= MIN_INTERVAL) {
-        if (msg->timeout <= MAX_INTERVAL)
-            interval = msg2->timeout;
-        else 
-            interval = MAX_INTERVAL;
-    } else {
-        interval = MIN_INTERVAL;
-    }
-
-    dsme_log(LOG_INFO, "process_wd interval set to %i", interval);
-#endif
-}
-
-/**
  * Function handles setting a new process to be watchdogged.
  */
 DSME_HANDLER(DSM_MSGTYPE_PROCESSWD_CREATE, client, msg)
@@ -275,17 +223,6 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESSWD_CREATE, client, msg)
 
   processes = g_slist_prepend(processes, proc);
 
-#ifndef DSME_WD_SYNC
-  if (!timer) {
-      timer = dsme_create_timer(interval, timeout_func, 0);
-      if (!timer) {
-          dsme_log(LOG_CRIT, "Cannot add timer: %s", strerror(errno));
-          processes = g_slist_delete_link(processes, processes);
-          swwd_entry_delete(proc);
-          return;
-      }
-  }
-#endif
   dsme_log(LOG_DEBUG, "Added process (pid: %i) to processwd", proc->pid);
 }
 
@@ -330,14 +267,6 @@ static void swwd_del(pid_t pid)
   swwd_entry_delete(proc);
   processes = g_slist_delete_link(processes, node);
   dsme_log(LOG_INFO, "removed exited process from process wd");
-
-#ifndef DSME_WD_SYNC
-  /* Remove timer if there no more watched processes */
-  if (!processes) {
-      dsme_destroy_timer(timer);
-      timer = NULL;
-  }
-#endif
 }
 
 DSME_HANDLER(DSM_MSGTYPE_PROCESSWD_DELETE, conn, msg)
@@ -372,13 +301,6 @@ DSME_HANDLER(DSM_MSGTYPE_CLOSE, conn, msg)
       processes = g_slist_delete_link(processes, deleted);
       dsme_log(LOG_INFO, "removed process with closed socket from process wd");
   }
-#ifndef DSME_WD_SYNC
-  /* Remove timer if there no more watched processes */
-  if (!processes) {
-      dsme_destroy_timer(timer);
-      timer = NULL;
-  }
-#endif
 }
 
 /**
@@ -389,15 +311,13 @@ DSME_HANDLER(DSM_MSGTYPE_CLOSE, conn, msg)
  * - DSM_MSGTYPE_PROCESSWD_DELETE Stop the watchdog for connection sending the
  *   event. dsmemsg_swwd_t
  * - DSM_MSGTYPE_PONG The reply sent by a process for ping. dsmemsg_swwd_t
- * - DSM_MSGTYPE_SET_INTERVAL Set the interval for pings.
  *   dsmemsg_timeout_change_t
  */ 
 module_fn_info_t message_handlers[] = {
       DSME_HANDLER_BINDING(DSM_MSGTYPE_PROCESSWD_CREATE),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_PROCESSWD_DELETE),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_PROCESSWD_PONG),
-      DSME_HANDLER_BINDING(DSM_MSGTYPE_PROCESSWD_SET_INTERVAL),
-      DSME_HANDLER_BINDING(DSM_MSGTYPE_PROCESSWD_MANUAL_PING),
+      DSME_HANDLER_BINDING(DSM_MSGTYPE_HEARTBEAT),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_PROCESS_EXITED),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_CLOSE),
       {0}
@@ -406,9 +326,6 @@ module_fn_info_t message_handlers[] = {
 void module_init(module_t *handle)
 {
   dsme_log(LOG_DEBUG, "libprocesswd.so loaded");
-#ifdef DSME_WD_SYNC
-  dsme_log(LOG_DEBUG, "Processwd: compiled with DSME_WD_SYNC, working in manual mode");
-#endif
 }
 
 void module_fini(void)

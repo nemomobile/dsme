@@ -36,9 +36,6 @@
 
 #include "hwwd.h"
 #include "dsme_wd.h"
-#ifdef DSME_WD_SYNC
-#  include "processwd.h"
-#endif
 
 #include "dsme/modules.h"
 #include "dsme/timers.h"
@@ -47,17 +44,8 @@
 #include <errno.h>
 #include <string.h>
 
-#ifdef DSME_WD_SYNC
-#  define DSME_WD_SYNC_PROCESSWD_DIVISOR 2
-#endif
 
-typedef enum {
-  KICKER_TYPE_NONE,
-  KICKER_TYPE_THREAD,
-  KICKER_TYPE_CLIENT
-} KICKER_TYPE;
-
-static KICKER_TYPE kicker_type = KICKER_TYPE_NONE;
+static bool kicking_enabled = false;
 
 /* connection for the kicker process */
 static endpoint_t* kicker_client = NULL;
@@ -68,36 +56,22 @@ static endpoint_t* kicker_client = NULL;
  */
 static dsme_timer_t hwwd_kick_timer = 0;
 
-static void start_kicking_now(void);
-static int hwwd_kick_fn(void* unused);
+static void start_heartbeat_now(void);
+static int  heartbeat(void* unused);
 
-
-DSME_HANDLER(DSM_MSGTYPE_HWWD_KICKER, client, msg)
-{
-	if (kicker_type != KICKER_TYPE_NONE) {
-		dsme_log(LOG_ERR, "libhwwd: kicker already registered!");
-		return;
-	}
-
-	kicker_client   = endpoint_copy(client);
-	kicker_type     = KICKER_TYPE_CLIENT;
-	start_kicking_now();
-
-	dsme_log(LOG_INFO, "libhwwd: kicker registered and kicked");
-}
 
 DSME_HANDLER(DSM_MSGTYPE_HWWD_KICK, client, msg)
 {
-	dsme_log(LOG_DEBUG, "hwwd_kick_force()");
-	
-	if (kicker_type == KICKER_TYPE_NONE) {
-		return;
-        }
-	
-	start_kicking_now();
+    dsme_log(LOG_DEBUG, "hwwd_kick_force()");
+
+    if (!kicking_enabled) {
+        return;
+    }
+
+    start_heartbeat_now();
 }
 
-static void start_kicking_now(void)
+static void start_heartbeat_now(void)
 {
         /* remove previous timer, if any */
 	if (hwwd_kick_timer) {
@@ -106,11 +80,11 @@ static void start_kicking_now(void)
 	}
 
         /* do the first kick */
-        (void)hwwd_kick_fn(NULL);
+        (void)heartbeat(NULL);
 
 	/* start kicking interval */
         hwwd_kick_timer = dsme_create_timer_high_priority(DSME_WD_PERIOD,
-                                                          hwwd_kick_fn,
+                                                          heartbeat,
                                                           NULL);
         if (hwwd_kick_timer) {
             dsme_log(LOG_NOTICE, "Setting WD timeout to %d", DSME_WD_PERIOD);
@@ -129,46 +103,21 @@ static void start_kicking_now(void)
 
 
 /**
- * This function kicks the HW watchdog.
+ * This function kicks the HW watchdog and sends a heartbeat.
  */
-static int hwwd_kick_fn(void* unused)
+static int heartbeat(void* unused)
 {
-	/* Let the kicker process or thread kick */
-        switch (kicker_type) {
+    /* first kick the HW watchdog */
+    if (kicking_enabled) {
+        dsme_wd_kick();
+    }
 
-        case KICKER_TYPE_CLIENT:
-          if (kicker_client) {
-              DSM_MSGTYPE_HWWD_KICK msg = DSME_MSG_INIT(DSM_MSGTYPE_HWWD_KICK);
-              endpoint_send(kicker_client, &msg);
-          }
-          break;
+    /* then send the heartbeat */
+    const DSM_MSGTYPE_HEARTBEAT beat = DSME_MSG_INIT(DSM_MSGTYPE_HEARTBEAT);
+    broadcast_internally(&beat);
+    dsme_log(LOG_DEBUG, "hwwd: heartbeat");
 
-        case KICKER_TYPE_THREAD:
-            dsme_wd_kick();
-            break;
-
-        default:
-            /* do nothing */
-            break;
-        }
-
-#ifdef DSME_WD_SYNC
-        {
-            static unsigned kick_counter = 0;
-
-            if (kick_counter % DSME_WD_SYNC_PROCESSWD_DIVISOR == 0) {
-                /* Kick ProcessWD */
-                const DSM_MSGTYPE_PROCESSWD_MANUAL_PING ping =
-                    DSME_MSG_INIT(DSM_MSGTYPE_PROCESSWD_MANUAL_PING);
-                broadcast_internally(&ping);
-                dsme_log(LOG_DEBUG, "hwwd: manual processwd ping requested");
-            }
-
-            ++kick_counter;
-        }
-#endif
-
-        return 1; /* keep the interval going */
+    return 1; /* keep the interval going */
 }
 
 /**
@@ -177,7 +126,6 @@ static int hwwd_kick_fn(void* unused)
  */
 module_fn_info_t message_handlers[] = {
     DSME_HANDLER_BINDING(DSM_MSGTYPE_HWWD_KICK),
-    DSME_HANDLER_BINDING(DSM_MSGTYPE_HWWD_KICKER),
     {0}
 };
 
@@ -186,20 +134,14 @@ module_fn_info_t message_handlers[] = {
  */
 void module_init(module_t *handle)
 {
-        if (!dsme_wd_init()) {
-          dsme_log(LOG_ERR, "dsme_wd_init() failed, WD kicking disabled");
-	  dsme_log(LOG_DEBUG, "libhwwd.so: waiting for the kicker to register");
-        } else {
-          kicker_type = KICKER_TYPE_THREAD;
-#ifndef DSME_WD_SYNC
-          start_kicking_now();
-#endif
-        }
-#ifdef DSME_WD_SYNC
-        start_kicking_now();
-#endif
+    if (!dsme_wd_init()) {
+        dsme_log(LOG_ERR, "dsme_wd_init() failed, WD kicking disabled");
+    } else {
+        kicking_enabled = true;
+    }
+    start_heartbeat_now();
 
-	dsme_log(LOG_DEBUG, "libhwwd.so loaded");
+    dsme_log(LOG_DEBUG, "libhwwd.so loaded");
 }
 
 void module_fini(void)
