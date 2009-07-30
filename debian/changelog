@@ -1,3 +1,9 @@
+dsme (0.60.22) unstable; urgency=low
+
+  * Potential fix to NB#129544: sync thermal manager to hwwd kicking
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Thu, 30 Jul 2009 15:01:57 +0000
+
 dsme (0.60.21) unstable; urgency=low
 
   * Fixes: NB#127619: kick hwwd's every 12 s, process wd's every 24 s
