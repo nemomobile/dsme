@@ -203,7 +203,7 @@ static void log_to_syslog(int prio, const char* message)
 {
     if (logopt.verbosity >= prio) {
         if (prio < 0) prio = LOG_DEBUG;
-        syslog(prio, message);
+        syslog(prio, "%s", message);
     }
 }
 
