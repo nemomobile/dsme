@@ -104,6 +104,7 @@ static void handle_usb_state(GIOChannel* chan)
     } else {
         dsme_log(LOG_DEBUG, "Got usb mode: '%s'", line);
         send_usb_state(line);
+        g_free(line);
     }
 
     g_clear_error(&error);
