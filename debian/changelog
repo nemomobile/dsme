@@ -1,5 +1,6 @@
 dsme (0.60.23) unstable; urgency=low
 
+  * Fixes: NB#130039: offload lifeguard statistics to the logger thread
   * Part of the fix for NB#123145: fix USB connection state detection
 
  -- Semi Malinen <semi.malinen@nokia.com>  Sat, 08 Aug 2009 10:11:23 +0000
