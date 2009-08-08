@@ -23,6 +23,8 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#define _GNU_SOURCE // TODO: should these be put to makefile?
+
 #include "dsme/logging.h"
 
 #include <unistd.h>
@@ -80,7 +82,67 @@ static log_entry ring_buffer[DSME_MAX_LOG_BUFFER_ENTRIES];
 /* ring buffer semaphore */
 static sem_t ring_buffer_sem;
 
+/* ring buffer write and read counters */
+static volatile unsigned write_count = 0;
+static volatile unsigned read_count  = 0;
 
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+// SIMO HACKING
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+void dsme_log_raw(int level, const char *fmt, ...) {
+  if (logopt.verbosity >= level) {
+    va_list va; char *msg = 0;
+    va_start(va, fmt);
+    vasprintf(&msg, fmt, va);
+    va_end(va);
+    if( msg ) dsme_log_routine(level, msg), free(msg);
+  }
+}
+
+void dsme_log_wakeup(void) {
+  sem_post(&ring_buffer_sem);
+}
+
+#define DSME_MAX_LOG_CALLBACKS 4
+
+static void (*log_cb[DSME_MAX_LOG_CALLBACKS])(void);
+
+int dsme_log_cb_attach(void (*fn)(void))
+{
+  int i;
+  for( i = 0; i < DSME_MAX_LOG_CALLBACKS; ++i ) {
+    if( log_cb[i] == 0 ) {
+      log_cb[i] = fn;
+      return 1;
+    }
+  }
+  return 0;
+}
+
+int dsme_log_cb_detach(void (*fn)(void))
+{
+  int i;
+  for( i = 0; i < DSME_MAX_LOG_CALLBACKS; ++i ) {
+    if( log_cb[i] == fn ) {
+      log_cb[i] = 0;
+      return 1;
+    }
+  }
+  return 0;
+}
+
+static void dsme_log_cb_execute_all(void)
+{
+  int i;
+  for( i = 0; i < DSME_MAX_LOG_CALLBACKS; ++i ) {
+    if( log_cb[i] != 0 ) log_cb[i]();
+  }
+}
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// SIMO HACKING
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 /*
  * This routine returns the string corresponding to the logging priority
@@ -228,7 +290,6 @@ static void log_to_file(int prio, const char* message)
  */
 void dsme_log_txt(int level, const char* fmt, ...)
 {
-    static unsigned write_count = 0;
     va_list         ap;
 
     va_start(ap, fmt);
@@ -266,19 +327,22 @@ void dsme_log_txt(int level, const char* fmt, ...)
  */
 static void* logging_thread(void* param)
 {
-    static unsigned read_count = 0;
 
     while (true) {
         while (sem_wait(&ring_buffer_sem) == -1) {
             continue;
         }
 
-        log_entry* entry =
-            &ring_buffer[read_count % DSME_MAX_LOG_BUFFER_ENTRIES];
+        if( read_count != write_count ) {
+	    log_entry* entry =
+		 &ring_buffer[read_count % DSME_MAX_LOG_BUFFER_ENTRIES];
+	    
+	    dsme_log_routine(entry->prio, entry->message);
+	    
+	    ++read_count;
+	}
 
-        dsme_log_routine(entry->prio, entry->message);
-
-        ++read_count;
+        dsme_log_cb_execute_all();
     }
 
     return 0;

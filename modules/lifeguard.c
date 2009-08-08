@@ -76,8 +76,8 @@
 #define FILE_LIFEGUARD_UIDS   "/etc/dsme/lifeguard.uids"
 
 #define FILE_DSME_DIR         "/var/lib/dsme"
-#define FILE_DSME_LG_RESTARTS "/var/lib/dsme/stats/lifeguard_restarts"
-#define FILE_DSME_LG_RESETS   "/var/lib/dsme/stats/lifeguard_resets"
+#define FILE_DSME_LG_RESTARTS FILE_DSME_DIR"/stats/lifeguard_restarts"
+#define FILE_DSME_LG_RESETS   FILE_DSME_DIR"/stats/lifeguard_resets"
 
 #define DELIMETER             " : "
 
@@ -112,10 +112,233 @@ static int deleteprocess(dsme_process_t * process);
 static void send_reset_request();
 static char **getenvbypid(pid_t pid);
 static void read_priv_uids(void);
+#ifdef DEAD_CODE
 static int increment_process_counter(const char* statfilename, const char* process);
+#endif
 static int update_reset_count(const char* process);
 static int update_restart_count(const char* process);
 
+
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+// <<<< LIFEGUARD STATISTICS
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+#define LG_RESTARTS_PATH FILE_DSME_LG_RESTARTS
+#define LG_RESTARTS_TEMP LG_RESTARTS_PATH".tmp"
+#define LG_RESTARTS_BACK LG_RESTARTS_PATH".bak"
+
+#define LG_RESETS_PATH  FILE_DSME_LG_RESETS
+#define LG_RESETS_TEMP  LG_RESETS_PATH".tmp"
+#define LG_RESETS_BACK  LG_RESETS_PATH".bak"
+
+#define numof(a) (sizeof(a)/sizeof*(a))
+
+typedef struct statitem_t {
+  unsigned lru;
+  unsigned cnt;
+  char     name[56];
+} statitem_t;
+
+static unsigned    lg_lrutag;
+static statitem_t  lg_resets[32];
+static statitem_t  lg_restarts[32];
+
+static volatile unsigned resets_in    = 0;
+static volatile unsigned resets_out   = 0;
+
+static volatile unsigned restarts_in  = 0;
+static volatile unsigned restarts_out = 0;
+
+static int statitem_cmp(const void *a, const void *b) {
+  const statitem_t *A = *(const statitem_t **)a;
+  const statitem_t *B = *(const statitem_t **)b;
+  return (A->lru > B->lru) - (A->lru < B->lru);
+}
+
+static inline int statitem_is_named(const statitem_t *itm, const char *name) {
+  return !strncmp(itm->name, name, sizeof itm->name - 1);
+}
+
+static inline int statitem_is_used(const statitem_t *itm) {
+  return itm->name[0] != 0;
+}
+
+static void statitem_hit(statitem_t *itm, const char *name, unsigned cnt) {
+  if( !statitem_is_named(itm, name) )
+    itm->cnt = *itm->name = 0, strncat(itm->name, name, sizeof itm->name - 1);
+  itm->lru = ++lg_lrutag;
+  itm->cnt += cnt;
+}
+
+static void statitem_add_hit(statitem_t *arr, size_t n, const char *name) {
+  statitem_t *itm, *end;
+  for( itm = arr, end = arr+n; arr != end ; ++arr ) {
+    if( !statitem_is_used(arr) || statitem_is_named(arr, name) ) {
+      itm = arr; break; 
+    }
+    if( itm->lru > arr->lru ) { itm = arr; }
+  }
+  statitem_hit(itm, name, 1);
+}
+
+#if 0
+static void statitem_show(const statitem_t *arr, size_t n) {
+  const statitem_t **ord = malloc(n * sizeof *ord);
+  size_t i;
+  for( i = 0; i < n; ++i ) ord[i] = &arr[i];
+  qsort(ord, n, sizeof *ord, statitem_cmp);
+
+  printf("--\n");
+  for( i = 0; i < n; ++i ) {
+    if( statitem_is_used((arr = ord[i])) )
+      printf("lru=%03d, cnt=%03d, name=%s\n", arr->lru, arr->cnt, arr->name);
+  }
+  free(ord);
+}
+#endif
+
+static void statitem_load(statitem_t *arr, size_t n, const char *path) {
+  FILE  *file = 0;
+  char  *buff = 0;
+  size_t size = 0;
+  size_t i = 0;
+  char  *sep;
+  memset(arr, 0, n * sizeof *arr);
+
+  if( (file = fopen(path, "r")) == 0 ) {
+    dsme_log_raw(LOG_ERR, "can't load %s: %s\n", path, strerror(errno));
+  }
+  else {
+    while( getline(&buff, &size, file) != -1 ) {
+      if( (sep = strrchr(buff, ':')) != 0 )
+	*sep++ = 0, statitem_hit(&arr[i++%n], buff, strtoul(sep,0,0));
+    }
+    fclose(file);
+  }
+  free(buff);
+}
+
+static int statitem_save(const statitem_t *arr, size_t n, const char *path) {
+  int ok = 0;
+  FILE *file = 0;
+  const statitem_t **ord = 0;
+  size_t i,m;
+  
+  if( (ord = malloc(n * sizeof *ord)) == 0 )
+    goto cleanup;
+  
+  for( i = m = 0; i < n; ++i )
+    if( statitem_is_used(arr+i) ) ord[m++] = arr+i;
+  qsort(ord, m, sizeof *ord, statitem_cmp);
+
+  if( (file = fopen(path, "w")) == 0 ) {
+    dsme_log_raw(LOG_ERR, "can't save %s: %s\n", path, strerror(errno));
+    goto cleanup;
+  }
+  
+  for( i = 0; i < m ; ++i )
+    if( fprintf(file, "%s: %u\n", ord[i]->name, ord[i]->cnt) < 0 )
+      break;
+  
+  if( ferror(file) || fflush(file) == EOF ) {
+    dsme_log_raw(LOG_ERR, "can't write %s: %s\n", path, strerror(errno));
+    goto cleanup;
+  }
+  
+  if( fsync(fileno(file)) == -1 ) {
+    dsme_log_raw(LOG_ERR, "can't sync %s: %s\n", path, strerror(errno));
+    goto cleanup;
+  }
+  
+  ok = 1;
+  cleanup:
+  
+  if( file != 0 && fclose(file) == EOF )
+    dsme_log_raw(LOG_WARNING, "can't close %s: %s\n", path, strerror(errno));
+
+  free(ord);
+  
+  return ok;
+}
+
+static void cycle(const char *temp, const char *path, const char *back) {
+  if( access(temp, F_OK) == 0 )
+    rename(path, back), rename(temp, path);
+}
+
+static const char *oneof(const char *temp, const char *path, const char *back) {
+  if( access(path, F_OK) == 0 ) return path;
+  if( access(back, F_OK) == 0 ) return back;
+  if( access(temp, F_OK) == 0 ) return temp;
+  return path;
+}
+
+/* ------------------------------------------------------------------------- *
+ * restarts
+ * ------------------------------------------------------------------------- */
+
+static void lg_restarts_load(void) {
+  const char *path = oneof(LG_RESTARTS_TEMP, LG_RESTARTS_PATH, LG_RESTARTS_BACK);
+  statitem_load(lg_restarts, numof(lg_restarts), path);
+  //statitem_show(lg_restarts, numof(lg_restarts));
+}
+static void lg_restarts_save(void) {
+  //statitem_show(lg_restarts, numof(lg_restarts));
+  if( statitem_save(lg_restarts, numof(lg_restarts), LG_RESTARTS_TEMP) )
+    cycle(LG_RESTARTS_TEMP, LG_RESTARTS_PATH, LG_RESTARTS_BACK);
+}
+
+static void lg_restarts_update(const char *name) {
+  statitem_add_hit(lg_restarts, numof(lg_restarts), name);
+  //statitem_show(lg_restarts, numof(lg_restarts));
+
+  if( restarts_in == restarts_out ) {
+    ++restarts_in, dsme_log_wakeup();
+  }
+}
+
+/* ------------------------------------------------------------------------- *
+ * resets
+ * ------------------------------------------------------------------------- */
+
+static void lg_resets_load(void) {
+  const char *path = oneof(LG_RESETS_TEMP, LG_RESETS_PATH, LG_RESETS_BACK);
+  statitem_load(lg_resets, numof(lg_resets), path);
+  //statitem_show(lg_resets, numof(lg_resets));
+}
+static void lg_resets_save(void) {
+  //statitem_show(lg_resets, numof(lg_resets));
+  if( statitem_save(lg_resets, numof(lg_resets), LG_RESETS_TEMP) )
+    cycle(LG_RESETS_TEMP, LG_RESETS_PATH, LG_RESETS_BACK);
+}
+
+static void lg_resets_update(const char *name) {
+  statitem_add_hit(lg_resets, numof(lg_resets), name);
+  //statitem_show(lg_resets, numof(lg_resets));
+  
+  if( resets_in == resets_out ) {
+    ++resets_in, dsme_log_wakeup();
+  }
+}
+
+/* ------------------------------------------------------------------------- *
+ * callback for logging tread
+ * ------------------------------------------------------------------------- */
+
+static void lg_handler_cb(void)
+{
+  if( restarts_in != restarts_out ) {
+    restarts_out = restarts_in;
+    lg_restarts_save();
+  }
+  
+  if( resets_in != resets_out ) {
+    resets_out = resets_in;
+    lg_resets_save();
+  }
+}
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// >>>> LIFEGUARD STATISTICS
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 /**
  * List of processes registered to Lifeguard
@@ -777,7 +1000,8 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_EXITED, client, msg)
  * @param The name of the process that caused the reset
  */
 static int update_reset_count(const char* process) {
-	
+    lg_resets_update(process); return 0;	
+#ifdef DEAD_CODE
 	if (access(FILE_DSME_DIR, X_OK) == 0) {
 		return increment_process_counter(FILE_DSME_LG_RESETS, process);
 	} else {
@@ -785,6 +1009,7 @@ static int update_reset_count(const char* process) {
 		dsme_log(LOG_ERR, "DSME stats dir not accessible, lifeguard stats not saved");
 		return -1; 
 	}
+#endif
 }
 
 /**
@@ -793,7 +1018,8 @@ static int update_reset_count(const char* process) {
  * @param The name of the restarted process
  */
 static int update_restart_count(const char* process) {
-
+    lg_restarts_update(process); return 0;	
+#ifdef DEAD_CODE
 	if (access(FILE_DSME_DIR, X_OK) == 0) {
 		return increment_process_counter(FILE_DSME_LG_RESTARTS, process);
 	} else {
@@ -801,6 +1027,7 @@ static int update_restart_count(const char* process) {
 		dsme_log(LOG_ERR, "DSME stats dir not accessible, lifeguard stats not saved");
 		return -1; 
 	}
+#endif
 }
 
 /**
@@ -810,6 +1037,7 @@ static int update_restart_count(const char* process) {
  * @param statfilename Name of the Lifeguard stats filename
  * @param process The name of the process in the lifeguard
  */
+#ifdef DEAD_CODE
 static int increment_process_counter(const char* statfilename,
                                      const char* process)
 {
@@ -907,6 +1135,7 @@ static int increment_process_counter(const char* statfilename,
 
 	return 0;
 }
+#endif
 
 static int reboot_flag(void)
 {
@@ -975,8 +1204,14 @@ void module_init(module_t * handle)
 {
 	dsme_log(LOG_DEBUG, "liblifeguard.so loaded");
 
+        lg_restarts_load();
+        lg_resets_load();
+
 	read_priv_uids();
 	lg_reboot_enabled = reboot_flag();
+  
+        // attach callback for logger thread
+        dsme_log_cb_attach(lg_handler_cb);
 }
 
 /**
@@ -984,6 +1219,9 @@ void module_init(module_t * handle)
  */
 void module_fini(void)
 {
+        // detach callback for logger thread
+        dsme_log_cb_detach(lg_handler_cb);
+  
         spawn_shutdown();
 
         while (processes) {
