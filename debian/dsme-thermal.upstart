@@ -24,10 +24,10 @@ script
             if THERMALBITS=$($THERMALTOOL $THERMALARGS) 2> /dev/null ; then
                 if echo $THERMALBITS | grep -q "$THERMALPATTERN" ; then
                     cat > $THERMALCONFIG <<-'EOF'
-			-99, 110, 60
-			110, 115, 60
-			115, 120, 30
-			120, 999, 30
+			-99, 110, 5
+			110, 115, 5
+			115, 120, 2
+			120, 999, 2
 			EOF
                     echo "Using wide thermal limits"
                 else
