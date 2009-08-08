@@ -137,11 +137,18 @@ DSME_HANDLER(DSM_MSGTYPE_SAVE_DATA_IND, server, msg)
 
 DSME_HANDLER(DSM_MSGTYPE_STATE_REQ_DENIED_IND, server, msg)
 {
+    const char* request = (msg->state == DSME_STATE_SHUTDOWN ?
+                           "shutdown" : "reboot");
+
+    dsme_log(LOG_CRIT,
+             "proxying %s request denial due to %s to D-Bus",
+             request,
+             DSMEMSG_EXTRA(msg));
+
     DsmeDbusMessage* sig = dsme_dbus_signal_new(sig_path,
                                                 sig_interface,
                                                 dsme_state_req_denied_ind);
-    dsme_dbus_message_append_string(sig, (msg->state == DSME_STATE_SHUTDOWN ?
-                                          "shutdown" : "reboot"));
+    dsme_dbus_message_append_string(sig, request );
     dsme_dbus_message_append_string(sig, DSMEMSG_EXTRA(msg));
 
     dsme_dbus_signal_emit(sig);

@@ -512,7 +512,7 @@ DSME_HANDLER(DSM_MSGTYPE_SET_USB_STATE, conn, msg)
 {
     connected_to_pc = msg->connected_to_pc;
 
-    dsme_log(LOG_DEBUG,
+    dsme_log(LOG_CRIT,
              "USB %s",
              connected_to_pc ? "connected" : "disconnected");
 }
