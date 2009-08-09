@@ -530,11 +530,11 @@ DSME_HANDLER(DSM_MSGTYPE_SHUTDOWN_REQ, conn, msg)
            (sender ? sender : "(unknown)"));
   free(sender);
 
-  if (!connected_to_pc) {
+  if (connected_to_pc && current_state == DSME_STATE_USER) {
+      deny_state_change(DSME_STATE_SHUTDOWN, "usb");
+  } else {
       shutdown_requested = true;
       change_state_if_necessary();
-  } else {
-      deny_state_change(DSME_STATE_SHUTDOWN, "usb");
   }
 }
 
@@ -550,12 +550,8 @@ DSME_HANDLER(DSM_MSGTYPE_POWERUP_REQ, conn, msg)
            (sender ? sender : "(unknown)"));
   free(sender);
 
-  if (!connected_to_pc) {
-      shutdown_requested = false;
-      change_state_if_necessary();
-  } else {
-      deny_state_change(DSME_STATE_REBOOT, "usb");
-  }
+  shutdown_requested = false;
+  change_state_if_necessary();
 }
 
 
@@ -567,11 +563,11 @@ DSME_HANDLER(DSM_MSGTYPE_REBOOT_REQ, conn, msg)
            (sender ? sender : "(unknown)"));
   free(sender);
 
-  if (!connected_to_pc) {
+  if (connected_to_pc && current_state == DSME_STATE_USER) {
+      deny_state_change(DSME_STATE_REBOOT, "usb");
+  } else {
       reboot_requested = true;
       change_state_if_necessary();
-  } else {
-      deny_state_change(DSME_STATE_REBOOT, "usb");
   }
 }
 
