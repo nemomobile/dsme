@@ -1,3 +1,9 @@
+dsme (0.60.24) unstable; urgency=low
+
+  * Part of the fix for NB#123145: only prevent shutdown/reboot in USER mode
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Sun, 09 Aug 2009 09:58:33 +0000
+
 dsme (0.60.23) unstable; urgency=low
 
   * Fixes: NB#130039: offload lifeguard statistics to the logger thread
