@@ -220,7 +220,7 @@ static void setup_child(gpointer setup_data)
   if (passwd_field != NULL) {
       if (initgroups(passwd_field->pw_name, passwd_field->pw_gid) == -1) {
           DLOG_ERR("initgroups() failed: %s", strerror(errno));
-          exit(EX_NOPERM);
+          _exit(EX_NOPERM);
       }
   } else {
       DLOG_ERR("requested UID not found, initgroups() not called");
@@ -228,12 +228,12 @@ static void setup_child(gpointer setup_data)
 
   if (setgid(p->gid)) {
       DLOG_ERR("'%s' setgid(%d) => Permission denied", p->cmdline, p->gid);
-      exit(EX_NOPERM);
+      _exit(EX_NOPERM);
   }
 
   if (setuid(p->uid)) {
       DLOG_ERR("'%s' setuid(%d) => Permission denied", p->cmdline, p->uid);
-      exit(EX_NOPERM);
+      _exit(EX_NOPERM);
   }
 
   LOG_CLOSE();
