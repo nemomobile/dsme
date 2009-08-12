@@ -143,7 +143,7 @@ DSME_HANDLER(DSM_MSGTYPE_STATE_REQ_DENIED_IND, server, msg)
     dsme_log(LOG_CRIT,
              "proxying %s request denial due to %s to D-Bus",
              request,
-             DSMEMSG_EXTRA(msg));
+             (const char*)DSMEMSG_EXTRA(msg));
 
     DsmeDbusMessage* sig = dsme_dbus_signal_new(sig_path,
                                                 sig_interface,

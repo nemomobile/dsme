@@ -64,10 +64,7 @@ typedef enum {
 #ifdef DSME_LOG_ENABLE
 /* Function prototypes */
 void dsme_log_txt(int level, const char *fmt, ...)
-# if 0 // FIXME: disable now, let Semi deal with the warnings ....
-  __attribute__((format(printf,2,3)))
-# endif
-;
+    __attribute__((format(printf,2,3)));
 void dsme_log_raw(int level, const char *fmt, ...) __attribute__((format(printf,2,3)));
 void dsme_log_wakeup(void);
 int dsme_log_cb_attach(void (*fn)(void));

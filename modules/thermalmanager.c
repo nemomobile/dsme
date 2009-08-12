@@ -159,7 +159,7 @@ static void receive_temperature_response(thermal_object_t* thermal_object,
 
   if (temperature == -1) {
       dsme_log(LOG_DEBUG,
-               "% temperature request failed",
+               "%s temperature request failed",
                thermal_object->conf->name);
       return;
   }

@@ -113,7 +113,7 @@ static void handle_usb_state(GIOChannel* chan)
     g_io_channel_seek_position(chan, 0, G_SEEK_SET, &error);
     if (error) {
         dsme_log(LOG_ERR,
-                 "Error seeking %s:",
+                 "Error seeking %s: %s",
                  DSME_SYSFS_USB_FILE,
                  error->message);
     }
