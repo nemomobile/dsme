@@ -557,7 +557,7 @@ DSME_HANDLER(DSM_MSGTYPE_REBOOT_REQ, conn, msg)
            (sender ? sender : "(unknown)"));
   free(sender);
 
-  if (is_state_change_request_acceptable(DSME_STATE_SHUTDOWN)) {
+  if (is_state_change_request_acceptable(DSME_STATE_REBOOT)) {
       reboot_requested = true;
       change_state_if_necessary();
   }
