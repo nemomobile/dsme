@@ -34,6 +34,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
 
 
@@ -68,7 +69,6 @@ static bool     alarm_set              = false;
 static bool     device_overheated      = false;
 static bool     emergency_call_ongoing = false;
 static bool     battery_empty          = false;
-static bool     connected_to_pc        = false;
 static bool     shutdown_requested     = false;
 static bool     reboot_requested       = false;
 static bool     test                   = false;
@@ -89,6 +89,8 @@ static dsme_timer_t delayed_actdead_timer    = 0;
 static void change_state_if_necessary(void);
 static void try_to_change_state(dsme_state_t new_state);
 static void change_state(dsme_state_t new_state);
+static void deny_state_change_request(dsme_state_t denied_state,
+                                      const char*  reason);
 
 static void start_delayed_shutdown_timer(unsigned seconds);
 static int  delayed_shutdown_fn(void* unused);
@@ -107,6 +109,7 @@ static int  delayed_charger_disconnect_fn(void* unused);
 static void stop_charger_disconnect_timer(void);
 
 static bool rd_mode_enabled(void);
+static bool is_in_usb_mass_storage_mode(void);
 
 
 static const char* state_name(dsme_state_t state)
@@ -305,14 +308,34 @@ static void change_state(dsme_state_t new_state)
 }
 
 
-static void deny_state_change(dsme_state_t denied_state, const char* reason)
+static bool is_state_change_request_acceptable(dsme_state_t requested_state)
+{
+    bool acceptable = true;
+
+    if ((requested_state == DSME_STATE_SHUTDOWN ||
+         requested_state == DSME_STATE_REBOOT) &&
+        is_in_usb_mass_storage_mode())
+    {
+        acceptable = false;
+        deny_state_change_request(requested_state, "usb");
+    }
+
+    return acceptable;
+}
+
+
+static void deny_state_change_request(dsme_state_t denied_state,
+                                      const char*  reason)
 {
   DSM_MSGTYPE_STATE_REQ_DENIED_IND ind =
       DSME_MSG_INIT(DSM_MSGTYPE_STATE_REQ_DENIED_IND);
 
   ind.state = denied_state;
   broadcast_with_extra(&ind, strlen(reason) + 1, reason);
-  dsme_log(LOG_CRIT, "shutdown or reboot denied due to: %s", reason);
+  dsme_log(LOG_CRIT,
+           "%s denied due to: %s",
+           (denied_state == DSME_STATE_SHUTDOWN ? "shutdown" : "reboot"),
+           reason);
 }
 
 
@@ -508,16 +531,6 @@ DSME_HANDLER(DSM_MSGTYPE_SET_CHARGER_STATE, conn, msg)
 }
 
 
-DSME_HANDLER(DSM_MSGTYPE_SET_USB_STATE, conn, msg)
-{
-    connected_to_pc = msg->connected_to_pc;
-
-    dsme_log(LOG_CRIT,
-             "USB %s",
-             connected_to_pc ? "connected" : "disconnected");
-}
-
-
 /**
  * Shutdown requested.
  * We go to actdead state if alarm is set (or snoozed) or charger connected.
@@ -530,13 +543,26 @@ DSME_HANDLER(DSM_MSGTYPE_SHUTDOWN_REQ, conn, msg)
            (sender ? sender : "(unknown)"));
   free(sender);
 
-  if (connected_to_pc && current_state == DSME_STATE_USER) {
-      deny_state_change(DSME_STATE_SHUTDOWN, "usb");
-  } else {
+  if (is_state_change_request_acceptable(DSME_STATE_SHUTDOWN)) {
       shutdown_requested = true;
       change_state_if_necessary();
   }
 }
+
+DSME_HANDLER(DSM_MSGTYPE_REBOOT_REQ, conn, msg)
+{
+  char* sender = endpoint_name(conn);
+  dsme_log(LOG_CRIT,
+           "reboot request received from %s",
+           (sender ? sender : "(unknown)"));
+  free(sender);
+
+  if (is_state_change_request_acceptable(DSME_STATE_SHUTDOWN)) {
+      reboot_requested = true;
+      change_state_if_necessary();
+  }
+}
+
 
 /**
  * Power up requested.
@@ -552,23 +578,6 @@ DSME_HANDLER(DSM_MSGTYPE_POWERUP_REQ, conn, msg)
 
   shutdown_requested = false;
   change_state_if_necessary();
-}
-
-
-DSME_HANDLER(DSM_MSGTYPE_REBOOT_REQ, conn, msg)
-{
-  char* sender = endpoint_name(conn);
-  dsme_log(LOG_CRIT,
-           "reboot request received from %s",
-           (sender ? sender : "(unknown)"));
-  free(sender);
-
-  if (connected_to_pc && current_state == DSME_STATE_USER) {
-      deny_state_change(DSME_STATE_REBOOT, "usb");
-  } else {
-      reboot_requested = true;
-      change_state_if_necessary();
-  }
 }
 
 
@@ -641,7 +650,7 @@ DSME_HANDLER(DSM_MSGTYPE_STATE_QUERY, client, msg)
 
 
 /**
- * Reads the RD mode state and returns 1 if enabled
+ * Reads the RD mode state and returns true if enabled
  */
 static bool rd_mode_enabled(void)
 {
@@ -668,6 +677,45 @@ static bool rd_mode_enabled(void)
   return enabled;
 }
 
+static bool scan_file(const char* filename,
+                      const char* format,
+                      int         expected_items,
+                      ...)
+{
+    FILE*   fp;
+    int     scanned_items;
+    va_list ap;
+
+    if ((fp = fopen(filename, "r")) == NULL) {
+        return false;
+    }
+
+    va_start(ap, expected_items);
+    scanned_items = vfscanf(fp, format, ap);
+    va_end(ap);
+
+    fclose(fp);
+
+    return scanned_items != EOF &&
+           (expected_items == -1 || scanned_items == expected_items);
+}
+
+static bool is_in_usb_mass_storage_mode(void)
+{
+    int string_length = 0;
+
+    return (scan_file("/sys/devices/platform/musb_hdrc/gadget/gadget-lun0/file",
+                      "%*s%n",
+                      -1,
+                      &string_length) &&
+            string_length != 0) ||
+           (scan_file("/sys/devices/platform/musb_hdrc/gadget/gadget-lun1/file",
+                      "%*s%n",
+                      -1,
+                      &string_length) &&
+            string_length !=-0);
+}
+
 
 module_fn_info_t message_handlers[] = {
       DSME_HANDLER_BINDING(DSM_MSGTYPE_STATE_QUERY),
@@ -679,7 +727,6 @@ module_fn_info_t message_handlers[] = {
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_THERMAL_STATE),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_EMERGENCY_CALL_STATE),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_BATTERY_STATE),
-      DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_USB_STATE),
       {0}
 };
 
