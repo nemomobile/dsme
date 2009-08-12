@@ -73,7 +73,6 @@ const char *modules[] = {
     "libstate.so",
     "liblifeguard.so",
     "libprocesswd.so",
-    "libusbtracker.so",
     "libdbusproxy.so",
     "libalarmtracker.so",
     "libthermalmanager.so",
