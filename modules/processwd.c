@@ -212,7 +212,7 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESSWD_CREATE, client, msg)
 
   if (g_slist_find_custom(processes, (void *)msg->pid, compare_pids)) {
       /* Already there - just ignore and return */
-      dsme_log(LOG_INFO, "Process WD requested for existing PID\n");
+      dsme_log(LOG_INFO, "Process WD requested for existing pid\n");
       return;
   }
 
@@ -237,7 +237,7 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESSWD_PONG, conn, msg)
   node = g_slist_find_custom(processes, (void*)msg->pid, compare_pids);
   if (!node) {
       /* Already there - just ignore and return */
-      dsme_log(LOG_INFO, "ProcessWD PONG for non-existing PID %i", msg->pid);
+      dsme_log(LOG_INFO, "ProcessWD PONG for non-existing pid %i", msg->pid);
       return;
   }
   dsme_log(LOG_DEBUG, "pong for pid %i", msg->pid);
@@ -266,7 +266,7 @@ static void swwd_del(pid_t pid)
   proc = (dsme_swwd_entry_t*)(node->data);
   swwd_entry_delete(proc);
   processes = g_slist_delete_link(processes, node);
-  dsme_log(LOG_INFO, "removed exited process from process wd");
+  dsme_log(LOG_INFO, "removed exited process (pid %d) from process wd", pid);
 }
 
 DSME_HANDLER(DSM_MSGTYPE_PROCESSWD_DELETE, conn, msg)
@@ -292,7 +292,7 @@ DSME_HANDLER(DSM_MSGTYPE_CLOSE, conn, msg)
   while ((node = g_slist_find_custom(node, conn, compare_endpoints))) {
       if (node->data) {
           proc = (dsme_swwd_entry_t *)(node->data);
-          dsme_log(LOG_DEBUG, "process socket closed, killing process: %i", proc->pid);
+          dsme_log(LOG_DEBUG, "process socket closed, killing process with pid %i", proc->pid);
           kill(proc->pid, SIGKILL);
           swwd_entry_delete(proc);
       }
