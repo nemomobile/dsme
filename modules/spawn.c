@@ -27,7 +27,6 @@
 
 #include "spawn.h"
 #include "dsme/logging.h"
-#include "dsme/osso-log.h"
 #include "dsme/modules.h"
 #include "dsme/messages.h"
 #include "dsme/oom.h"
@@ -169,14 +168,8 @@ static void setup_child(gpointer setup_data)
   const child_setup* p            = setup_data;
   struct passwd*     passwd_field = NULL;
 
-#ifdef DSME_LOG_ENABLE
-  dsme_log_close();
-#endif
-
-  DLOG_OPEN("dsme");
-
   if (setsid() < 0) {
-      DLOG_ERR("failed to set session id");
+      fprintf(stderr, "'%s' failed to set session id", p->cmdline);
   }
 
   /* restore the default scheduler */
@@ -184,34 +177,33 @@ static void setup_child(gpointer setup_data)
   memset(&sch, 0, sizeof(sch));
   sch.sched_priority = 0;
   if (sched_setscheduler(0, SCHED_OTHER, &sch) == -1) {
-      DLOG_ERR("unable to set the scheduler for the spawned process");
+      fprintf(stderr, "'%s' unable to set the scheduler", p->cmdline);
   }
 
   /* set the priority first to zero as dsme runs with -1,
    * then to the requested
    */
   if (setpriority(PRIO_PROCESS, 0, 0) != 0) {
-      DLOG_ERR("unable to set the priority for the spawned process to 0");
+      fprintf(stderr, "'%s' unable to set the priority to 0", p->cmdline);
   }
   if (p->nice_val != 0) {
-      DLOG_INFO("Nicing to %d", p->nice_val);
       errno = 0;
       if (nice(p->nice_val) == -1 && errno != 0) {
-          DLOG_ERR("unable to nice the the spawned process to %i", p->nice_val);
+          fprintf(stderr, "'%s' unable to nice to %i", p->cmdline, p->nice_val);
       }
   }
   if (p->oom_adj != 0) {
-      DLOG_INFO("Setting OOM adj");
       if (!adjust_oom(p->oom_adj)) {
-          DLOG_ERR("failed to set oom_adj; Unprotecting from OOM");
+          fprintf(stderr,
+                  "'%s' failed to set oom_adj; Unprotecting from OOM",
+                  p->cmdline);
           if (!unprotect_from_oom()) {
-              DLOG_ERR("failed to unprotect from OOM");
+              fprintf(stderr, "'%s' failed to unprotect from OOM", p->cmdline);
           }
       }
   } else if (p->nice_val >= 0) {
-      DLOG_INFO("Unprotecting from OOM");
       if (!unprotect_from_oom()) {
-          DLOG_ERR("failed to unprotect from OOM");
+          fprintf(stderr, "'%s' failed to unprotect from OOM", p->cmdline);
       }
   }
 
@@ -219,24 +211,34 @@ static void setup_child(gpointer setup_data)
 
   if (passwd_field != NULL) {
       if (initgroups(passwd_field->pw_name, passwd_field->pw_gid) == -1) {
-          DLOG_ERR("initgroups() failed: %s", strerror(errno));
+          fprintf(stderr,
+                  "'%s' initgroups() failed: %s",
+                  p->cmdline,
+                  strerror(errno));
           _exit(EX_NOPERM);
       }
   } else {
-      DLOG_ERR("requested UID not found, initgroups() not called");
+      fprintf(stderr,
+              "'%s' requested UID (%d) not found, initgroups() not called",
+              p->cmdline,
+              p->uid);
   }
 
   if (setgid(p->gid)) {
-      DLOG_ERR("'%s' setgid(%d) => Permission denied", p->cmdline, p->gid);
+      fprintf(stderr,
+              "'%s' setgid(%d) => Permission denied",
+              p->cmdline,
+              p->gid);
       _exit(EX_NOPERM);
   }
 
   if (setuid(p->uid)) {
-      DLOG_ERR("'%s' setuid(%d) => Permission denied", p->cmdline, p->uid);
+      fprintf(stderr,
+              "'%s' setuid(%d) => Permission denied",
+              p->cmdline,
+              p->uid);
       _exit(EX_NOPERM);
   }
-
-  LOG_CLOSE();
 }
 
 pid_t spawn_proc(const char* cmdline,
