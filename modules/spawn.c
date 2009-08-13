@@ -278,5 +278,7 @@ pid_t spawn_proc(const char* cmdline,
 
 void spawn_shutdown(void) {
   // TODO: no guarantee that announce_child_exit is a unique value :(
-  g_source_remove_by_user_data(announce_child_exit);
+  while (g_source_remove_by_user_data(announce_child_exit)) {
+      // EMPTY LOOP
+  }
 }
