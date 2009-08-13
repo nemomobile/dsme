@@ -451,7 +451,7 @@ out:
         return false;
     }
     if (pthread_attr_getschedparam(&tattr, &param) != 0) {
-        fprintf(stderr, "Error gettint scheduling parameters\n");
+        fprintf(stderr, "Error getting scheduling parameters\n");
         return false;
     }
     if (pthread_create(&tid, &tattr, logging_thread, 0) != 0) {
