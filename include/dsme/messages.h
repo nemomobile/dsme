@@ -125,14 +125,18 @@ enum {
 typedef dsmemsg_generic_t DSM_MSGTYPE_GET_VERSION;
 typedef dsmemsg_generic_t DSM_MSGTYPE_DSME_VERSION;
 
+/* TA stands for Type Approval: */
+typedef dsmemsg_generic_t DSM_MSGTYPE_SET_TA_TEST_MODE;
+
 
 enum {
     /* DSME Protocol messages 000000xx */
-    DSME_MSG_ENUM(DSM_MSGTYPE_CLOSE,          0x00000001),
+    DSME_MSG_ENUM(DSM_MSGTYPE_CLOSE,            0x00000001),
 
     /* misc */
-    DSME_MSG_ENUM(DSM_MSGTYPE_GET_VERSION,    0x00001100),
-    DSME_MSG_ENUM(DSM_MSGTYPE_DSME_VERSION,   0x00001101),
+    DSME_MSG_ENUM(DSM_MSGTYPE_GET_VERSION,      0x00001100),
+    DSME_MSG_ENUM(DSM_MSGTYPE_DSME_VERSION,     0x00001101),
+    DSME_MSG_ENUM(DSM_MSGTYPE_SET_TA_TEST_MODE, 0x00001102),
 };
 
 void* dsmemsg_new(u_int32_t id, size_t size, size_t extra);

@@ -68,6 +68,10 @@ static const char* const path      = "/com/nokia/thermalmanager";
 
 static THERMAL_STATUS current_status = THERMAL_STATUS_NORMAL;
 
+#ifdef DSME_THERMAL_TUNING
+static bool is_in_ta_test = false;
+#endif
+
 
 static const char* current_status_name()
 {
@@ -168,7 +172,9 @@ static void receive_temperature_response(thermal_object_t* thermal_object,
   THERMAL_STATUS new_status      = thermal_object->status;
 
 #ifdef DSME_THERMAL_TUNING
-  thermal_object_try_to_read_config(thermal_object);
+  if (is_in_ta_test) {
+      thermal_object_try_to_read_config(thermal_object);
+  }
 #endif
 
   /* heuristics to convert to degrees C */
@@ -297,6 +303,15 @@ DSME_HANDLER(DSM_MSGTYPE_DBUS_DISCONNECT, client, msg)
   dsme_dbus_unbind_methods(&bound, methods, service, interface);
 }
 
+#ifdef DSME_THERMAL_TUNING
+DSME_HANDLER(DSM_MSGTYPE_SET_TA_TEST_MODE, client, msg)
+{
+    is_in_ta_test = true;
+    dsme_log(LOG_CRIT, "thermal manager: set TA test mode");
+}
+#endif
+
+
 // TODO: rename module_fn_info_t to dsme_binding_t
 module_fn_info_t message_handlers[] = {
   DSME_HANDLER_BINDING(DSM_MSGTYPE_HEARTBEAT),
@@ -304,6 +319,9 @@ module_fn_info_t message_handlers[] = {
   DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_DISCONNECT),
 #if 0 // TODO
   DSME_HANDLER_BINDING(DSM_MSGTYPE_ENABLE_THERMAL_LOGGING),
+#endif
+#ifdef DSME_THERMAL_TUNING
+  DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_TA_TEST_MODE),
 #endif
   { 0 }
 };
@@ -338,9 +356,7 @@ static FILE* thermal_tuning_file(const char* thermal_object_name)
            DSME_THERMAL_TUNING_CONF_PATH,
            thermal_object_name);
 
-#ifndef DSME_THERMAL_LOGGING
   dsme_log(LOG_DEBUG, "trying to open %s for thermal tuning values", name);
-#endif
 
   return fopen(name, "r");
 }

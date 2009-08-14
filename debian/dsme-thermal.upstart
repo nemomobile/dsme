@@ -29,6 +29,7 @@ script
 			115, 120, 2
 			120, 999, 2
 			EOF
+                    /usr/sbin/dsmetool -a
                     echo "Using wide thermal limits"
                 else
                     echo "Using normal thermal limits"

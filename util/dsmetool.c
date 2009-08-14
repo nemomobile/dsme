@@ -332,6 +332,18 @@ static int send_reboot_request()
     return EXIT_SUCCESS;
 }
 
+static int send_ta_test_request()
+{
+    DSM_MSGTYPE_SET_TA_TEST_MODE msg =
+        DSME_MSG_INIT(DSM_MSGTYPE_SET_TA_TEST_MODE);
+
+    connect_to_dsme();
+    send_to_dsme(&msg);
+    disconnect_from_dsme();
+
+    return EXIT_SUCCESS;
+}
+
 int main(int argc, char* argv[])
 {
     const char* program_name  = argv[0];
@@ -350,7 +362,7 @@ int main(int argc, char* argv[])
     enum { NONE, START, STOP } action = NONE;
     const char* program       = "";
     process_actions_t policy  = ONCE;
-    const char* short_options = "n:m:hr:f:t:o:c:T:k:S:u:g:U:G:dsbv";
+    const char* short_options = "n:m:hr:f:t:o:c:T:k:S:u:g:U:G:dsbva";
     const struct option long_options[] = {
         {"help",               0, NULL, 'h'},
         {"start-reset",        1, NULL, 'r'},
@@ -371,6 +383,7 @@ int main(int argc, char* argv[])
         {"stop-dbus",          0, NULL, 's'},
         {"reboot",             0, NULL, 'b'},
         {"version",            0, NULL, 'v'},
+        {"ta-test",            0, NULL, 'a'},
         {0, 0, 0, 0}
     };
 
@@ -442,6 +455,9 @@ int main(int argc, char* argv[])
                 break;
             case 'v':
                 return get_version();
+                break;
+            case 'a':
+                return send_ta_test_request();
                 break;
             case 'h':
                 usage(program_name);
