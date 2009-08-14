@@ -89,7 +89,7 @@ void dsme_wd_kick(void)
               ms = (timestamp.tv_sec - previous_timestamp.tv_sec) * 1000;
               ms += (timestamp.tv_nsec - previous_timestamp.tv_nsec) / 1000000;
 
-              if (ms > (DSME_WD_PERIOD + 1) * 1000) {
+              if (ms > DSME_WD_PERIOD * 1000 + 100) {
                   dsme_log(LOG_CRIT, "took %ld ms between WD kicks", ms);
               } else {
                   dsme_log(LOG_DEBUG, "Time since previous WD kick: %ld ms", ms);
