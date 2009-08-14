@@ -240,10 +240,15 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESSWD_PONG, conn, msg)
       dsme_log(LOG_INFO, "ProcessWD PONG for non-existing pid %i", msg->pid);
       return;
   }
-  dsme_log(LOG_DEBUG, "pong for pid %i", msg->pid);
 
   proc = (dsme_swwd_entry_t *)(node->data);
-  if (proc) proc->pingcount = 0;
+  if (proc) {
+      dsme_log(LOG_DEBUG,
+               "pong for pid %i after %d ping(s)",
+               msg->pid,
+               proc->pingcount);
+      proc->pingcount = 0;
+  }
 }
 
 /**
