@@ -100,6 +100,7 @@ static bool make_argv(const char* cmdline, char*** argv, char** buf)
       /* This branch is not necessarily needed, but it "lighter" than
        * above version using "/bin/sh"
        */
+      // TODO: replace this branch with a call to g_shell_parse_argv()
       int   argcount = 0;
       char* c;
 
@@ -163,10 +164,21 @@ typedef struct child_setup {
   int         oom_adj;
 } child_setup;
 
-static void setup_child(gpointer setup_data)
+static void setup_child(const child_setup* setup_data)
 {
-  const child_setup* p            = setup_data;
-  struct passwd*     passwd_field = NULL;
+  const child_setup* p = setup_data;
+
+  int i;
+  int max_fd_count;
+
+  max_fd_count = getdtablesize();
+  if (max_fd_count == -1)  {
+      max_fd_count = 256;
+  }
+
+  for (i = 3; i < max_fd_count; ++i) {
+      close(i);
+  }
 
   if (setsid() < 0) {
       fprintf(stderr, "'%s' failed to set session id", p->cmdline);
@@ -207,8 +219,7 @@ static void setup_child(gpointer setup_data)
       }
   }
 
-  passwd_field = getpwuid(p->uid);
-
+  struct passwd* passwd_field = getpwuid(p->uid);
   if (passwd_field != NULL) {
       if (initgroups(passwd_field->pw_name, passwd_field->pw_gid) == -1) {
           fprintf(stderr,
@@ -241,6 +252,7 @@ static void setup_child(gpointer setup_data)
   }
 }
 
+
 pid_t spawn_proc(const char* cmdline,
                  uid_t       uid,
                  gid_t       gid,
@@ -252,31 +264,43 @@ pid_t spawn_proc(const char* cmdline,
   char**      args    = NULL;
   char*       cmdcopy = NULL;
   pid_t       pid;
-  GError*     err     = NULL;
   child_setup setup   = { cmdline, uid, gid, nice_val, oom_adj };
 
-  if (make_argv(cmdline, &args, &cmdcopy) &&
-      g_spawn_async(NULL,
-                    args,
-                    env,
-                    G_SPAWN_DO_NOT_REAP_CHILD,
-                    setup_child,
-                    &setup,
-                    &pid,
-                    &err))
-  {
-      g_child_watch_add(pid, announce_child_exit, announce_child_exit);
-      retval = pid;
-  } else {
-      dsme_log(LOG_CRIT, "spawn: %s", err ? err->message : "failed");
-      g_error_free(err);
-  }
+  if (make_argv(cmdline, &args, &cmdcopy)) {
+      pid = fork();
 
-  free(cmdcopy);
-  free(args);
+      if (pid == 0) {
+
+          /* child */
+          setup_child(&setup);
+
+          if (env) {
+              execve(args[0], args, env);
+          } else {
+              execvp(args[0], args);
+          }
+
+          fprintf(stderr, "'%s' exec() failed: %s\n", cmdline, strerror(errno));
+          exit(EXIT_FAILURE);
+
+      } else if (pid == -1) {
+          /* error */
+          dsme_log(LOG_CRIT, "fork() failed: %s", strerror(errno));
+      } else {
+          /* parent */
+          g_child_watch_add(pid, announce_child_exit, announce_child_exit);
+          retval = pid;
+      }
+
+      free(cmdcopy);
+      free(args);
+  } else {
+      dsme_log(LOG_CRIT, "error parsing cmdline: '%s'", cmdline);
+  }
 
   return retval;
 }
+
 
 void spawn_shutdown(void) {
   // TODO: no guarantee that announce_child_exit is a unique value :(
