@@ -1,3 +1,10 @@
+dsme (0.60.25) unstable; urgency=low
+
+  * Part of the fix for NB#127507: do not block in parent when spawning
+  * Fixes: NB#132451: detect mass storage mode properly
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Fri, 14 Aug 2009 10:37:56 +0000
+
 dsme (0.60.24) unstable; urgency=low
 
   * Part of the fix for NB#123145: only prevent shutdown/reboot in USER mode
