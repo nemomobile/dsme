@@ -360,7 +360,7 @@ int main(int argc, char *argv[])
 
   dsme_log(LOG_DEBUG, "Entering main loop");
   dsme_main_loop_run(process_message_queue);
-  dsme_log(LOG_DEBUG, "Exiting main loop");
+  dsme_log(LOG_CRIT, "Exited main loop, quitting");
 
   if (remove(PID_FILE) < 0) {
       dsme_log(LOG_ERR, "Couldn't remove lockfile");
