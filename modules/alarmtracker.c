@@ -23,6 +23,11 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*
+ * How to send alarms to alarm tracker:
+ * dbus-send --system --type=signal /com/nokia/alarmd com.nokia.alarmd.queue_status_ind int32:0 int32:1 int32:2 int32:3
+ */
+
 #include "state.h"
 #include "dbusproxy.h"
 #include "dsme_dbus.h"
@@ -54,9 +59,11 @@ static bool   alarm_state_file_up_to_date = false;
 static dsme_timer_t alarm_state_transition_timer = 0;
 
 
-static void save_alarm_queue_status(void)
+static void save_alarm_queue_status_cb(void)
 {
-  alarm_state_file_up_to_date = false;
+  if (alarm_state_file_up_to_date) {
+      return;
+   }
 
   FILE* f;
 
@@ -89,7 +96,9 @@ static void save_alarm_queue_status(void)
       "Alarm queue status saved to file %s",
       ALARM_STATE_FILE);
   } else {
-      dsme_log(LOG_WARNING, "Saving alarm queue status failed");
+      dsme_log(LOG_ERR, "Saving alarm queue status failed");
+      /* do not retry to avoid spamming the log */
+      alarm_state_file_up_to_date = true;
   }
 }
 
@@ -195,7 +204,9 @@ static void alarmd_queue_status_ind(const DsmeDbusMessage* ind)
 
       dsme_log(LOG_DEBUG, "got new alarms: %ld, %ld, %ld", active, desktop, actdead);
 
-      save_alarm_queue_status();
+      /* save alarm queue status in the logger thread */
+      alarm_state_file_up_to_date = false;
+      dsme_log_wakeup();
   } else {
       dsme_log(LOG_DEBUG, "got old alarms: %ld, %ld, %ld", active, desktop, actdead);
   }
@@ -238,12 +249,18 @@ void module_init(module_t* handle)
   dsme_log(LOG_DEBUG, "libalarmtracker.so loaded");
 
   restore_alarm_queue_status();
+
+  /* attach a callback for saving alarms from the logger thread */
+  dsme_log_cb_attach(save_alarm_queue_status_cb);
+
   set_alarm_state(0);
 }
 
 void module_fini(void)
 {
   dsme_dbus_unbind_signals(&bound, signals);
+
+  dsme_log_cb_detach(save_alarm_queue_status_cb);
 
   dsme_log(LOG_DEBUG, "libalarmtracker.so unloaded");
 }
