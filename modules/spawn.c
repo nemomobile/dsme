@@ -267,6 +267,7 @@ pid_t spawn_proc(const char* cmdline,
   child_setup setup   = { cmdline, uid, gid, nice_val, oom_adj };
 
   if (make_argv(cmdline, &args, &cmdcopy)) {
+      fflush(0);
       pid = fork();
 
       if (pid == 0) {
@@ -281,7 +282,7 @@ pid_t spawn_proc(const char* cmdline,
           }
 
           fprintf(stderr, "'%s' exec() failed: %s\n", cmdline, strerror(errno));
-          exit(EXIT_FAILURE);
+          _exit(EXIT_FAILURE);
 
       } else if (pid == -1) {
           /* error */
