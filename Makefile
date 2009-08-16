@@ -1,7 +1,7 @@
 #
 # Build targets
 #
-BINARIES     := dsme
+BINARIES     := dsme dsme-exec-helper
 A_LIBRARIES  := libdsme
 SO_LIBRARIES := libdsme libdsme_dbus_if
 SUBDIRS      := util modules
@@ -15,7 +15,7 @@ INSTALL_PERM  := 644
 INSTALL_OWNER := $(shell id -u)
 INSTALL_GROUP := $(shell id -g)
 
-INSTALL_BINARIES                      := dsme
+INSTALL_BINARIES                      := dsme dsme-exec-helper
 $(INSTALL_BINARIES)    : INSTALL_PERM := 755
 $(INSTALL_BINARIES)    : INSTALL_DIR  := $(DESTDIR)/sbin
 INSTALL_A_LIBRARIES                   := libdsme.a
@@ -91,6 +91,11 @@ libdsme.so : LIBRARY_VERSION  := 0.2.0
 libdsme_dbus_if_C_OBJS                   := modules/dsme_dbus_if.o
 modules/dsme_dbus_if.o: C_EXTRA_GENFLAGS := -fPIC
 libdsme_dbus_if.so    : LIBRARY_VERSION  := 0.2.0
+
+# TODO: move dsme-exec-helper to modules/
+# dsme-exec-helper
+dsme-exec-helper_C_OBJS := dsme-exec-helper.o oom.o
+dsme-exec-helper.o : C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
 
 
 #
