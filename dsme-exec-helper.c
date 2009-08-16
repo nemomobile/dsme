@@ -246,12 +246,6 @@ int main(int argc, char* argv[])
         char*  buf  = 0;
         if (make_argv(cmdline, &args, &buf)) {
 
-            int i;
-            fprintf(stderr, "about to exec: %s\n", cmdline);
-            for (i = 0; args[i]; ++i) {
-                fprintf(stderr, "argv[%d]: '%s'\n", i, args[i]);
-            }
-
             fflush(0);
             execvp(args[0], args);
 

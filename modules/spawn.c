@@ -47,13 +47,14 @@
 
 #define DSME_STATIC_STRLEN(s) (sizeof(s) / sizeof(s[0]))
 
+// TODO: is /sbin/ the right place for the exec helper?
 #define DSME_EXEC_HELPER_PATH "/sbin/dsme-exec-helper"
 
 
 static void announce_child_exit(GPid pid, gint status, gpointer unused);
 
 
-// WARNING: non-re-entrant due to static non-const strings
+/* WARNING: non-re-entrant due to static non-const strings */
 static bool make_argv_for_exec_helper(const char* cmdline,
                                       uid_t       uid,
                                       gid_t       gid,
