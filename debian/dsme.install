@@ -1,4 +1,5 @@
 debian/tmp/sbin/dsme
+debian/tmp/sbin/dsme-exec-helper
 debian/tmp/usr/lib/dsme/*
 debian/tmp/usr/sbin/waitfordsme
 debian/tmp/usr/sbin/dsmetool
