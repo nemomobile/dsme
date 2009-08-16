@@ -34,7 +34,6 @@
 #include <ctype.h>
 #include <errno.h>
 #include <unistd.h>
-#include <sched.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/types.h>
@@ -84,20 +83,6 @@ static void non_async_signal_safe_child_setup(const char* cmdline,
                                               int         nice_val,
                                               int         oom_adj)
 {
-  /* restore the default scheduler */
-  struct sched_param sch;
-  memset(&sch, 0, sizeof(sch));
-  sch.sched_priority = 0;
-  if (sched_setscheduler(0, SCHED_OTHER, &sch) == -1) {
-      fprintf(stderr, "'%s' unable to set the scheduler", cmdline);
-  }
-
-  /* set the priority first to zero as dsme runs with -1,
-   * then to the requested
-   */
-  if (setpriority(PRIO_PROCESS, 0, 0) != 0) {
-      fprintf(stderr, "'%s' unable to set the priority to 0", cmdline);
-  }
   if (nice_val != 0) {
       errno = 0;
       if (nice(nice_val) == -1 && errno != 0) {

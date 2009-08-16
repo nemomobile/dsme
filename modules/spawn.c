@@ -43,6 +43,7 @@
 #include <errno.h>
 #include <pwd.h>
 #include <stdbool.h>
+#include <sched.h>
 
 
 #define DSME_STATIC_STRLEN(s) (sizeof(s) / sizeof(s[0]))
@@ -95,6 +96,29 @@ static bool make_argv_for_exec_helper(const char* cmdline,
 
 static void async_signal_safe_child_setup(const char* cmdline)
 {
+  /* restore the default scheduler */
+  struct sched_param sch;
+  memset(&sch, 0, sizeof(sch));
+  sch.sched_priority = 0;
+  if (sched_setscheduler(0, SCHED_OTHER, &sch) == -1) {
+      const char msg[] = "unable to set the scheduler: ";
+
+      (void)write(2, msg, DSME_STATIC_STRLEN(msg));
+      (void)write(2, cmdline, strlen(cmdline));
+      (void)write(2, "\n", 1);
+  }
+
+  /* set the priority first to zero as dsme runs with -1,
+   * then to the requested
+   */
+  if (setpriority(PRIO_PROCESS, 0, 0) != 0) {
+      const char msg[] = "unable to set the priority to 0: ";
+
+      (void)write(2, msg, DSME_STATIC_STRLEN(msg));
+      (void)write(2, cmdline, strlen(cmdline));
+      (void)write(2, "\n", 1);
+  }
+
   int i;
   int max_fd_count;
 
@@ -107,7 +131,7 @@ static void async_signal_safe_child_setup(const char* cmdline)
       (void)close(i);
   }
 
-  /* establis a new session */
+  /* establish a new session */
   if (setsid() < 0) {
       const char msg[] = "setsid() failed: ";
 
