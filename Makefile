@@ -37,7 +37,7 @@ dsme_dbus_if.pc        : INSTALL_DIR  := $(DESTDIR)/usr/lib/pkgconfig
 # C_OPTFLAGS are not used for debug builds (ifdef DEBUG)
 # C_DBGFLAGS are not used for normal builds
 #
-C_GENFLAGS     := -DPRG_VERSION=$(VERSION) -g \
+C_GENFLAGS     := -DPRG_VERSION=$(VERSION) -pthread -g \
                   -Wall -Wwrite-strings -Wmissing-prototypes -Werror# -pedantic
 C_OPTFLAGS     := -O2 -s
 C_DBGFLAGS     := -g -DDEBUG -DDSME_LOG_ENABLE
