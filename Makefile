@@ -45,7 +45,7 @@ C_DEFINES      := DSME_POSIX_TIMER DSME_WD_SYNC DSME_BMEIPC
 C_INCDIRS      := $(TOPDIR)/include $(TOPDIR)/modules $(TOPDIR) 
 MKDEP_INCFLAGS := $$(pkg-config --cflags-only-I glib-2.0)
 
-LD_GENFLAGS :=
+LD_GENFLAGS := -pthread
 LD_LIBPATHS := $(TOPDIR)
 
 # If OSSO_DEBUG is defined, compile in the logging
