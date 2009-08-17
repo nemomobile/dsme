@@ -68,23 +68,28 @@ static void save_alarm_queue_status_cb(void)
   FILE* f;
 
   if ((f = fopen(ALARM_STATE_FILE_TMP, "w+")) == 0) {
-      dsme_log(LOG_DEBUG, "%s: %s", ALARM_STATE_FILE, strerror(errno));
+      dsme_log_raw(LOG_DEBUG, "%s: %s", ALARM_STATE_FILE, strerror(errno));
   } else {
       bool temp_file_ok = true;
 
       if (fprintf(f, "%ld, %ld, %ld\n", active, desktop, actdead) < 0) {
-          dsme_log(LOG_DEBUG, "Error writing file %s", ALARM_STATE_FILE_TMP);
+          dsme_log_raw(LOG_DEBUG, "Error writing %s", ALARM_STATE_FILE_TMP);
           temp_file_ok = false;
       }
 
       if (fclose(f) != 0) {
-          dsme_log(LOG_DEBUG, "%s: %s", ALARM_STATE_FILE_TMP, strerror(errno));
+          dsme_log_raw(LOG_DEBUG,
+                       "%s: %s",
+                       ALARM_STATE_FILE_TMP,
+                       strerror(errno));
           temp_file_ok = false;
       }
 
       if (temp_file_ok) {
           if (rename(ALARM_STATE_FILE_TMP, ALARM_STATE_FILE) != 0) {
-              dsme_log(LOG_DEBUG, "Error writing file %s", ALARM_STATE_FILE);
+              dsme_log_raw(LOG_DEBUG,
+                           "Error writing file %s",
+                           ALARM_STATE_FILE);
           } else {
               alarm_state_file_up_to_date = true;
           }
@@ -92,11 +97,11 @@ static void save_alarm_queue_status_cb(void)
   }
 
   if (alarm_state_file_up_to_date) {
-      dsme_log(LOG_DEBUG,
+      dsme_log_raw(LOG_DEBUG,
       "Alarm queue status saved to file %s",
       ALARM_STATE_FILE);
   } else {
-      dsme_log(LOG_ERR, "Saving alarm queue status failed");
+      dsme_log_raw(LOG_ERR, "Saving alarm queue status failed");
       /* do not retry to avoid spamming the log */
       alarm_state_file_up_to_date = true;
   }
