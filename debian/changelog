@@ -1,3 +1,12 @@
+dsme (0.60.26) unstable; urgency=low
+
+  * NB#127507: use helper app to avoid being non-async-signal-safe before exec
+  * NB#127507: use -pthread gcc flag all over
+  * NB#127507: only try to open thermal tuning file while in TA test
+  * NB#127507: offload alarm state saving to the logger thread
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Tue, 18 Aug 2009 10:07:14 +0000
+
 dsme (0.60.25) unstable; urgency=low
 
   * Part of the fix for NB#127507: do not block in parent when spawning
