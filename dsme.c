@@ -302,6 +302,8 @@ int main(int argc, char *argv[])
   signal(SIGTERM, signal_handler);
   signal(SIGPIPE, signal_handler);
 
+  g_thread_init(0);
+
   dsme_cal_init();
 
   parse_options(argc, argv, &module_names, &daemon);

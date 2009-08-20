@@ -71,7 +71,7 @@ dsme_C_OBJS             := dsme.o modulebase.o timers.o \
                            dsme-cal.o dsmesock.o
 dsme_SO_LIBS            := dsme
 dsme_LIBS               := dl cal
-dsme: LD_EXTRA_GENFLAGS := -rdynamic
+dsme: LD_EXTRA_GENFLAGS := -rdynamic $$(pkg-config --libs gthread-2.0)
 
 #logging.o:	C_EXTRA_DEFINES	:=	USE_STDERR
 dsme.o      : C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
