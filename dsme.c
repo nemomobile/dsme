@@ -317,7 +317,18 @@ int main(int argc, char *argv[])
       return EXIT_FAILURE;
   }
 
-#ifdef DSME_LOG_ENABLE  
+  if (setpriority(PRIO_PROCESS, 0, DSME_PRIORITY) != 0) {
+      fprintf(stderr, "Couldn't set the priority\n");
+  }
+
+  /* protect DSME from oom; notice that this must be done before any
+   * calls to pthread_create() in order to have all threads protected
+   */
+  if (!protect_from_oom()) {
+      fprintf(stderr, "Couldn't protect from oom\n");
+  }
+
+#ifdef DSME_LOG_ENABLE
   dsme_log_open(logging_method,
                 logging_verbosity,
                 0,
@@ -326,17 +337,6 @@ int main(int argc, char *argv[])
                 0,
                 "/var/log/dsme.log");
 #endif
-
-  if (setpriority(PRIO_PROCESS, 0, DSME_PRIORITY) != 0) {
-      dsme_log(LOG_ERR, "Couldn't set the priority");
-  }
-
-  /* protect DSME from oom; notice that this must be done before any
-   * calls to pthread_create() in order to have all threads protected
-   */
-  if (!protect_from_oom()) {
-      dsme_log(LOG_ERR, "Couldn't protect from oom");
-  }
 
   /* load modules */
   if (!modulebase_init(module_names)) {
