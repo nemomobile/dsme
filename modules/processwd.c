@@ -38,7 +38,7 @@
 
 #include "processwd.h"
 #include "spawn.h"
-#include "hwwd.h"
+#include "heartbeat.h"
 
 #include "dsme/messages.h"
 #include "dsme/modules.h"

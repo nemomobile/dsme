@@ -36,95 +36,83 @@
 
 #include "hwwd.h"
 #include "dsme_wd.h"
+#include "heartbeat.h"
 
 #include "dsme/modules.h"
 #include "dsme/timers.h"
 #include "dsme/logging.h"
-#include <sys/mman.h>
 #include <errno.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 
-static bool kicking_enabled = false;
+#define DSME_STATIC_STRLEN(s) (sizeof(s) - 1)
 
-/* connection for the kicker process */
-static endpoint_t* kicker_client = NULL;
 
-/**
- * @ingroup hwwd
- * Timer for HW watchdog kicking.
+void dsme_handle_unresponsive_main_thread(void);
+
+
+static bool              kicking_enabled             = false;
+static volatile unsigned pending_heartbeat_msg_count = 0;
+
+
+/*
+ * This function is called just before the WD thread goes to sleep
  */
-static dsme_timer_t hwwd_kick_timer = 0;
-
-static void start_heartbeat_now(void);
-static int  heartbeat(void* unused);
-
-
-DSME_HANDLER(DSM_MSGTYPE_HWWD_KICK, client, msg)
+static void kick_hwwd(void)
 {
-    dsme_log(LOG_DEBUG, "hwwd_kick_force()");
-
-    if (!kicking_enabled) {
-        return;
-    }
-
-    start_heartbeat_now();
-}
-
-static void start_heartbeat_now(void)
-{
-        /* remove previous timer, if any */
-	if (hwwd_kick_timer) {
-		dsme_destroy_timer(hwwd_kick_timer);
-		hwwd_kick_timer = 0;
-	}
-
-        /* do the first kick */
-        (void)heartbeat(NULL);
-
-	/* start kicking interval */
-        hwwd_kick_timer = dsme_create_timer_high_priority(DSME_WD_PERIOD,
-                                                          heartbeat,
-                                                          NULL);
-        if (hwwd_kick_timer) {
-            dsme_log(LOG_NOTICE, "Setting WD timeout to %d", DSME_WD_PERIOD);
-        } else {
-            dsme_log(LOG_CRIT, "Unable to create a timeout for WD kicking");
-        }
-
-        static int locked = -1;
-        if (locked == -1) {
-            dsme_log(LOG_NOTICE, "locking to RAM");
-            if ((locked = mlockall(MCL_CURRENT|MCL_FUTURE)) == -1) {
-                dsme_log(LOG_CRIT, "mlockall(): %s", strerror(errno));
-            }
-        }
-}
-
-
-/**
- * This function kicks the HW watchdog and sends a heartbeat.
- */
-static int heartbeat(void* unused)
-{
-    /* first kick the HW watchdog */
     if (kicking_enabled) {
         dsme_wd_kick();
     }
-
-    /* then send the heartbeat */
-    const DSM_MSGTYPE_HEARTBEAT beat = DSME_MSG_INIT(DSM_MSGTYPE_HEARTBEAT);
-    broadcast_internally(&beat);
-    dsme_log(LOG_DEBUG, "hwwd: heartbeat");
-
-    return 1; /* keep the interval going */
 }
+
+/*
+ * This function is called just after the WD thread wakes up
+ */
+static bool heartbeat(void)
+{
+    /* first kick the HW watchdog */
+    kick_hwwd();
+
+    /* then see if the mainloop is running */
+    if (pending_heartbeat_msg_count++ >= 5) { // TODO: give the 5 some nice name
+        dsme_handle_unresponsive_main_thread();
+    }
+
+    return true;
+}
+
+void dsme_handle_unresponsive_main_thread(void)
+{
+    const char msg[] = 
+        "dsme: mainloop frozen or seriously lagging; aborting\n";
+    (void)write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
+    abort();
+}
+
+DSME_HANDLER(DSM_MSGTYPE_HEARTBEAT, client, msg)
+{
+    /* indicate that the main loop is running */
+    pending_heartbeat_msg_count = 0;
+    dsme_log(LOG_DEBUG, "main loop is alive");
+}
+
+DSME_HANDLER(DSM_MSGTYPE_HWWD_KICK, client, msg)
+{
+    dsme_log(LOG_DEBUG, "forced hwwd kick");
+
+    kick_hwwd();
+}
+
 
 /**
   @ingroup hwwd
   DSME messages handled by hwwd-module.
  */
 module_fn_info_t message_handlers[] = {
+    DSME_HANDLER_BINDING(DSM_MSGTYPE_HEARTBEAT),
     DSME_HANDLER_BINDING(DSM_MSGTYPE_HWWD_KICK),
     {0}
 };
@@ -139,17 +127,20 @@ void module_init(module_t *handle)
     } else {
         kicking_enabled = true;
     }
-    start_heartbeat_now();
+
+    heartbeat();
+
+    DSM_MSGTYPE_HEARTBEAT_START msg =
+        DSME_MSG_INIT(DSM_MSGTYPE_HEARTBEAT_START);
+    msg.presleep_cb               = kick_hwwd;
+    msg.sleep_interval_in_seconds = DSME_WD_PERIOD;
+    msg.postsleep_cb              = heartbeat;
+    broadcast_internally(&msg);
 
     dsme_log(LOG_DEBUG, "libhwwd.so loaded");
 }
 
 void module_fini(void)
 {
-        if (kicker_client) {
-          endpoint_free(kicker_client);
-          kicker_client = 0;
-        }
-
-	dsme_log(LOG_DEBUG, "libhwwd.so unloaded");
+    dsme_log(LOG_DEBUG, "libhwwd.so unloaded");
 }

@@ -68,6 +68,7 @@
  * /etc/dsme/modules.conf is not readable.
  */
 const char *modules[] = {
+    "libheartbeat.so",
     "libhwwd.so",
     "librunlevel.so",
     "libstate.so",

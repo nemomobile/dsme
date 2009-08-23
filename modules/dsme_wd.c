@@ -46,8 +46,9 @@
 #include <linux/types.h>
 #include <linux/watchdog.h>
 
-#define DSME_WD_PRIORITY  (-20)
-#define DSME_WD_SCHEDULER SCHED_RR
+
+#define DSME_STATIC_STRLEN(s) (sizeof(s) - 1)
+
 
 typedef struct wd_t {
     const char* file;   /* pathname of the watchdog device */
@@ -71,14 +72,26 @@ void dsme_wd_kick(void)
       int i;
       for (i = 0; i < WD_COUNT; ++i) {
           if (wd_fd[i] != -1 && write(wd_fd[i], "*", 1) == 1) {
-              dsme_log(LOG_DEBUG, "Kicked WD %s", wd[i].file);
+#if 0 /* for debugging only */
+              const char msg[] = "Kicked WD "
+
+              (void)write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
+              (void)write(STDERR_FILENO, wd[i].file, strlen(wd[i].file));
+              (void)write(STDERR_FILENO, "\n", 1);
+#endif
           } else {
-              dsme_log(LOG_CRIT, "Error kicking WD %s", wd[i].file);
+              const char msg[] = "Error kicking WD ";
+
+              (void)write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
+              (void)write(STDERR_FILENO, wd[i].file, strlen(wd[i].file));
+              (void)write(STDERR_FILENO, "\n", 1);
+
               /* must not kick later wd's if an earlier one fails */
               break;
           }
       }
 
+#if 0 /* for debugging only */
       static struct timespec previous_timestamp = { 0, 0 };
       struct timespec timestamp;
 
@@ -90,13 +103,12 @@ void dsme_wd_kick(void)
               ms += (timestamp.tv_nsec - previous_timestamp.tv_nsec) / 1000000;
 
               if (ms > DSME_WD_PERIOD * 1000 + 100) {
-                  dsme_log(LOG_CRIT, "took %ld ms between WD kicks", ms);
-              } else {
-                  dsme_log(LOG_DEBUG, "Time since previous WD kick: %ld ms", ms);
+                  fprintf(stderr, "took %ld ms between WD kicks\n", ms);
               }
           }
           previous_timestamp = timestamp;
       }
+#endif
   }
 }
 
@@ -139,20 +151,6 @@ bool dsme_wd_init(void)
 
     for (i = 0; i < WD_COUNT; ++i) {
         wd_fd[i] = -1;
-    }
-
-    /* set process priority */
-    dsme_log(LOG_NOTICE, "setting priority %d", DSME_WD_PRIORITY);
-    if (setpriority(PRIO_PROCESS, 0, DSME_WD_PRIORITY) == -1) {
-        dsme_log(LOG_CRIT, "setpriority(): %s", strerror(errno));
-    }
-
-    dsme_log(LOG_NOTICE, "setting scheduler %d", DSME_WD_SCHEDULER);
-    struct sched_param sch;
-    memset(&sch, 0, sizeof(sch));
-    sch.sched_priority = sched_get_priority_max(DSME_WD_SCHEDULER);
-    if (sched_setscheduler(0, DSME_WD_SCHEDULER, &sch) == -1) {
-        dsme_log(LOG_CRIT, "sched_setscheduler(): %s", strerror(errno));
     }
 
     read_cal_config();

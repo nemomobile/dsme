@@ -46,7 +46,7 @@
 #include <sched.h>
 
 
-#define DSME_STATIC_STRLEN(s) (sizeof(s) / sizeof(s[0]))
+#define DSME_STATIC_STRLEN(s) (sizeof(s) - 1)
 
 // TODO: is /sbin/ the right place for the exec helper?
 #define DSME_EXEC_HELPER_PATH "/sbin/dsme-exec-helper"
@@ -94,6 +94,10 @@ static bool make_argv_for_exec_helper(const char* cmdline,
     return made;
 }
 
+/*
+ * this function is called between fork() and exec(),
+ * so it must only do async-signal-safe operations
+ */
 static void async_signal_safe_child_setup(const char* cmdline)
 {
   /* restore the default scheduler */
@@ -103,9 +107,9 @@ static void async_signal_safe_child_setup(const char* cmdline)
   if (sched_setscheduler(0, SCHED_OTHER, &sch) == -1) {
       const char msg[] = "unable to set the scheduler: ";
 
-      (void)write(2, msg, DSME_STATIC_STRLEN(msg));
-      (void)write(2, cmdline, strlen(cmdline));
-      (void)write(2, "\n", 1);
+      (void)write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
+      (void)write(STDERR_FILENO, cmdline, strlen(cmdline));
+      (void)write(STDERR_FILENO, "\n", 1);
   }
 
   /* set the priority first to zero as dsme runs with -1,
@@ -114,9 +118,9 @@ static void async_signal_safe_child_setup(const char* cmdline)
   if (setpriority(PRIO_PROCESS, 0, 0) != 0) {
       const char msg[] = "unable to set the priority to 0: ";
 
-      (void)write(2, msg, DSME_STATIC_STRLEN(msg));
-      (void)write(2, cmdline, strlen(cmdline));
-      (void)write(2, "\n", 1);
+      (void)write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
+      (void)write(STDERR_FILENO, cmdline, strlen(cmdline));
+      (void)write(STDERR_FILENO, "\n", 1);
   }
 
   int i;
@@ -135,9 +139,9 @@ static void async_signal_safe_child_setup(const char* cmdline)
   if (setsid() < 0) {
       const char msg[] = "setsid() failed: ";
 
-      (void)write(2, msg, DSME_STATIC_STRLEN(msg));
-      (void)write(2, cmdline, strlen(cmdline));
-      (void)write(2, "\n", 1);
+      (void)write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
+      (void)write(STDERR_FILENO, cmdline, strlen(cmdline));
+      (void)write(STDERR_FILENO, "\n", 1);
   }
 }
 

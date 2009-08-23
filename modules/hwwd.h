@@ -29,11 +29,9 @@
 #define DSME_HEARTBEAT_INTERVAL 12 /* seconds */
 
 enum {
-    DSME_MSG_ENUM(DSM_MSGTYPE_HEARTBEAT,   0x00000700),
     DSME_MSG_ENUM(DSM_MSGTYPE_HWWD_KICK,   0x00000703),
 };
 
-typedef dsmemsg_generic_t DSM_MSGTYPE_HEARTBEAT;
 typedef dsmemsg_generic_t DSM_MSGTYPE_HWWD_KICK;
 
 #endif

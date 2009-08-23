@@ -302,7 +302,18 @@ int main(int argc, char *argv[])
   signal(SIGTERM, signal_handler);
   signal(SIGPIPE, signal_handler);
 
-  g_thread_init(0);
+  /* protect DSME from oom; notice that this must be done before any
+   * calls to pthread_create() in order to have all threads protected
+   */
+  if (!protect_from_oom()) {
+      fprintf(stderr, "Couldn't protect from oom\n");
+  }
+
+  if (setpriority(PRIO_PROCESS, 0, DSME_PRIORITY) != 0) {
+      fprintf(stderr, "Couldn't set the priority\n");
+  }
+
+  g_thread_init(0); /* notice that this spawns a thread */
 
   dsme_cal_init();
 
@@ -315,17 +326,6 @@ int main(int argc, char *argv[])
 
   if (daemon && daemonize() == -1) {
       return EXIT_FAILURE;
-  }
-
-  if (setpriority(PRIO_PROCESS, 0, DSME_PRIORITY) != 0) {
-      fprintf(stderr, "Couldn't set the priority\n");
-  }
-
-  /* protect DSME from oom; notice that this must be done before any
-   * calls to pthread_create() in order to have all threads protected
-   */
-  if (!protect_from_oom()) {
-      fprintf(stderr, "Couldn't protect from oom\n");
   }
 
 #ifdef DSME_LOG_ENABLE

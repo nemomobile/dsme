@@ -39,7 +39,7 @@
 #include "dsme/modules.h"
 #include "dsme/logging.h"
 #include "state.h"
-#include "hwwd.h"
+#include "heartbeat.h"
 
 #include <glib.h>
 #include <stdlib.h>
