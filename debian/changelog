@@ -1,17 +1,19 @@
 dsme (0.60.27) unstable; urgency=low
 
-  * NB#127507: add high priority thread to kick hwwd's and wake up main thread
-  * NB#127507: call g_thread_init()
-  * NB#127507: protect all threads from OOM killer
+  * Fixes: NB#127507: partial fixes as follows
+  * add high priority thread to kick hwwd's and wake up main thread
+  * call g_thread_init()
+  * protect all threads from OOM killer
 
  -- Semi Malinen <semi.malinen@nokia.com>  Sun, 23 Aug 2009 14:30:46 +0000
 
 dsme (0.60.26) unstable; urgency=low
 
-  * NB#127507: use helper app to avoid being non-async-signal-safe before exec
-  * NB#127507: use -pthread gcc flag all over
-  * NB#127507: only try to open thermal tuning file while in TA test
-  * NB#127507: offload alarm state saving to the logger thread
+  * Fixes: NB#127507: partial fixes as follows
+  * use helper app to avoid being non-async-signal-safe before exec
+  * use -pthread gcc flag all over
+  * only try to open thermal tuning file while in TA test
+  * offload alarm state saving to the logger thread
 
  -- Semi Malinen <semi.malinen@nokia.com>  Tue, 18 Aug 2009 10:07:14 +0000
 
