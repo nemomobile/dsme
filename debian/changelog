@@ -1,3 +1,10 @@
+dsme (0.60.28) unstable; urgency=low
+
+  * Partial fix to NB#127466: remove a 2 s delay from shutdown
+  * Once committed, do not stop thermal shutdown even if temps come down
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Wed, 02 Sep 2009 07:42:42 +0000
+
 dsme (0.60.27) unstable; urgency=low
 
   * Fixes: NB#127507: partial fixes as follows
