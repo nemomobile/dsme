@@ -81,9 +81,8 @@ static dsme_state_t current_state = DSME_STATE_NOT_SET;
 static dsme_timer_t overheat_timer           = 0;
 static dsme_timer_t charger_disconnect_timer = 0;
 
-/* timers for giving other programs a bit of time before shutting down */
-static dsme_timer_t delayed_shutdown_timer   = 0;
-static dsme_timer_t delayed_actdead_timer    = 0;
+/* timers for shutting down in case of malfunction */
+static dsme_timer_t malf_shutdown_timer   = 0;
 
 
 static void change_state_if_necessary(void);
@@ -92,11 +91,10 @@ static void change_state(dsme_state_t new_state);
 static void deny_state_change_request(dsme_state_t denied_state,
                                       const char*  reason);
 
-static void start_delayed_shutdown_timer(unsigned seconds);
-static int  delayed_shutdown_fn(void* unused);
-static void start_delayed_actdead_timer(unsigned seconds);
-static int  delayed_actdead_fn(void* unused);
-static void stop_delayed_runlevel_timers(void);
+static void start_malf_shutdown_timer(unsigned seconds);
+static int  delayed_malf_shutdown_fn(void* unused);
+static void shutdown_or_reboot(void);
+static void stop_malf_shutdown_timer(void);
 static void change_runlevel(dsme_state_t state);
 static void kick_wds(void);
 
@@ -226,7 +224,7 @@ static void try_to_change_state(dsme_state_t new_state)
     case DSME_STATE_SHUTDOWN: /* Runlevel 0 */ /* FALL THROUGH */
     case DSME_STATE_REBOOT:   /* Runlevel 6 */
       change_state(new_state);
-      start_delayed_shutdown_timer(SHUTDOWN_TIMER_TIMEOUT);
+      shutdown_or_reboot();
       break;
 
     case DSME_STATE_USER:    /* Runlevel 2 */ /* FALL THROUGH */
@@ -243,9 +241,7 @@ static void try_to_change_state(dsme_state_t new_state)
           dsme_log(LOG_CRIT, "go to actdead via reboot");
           new_state = DSME_STATE_REBOOT;
           change_state(new_state);
-
-          /* make a delayed runlevel change from user to actdead state */
-          start_delayed_actdead_timer(SHUTDOWN_TIMER_TIMEOUT);
+          change_runlevel(DSME_STATE_ACTDEAD);
       }
       break;
 
@@ -261,7 +257,7 @@ static void try_to_change_state(dsme_state_t new_state)
 
       /* If R&D mode is not enabled, shutdown after the timer */
       if (!rd_mode_enabled()) {
-          start_delayed_shutdown_timer(MALF_SHUTDOWN_TIMER);
+          start_malf_shutdown_timer(MALF_SHUTDOWN_TIMER);
       } else {
           dsme_log(LOG_CRIT, "R&D mode enabled, not shutting down");
       }
@@ -338,13 +334,12 @@ static void deny_state_change_request(dsme_state_t denied_state,
 }
 
 
-static void start_delayed_shutdown_timer(unsigned seconds)
+static void start_malf_shutdown_timer(unsigned seconds)
 {
-  if (!delayed_shutdown_timer) {
-      stop_delayed_runlevel_timers();
-      if (!(delayed_shutdown_timer = dsme_create_timer(seconds,
-                                                       delayed_shutdown_fn,
-                                                       NULL)))
+  if (!malf_shutdown_timer) {
+      if (!(malf_shutdown_timer = dsme_create_timer(seconds,
+                                                    delayed_malf_shutdown_fn,
+                                                    NULL)))
       {
           dsme_log(LOG_CRIT, "Could not create a shutdown timer; exit!");
           exit(EXIT_FAILURE);
@@ -353,7 +348,23 @@ static void start_delayed_shutdown_timer(unsigned seconds)
   }
 }
 
-static int delayed_shutdown_fn(void* unused)
+static void stop_malf_shutdown_timer(void)
+{
+    if (malf_shutdown_timer) {
+        dsme_destroy_timer(malf_shutdown_timer);
+        malf_shutdown_timer = 0;
+        dsme_log(LOG_CRIT, "Delayed shutdown timer stopped");
+    }
+}
+
+static int delayed_malf_shutdown_fn(void* unused)
+{
+  shutdown_or_reboot();
+
+  return 0; /* stop the interval */
+}
+
+static void shutdown_or_reboot(void)
 {
   /* first kick WD's for the last time */
   kick_wds();
@@ -362,31 +373,6 @@ static int delayed_shutdown_fn(void* unused)
   DSM_MSGTYPE_SHUTDOWN msg = DSME_MSG_INIT(DSM_MSGTYPE_SHUTDOWN);
   msg.runlevel = state2runlevel(current_state);
   broadcast_internally(&msg);
-
-  return 0; /* stop the interval */
-}
-
-static void start_delayed_actdead_timer(unsigned seconds)
-{
-  if (!delayed_shutdown_timer && !delayed_actdead_timer) {
-      if (!(delayed_actdead_timer = dsme_create_timer(seconds,
-                                                      delayed_actdead_fn,
-                                                      NULL)))
-      {
-          dsme_log(LOG_CRIT, "Could not create an actdead timer; exit!");
-          exit(EXIT_FAILURE);
-      }
-      dsme_log(LOG_CRIT, "Reboot for actdead in %i seconds", seconds);
-  }
-}
-
-static int delayed_actdead_fn(void* unused)
-{
-  change_runlevel(DSME_STATE_ACTDEAD);
-
-  delayed_actdead_timer = 0;
-
-  return 0; /* stop the interval */
 }
 
 static void change_runlevel(dsme_state_t state)
@@ -404,20 +390,6 @@ static void kick_wds(void)
 {
   DSM_MSGTYPE_HWWD_KICK msg = DSME_MSG_INIT(DSM_MSGTYPE_HWWD_KICK);
   broadcast_internally(&msg);
-}
-
-static void stop_delayed_runlevel_timers(void)
-{
-    if (delayed_shutdown_timer) {
-        dsme_destroy_timer(delayed_shutdown_timer);
-        delayed_shutdown_timer = 0;
-        dsme_log(LOG_CRIT, "Delayed shutdown timer stopped");
-    }
-    if (delayed_actdead_timer) {
-        dsme_destroy_timer(delayed_actdead_timer);
-        delayed_actdead_timer = 0;
-        dsme_log(LOG_CRIT, "Delayed actdead timer stopped");
-    }
 }
 
 
@@ -608,7 +580,7 @@ DSME_HANDLER(DSM_MSGTYPE_SET_EMERGENCY_CALL_STATE, conn, msg)
 
   if (emergency_call_ongoing) {
       /* stop all timers that could lead to shutdown */
-      stop_delayed_runlevel_timers();
+      stop_malf_shutdown_timer();
   }
 
   change_state_if_necessary();

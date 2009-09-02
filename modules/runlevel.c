@@ -81,7 +81,10 @@ static void shutdown(dsme_runlevel_t runlevel)
       dsme_log(LOG_DEBUG, "Shutdown request to bad runlevel (%d)", runlevel);
       return;
   }
-  dsme_log(LOG_CRIT, "Shutdown/reboot");
+  dsme_log(LOG_CRIT,
+           runlevel == DSME_RUNLEVEL_SHUTDOWN ? "Shutdown" :
+           runlevel == DSME_RUNLEVEL_REBOOT   ? "Reboot"   :
+                                                "Malf");
 
   /* If runlevel change fails, handle the shutdown/reboot by DSME */
   if (access("/sbin/telinit", X_OK) != 0 || !change_runlevel(runlevel))
