@@ -102,7 +102,6 @@ static void kick_wds(void);
 
 static void start_overheat_timer(void);
 static int  delayed_overheat_fn(void* unused);
-static void stop_overheat_timer(void);
 
 static void start_charger_disconnect_timer(void);
 static int  delayed_charger_disconnect_fn(void* unused);
@@ -452,14 +451,6 @@ static int delayed_overheat_fn(void* unused)
   return 0; /* stop the interval */
 }
 
-static void stop_overheat_timer(void)
-{
-  if (overheat_timer) {
-      dsme_destroy_timer(overheat_timer);
-      overheat_timer = 0;
-      dsme_log(LOG_CRIT, "Thermal shutdown timer stopped");
-  }
-}
 
 
 static void start_charger_disconnect_timer(void)
@@ -602,9 +593,7 @@ DSME_HANDLER(DSM_MSGTYPE_SET_THERMAL_STATE, conn, msg)
   if (msg->overheated) {
       start_overheat_timer();
   } else {
-      stop_overheat_timer();
-      device_overheated = false;
-      change_state_if_necessary();
+      /* there is no going back from being overheated */
   }
 }
 
