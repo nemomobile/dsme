@@ -24,10 +24,10 @@
             upstart should notify dsme about D-Bus restart
         </note>
     </note>
-    <note priority="medium" time="1228294688">
-        stop using runlevels; use bootstates instead
-    </note>
     <note priority="medium" time="1234964310">
         wait 2 s for alarm count to go 0 before actdead-&gt;user
+    </note>
+    <note priority="medium" time="1251959677">
+        do not accept new processwd clients after committing to shutdown
     </note>
 </todo>
