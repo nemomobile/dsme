@@ -71,23 +71,26 @@ void dsme_wd_kick(void)
   if (wd_enabled) {
       int i;
       for (i = 0; i < WD_COUNT; ++i) {
-          if (wd_fd[i] != -1 && write(wd_fd[i], "*", 1) == 1) {
-#if 0 /* for debugging only */
-              const char msg[] = "Kicked WD "
+          if (wd_fd[i] != -1) {
+              int bytes_written;
+              while ((bytes_written = write(wd_fd[i], "*", 1)) == -1 &&
+                     errno == EAGAIN)
+              {
+                  const char msg[] = "Got EAGAIN when kicking WD ";
+                  (void)write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
+                  (void)write(STDERR_FILENO, wd[i].file, strlen(wd[i].file));
+                  (void)write(STDERR_FILENO, "\n", 1);
+              }
+              if (bytes_written != 1) {
+                  const char msg[] = "Error kicking WD ";
 
-              (void)write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
-              (void)write(STDERR_FILENO, wd[i].file, strlen(wd[i].file));
-              (void)write(STDERR_FILENO, "\n", 1);
-#endif
-          } else {
-              const char msg[] = "Error kicking WD ";
+                  (void)write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
+                  (void)write(STDERR_FILENO, wd[i].file, strlen(wd[i].file));
+                  (void)write(STDERR_FILENO, "\n", 1);
 
-              (void)write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
-              (void)write(STDERR_FILENO, wd[i].file, strlen(wd[i].file));
-              (void)write(STDERR_FILENO, "\n", 1);
-
-              /* must not kick later wd's if an earlier one fails */
-              break;
+                  /* must not kick later wd's if an earlier one fails */
+                  break;
+              }
           }
       }
 
