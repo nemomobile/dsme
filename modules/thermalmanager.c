@@ -38,8 +38,9 @@
 
 #include "dsme/modules.h"
 #include "dsme/logging.h"
-#include "state.h"
 #include "heartbeat.h"
+
+#include <dsme/state.h>
 
 #include <glib.h>
 #include <stdlib.h>

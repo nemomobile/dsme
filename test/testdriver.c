@@ -22,14 +22,14 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dsme/protocol.h"
-#include "dsme/dsmesock.h"
-#include "dsme/messages.h"
 #include "dsme/modulebase.h"
 #include "dsme/modules.h"
 #include "dsme/mainloop.h"
 #include "../modules/hwwd.h"
 
+#include <dsme/protocol.h>
+#include <dsme/dsmesock.h>
+#include <dsme/messages.h>
 #include <unistd.h>
 #include <errno.h>
 #include <assert.h>
@@ -296,7 +296,7 @@ static void run_(testcase* test, const char* name)
 
 /* TEST CASE HELPERS */
 
-#include "../modules/state.h"
+#include <dsme/state.h>
 #include "../modules/runlevel.h"
 #include "../modules/lifeguard.h"
 

@@ -86,19 +86,17 @@ binary-arch: build install
 	dh_installchangelogs
 	dh_installdocs -XREADME
 	dh_installexamples
-	dh_installinit -p dsme --no-start -- start 02 1 2 3 4 5 .
-	dh_installinit -p dsme --name=dsme-dbus --no-start -- start 20 1 2 3 4 5 .
 	dh_installupstart
 	dh_installupstart --name=dsme-dbus
 	dh_installupstart --name=dsme-thermal
 	dh_installman
 	dh_link
-	dh_strip --dbg-package=libdsme0.2.0
+	dh_strip --dbg-package=dsme
 	dh_compress
 	dh_fixperms
 	dh_makeshlibs --exclude=/usr/lib/dsme/
 	dh_installdeb
-	dh_shlibdeps -l$(CURDIR)/debian/libdsme0.2.0/usr/lib
+	dh_shlibdeps
 	dh_gencontrol
 	dh_md5sums
 	dh_builddeb

@@ -23,10 +23,10 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dsme/protocol.h"
 #include "../modules/lifeguard.h"
 #include "../modules/dbusproxy.h"
-#include "../modules/state.h"
+#include <dsme/state.h>
+#include <dsme/protocol.h>
 
 #include <stdlib.h>
 #include <stdbool.h>

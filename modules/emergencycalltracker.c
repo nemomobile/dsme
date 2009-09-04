@@ -28,13 +28,13 @@
  * dbus-send --type=signal --system /com/nokia/dsme com.nokia.mce.signal.sig_call_state_ind string:emergency
  */
 
-#include "state.h"
-
 #include "dbusproxy.h"
 #include "dsme_dbus.h"
 
 #include "dsme/modules.h"
 #include "dsme/logging.h"
+
+#include <dsme/state.h>
 
 #include <string.h>
 

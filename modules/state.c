@@ -23,12 +23,12 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "state.h"
 #include "runlevel.h"
 #include "hwwd.h"
 #include "dsme/timers.h"
 #include "dsme/modules.h"
 #include "dsme/logging.h"
+#include <dsme/state.h>
 
 #include <cal.h>
 
@@ -121,7 +121,7 @@ static const char* state_name(dsme_state_t state)
       const char* name;
   } states[] = {
 #define DSME_STATE(STATE, VALUE) { VALUE, #STATE },
-#include "state_states.h"
+#include <dsme/state_states.h>
 #undef  DSME_STATE
   };
 

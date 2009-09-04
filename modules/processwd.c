@@ -36,14 +36,15 @@
  *
  */
 
-#include "processwd.h"
 #include "spawn.h"
 #include "heartbeat.h"
 
-#include "dsme/messages.h"
 #include "dsme/modules.h"
 #include "dsme/logging.h"
 #include "dsme/timers.h"
+
+#include <dsme/messages.h>
+#include <dsme/processwd.h>
 
 #include <glib.h>
 #include <stdlib.h>

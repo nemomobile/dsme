@@ -1,3 +1,11 @@
+dsme (0.60.29) unstable; urgency=low
+
+  * Fixes: NB#132619: Split libdsme into a separate source package
+  * Partial fix to NB#127507: retry wd kicking in case of EAGAIN
+  * Put back the 2 s shutdown delay that was removed in 0.60.28
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Thu, 03 Sep 2009 11:19:05 +0300
+
 dsme (0.60.28) unstable; urgency=low
 
   * Partial fix to NB#127466: remove a 2 s delay from shutdown

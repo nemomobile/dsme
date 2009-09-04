@@ -28,13 +28,14 @@
  * dbus-send --system --type=signal /com/nokia/alarmd com.nokia.alarmd.queue_status_ind int32:0 int32:1 int32:2 int32:3
  */
 
-#include "state.h"
 #include "dbusproxy.h"
 #include "dsme_dbus.h"
 
 #include "dsme/timers.h"
 #include "dsme/modules.h"
 #include "dsme/logging.h"
+
+#include <dsme/state.h>
 
 #include <stdio.h>
 #include <limits.h>

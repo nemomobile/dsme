@@ -51,7 +51,7 @@ dsme_wd.o : C_EXTRA_GENFLAGS := -fPIC
 libdbusproxy_C_OBJS := dbusproxy.o dsme_dbus.o
 dbusproxy.o : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags glib-2.0)
 dsme_dbus.o : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags dbus-glib-1)
-libdbusproxy_EXTRA_LDFLAGS := $$(pkg-config --libs dbus-glib-1) ../libdsme_dbus_if.so
+libdbusproxy_EXTRA_LDFLAGS := $$(pkg-config --libs dbus-glib-1) -ldsme_dbus_if
 
 libalarmtracker_C_OBJS := alarmtracker.o
 alarmtracker.o : C_EXTRA_GENFLAGS := -fPIC
@@ -106,10 +106,7 @@ INSTALL_SO_LIBRARIES	+=	libthermalobject_memory.so
 endif
 $(INSTALL_SO_LIBRARIES): INSTALL_PERM := 755
 $(INSTALL_SO_LIBRARIES): INSTALL_DIR  := $(DESTDIR)/usr/lib/dsme
-INSTALL_INCLUDES                      := dsme_dbus_if.h \
-                                         state.h        \
-                                         state_states.h \
-                                         processwd.h
+INSTALL_INCLUDES                      := 
 $(INSTALL_INCLUDES): INSTALL_PERM     := 644
 $(INSTALL_INCLUDES): INSTALL_DIR      := $(DESTDIR)/usr/include/dsme
 

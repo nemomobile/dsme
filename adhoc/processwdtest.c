@@ -30,7 +30,7 @@
 
 #include <dsme/messages.h>
 #include <dsme/protocol.h>
-#include <processwd.h>
+#include <dsme/processwd.h>
 
 #include <stdio.h>
 #define tblog(a, b, c) fprintf(stderr, c);

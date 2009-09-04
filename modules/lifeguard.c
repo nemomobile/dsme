@@ -43,11 +43,11 @@
 
 #include "lifeguard.h"
 
-#include "state.h"
 #include "spawn.h"
-#include "dsme/messages.h"
 #include "dsme/modules.h"
 #include "dsme/logging.h"
+#include <dsme/messages.h>
+#include <dsme/state.h>
 
 #include <cal.h>
 

@@ -22,9 +22,9 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "../modules/state.h"
-#include "dsme/protocol.h"
-#include "dsme/messages.h"
+#include <dsme/state.h>
+#include <dsme/protocol.h>
+#include <dsme/messages.h>
 
 #include <stdio.h>
 #include <stdlib.h>

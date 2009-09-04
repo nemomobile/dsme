@@ -33,12 +33,13 @@
  */
 #include "dbusproxy.h"
 #include "dsme_dbus.h"
-#include "dsme_dbus_if.h"
 
-#include "state.h"
 
 #include "dsme/modules.h"
 #include "dsme/logging.h"
+
+#include <dsme/state.h>
+#include <dsme/dsme_dbus_if.h>
 
 #include <glib.h>
 #include <stdlib.h>

@@ -25,7 +25,7 @@
 #ifndef DSME_RUNLEVEL_H
 #define DSME_RUNLEVEL_H
 
-#include "state.h"
+#include <dsme/state.h>
 
 typedef enum {
   DSME_RUNLEVEL_SHUTDOWN = 0,

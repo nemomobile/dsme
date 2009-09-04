@@ -2,8 +2,6 @@
 # Build targets
 #
 BINARIES     := dsme dsme-exec-helper
-A_LIBRARIES  := libdsme
-SO_LIBRARIES := libdsme libdsme_dbus_if
 SUBDIRS      := util modules
 
 VERSION := 0.60.28
@@ -18,19 +16,6 @@ INSTALL_GROUP := $(shell id -g)
 INSTALL_BINARIES                      := dsme dsme-exec-helper
 $(INSTALL_BINARIES)    : INSTALL_PERM := 755
 $(INSTALL_BINARIES)    : INSTALL_DIR  := $(DESTDIR)/sbin
-INSTALL_A_LIBRARIES                   := libdsme.a
-$(INSTALL_A_LIBRARIES) : INSTALL_DIR  := $(DESTDIR)/usr/lib
-INSTALL_SO_LIBRARIES                  := libdsme.so libdsme_dbus_if.so
-$(INSTALL_SO_LIBRARIES): INSTALL_PERM := 755
-$(INSTALL_SO_LIBRARIES): INSTALL_DIR  := $(DESTDIR)/usr/lib
-INSTALL_INCLUDES                      := include/dsme/protocol.h \
-                                         include/dsme/messages.h
-$(INSTALL_INCLUDES)    : INSTALL_DIR  := $(DESTDIR)/usr/include/dsme
-#INSTALL_OTHER                         := README
-#README: INSTALL_DIR                   := $(DESTDIR)/usr/share/doc/dsme
-INSTALL_OTHER                         := dsme.pc dsme_dbus_if.pc
-dsme.pc                : INSTALL_DIR  := $(DESTDIR)/usr/lib/pkgconfig
-dsme_dbus_if.pc        : INSTALL_DIR  := $(DESTDIR)/usr/lib/pkgconfig
 
 #
 # Compiler and tool flags
@@ -45,8 +30,8 @@ C_DEFINES      := DSME_POSIX_TIMER DSME_WD_SYNC DSME_BMEIPC
 C_INCDIRS      := $(TOPDIR)/include $(TOPDIR)/modules $(TOPDIR) 
 MKDEP_INCFLAGS := $$(pkg-config --cflags-only-I glib-2.0)
 
+
 LD_GENFLAGS := -pthread
-LD_LIBPATHS := $(TOPDIR)
 
 # If OSSO_DEBUG is defined, compile in the logging
 #ifdef OSSO_LOG
@@ -69,8 +54,7 @@ endif
 dsme_C_OBJS             := dsme.o modulebase.o timers.o \
                            logging.o oom.o mainloop.o \
                            dsme-cal.o dsmesock.o
-dsme_SO_LIBS            := dsme
-dsme_LIBS               := dl cal
+dsme_LIBS               := dsme dl cal
 dsme: LD_EXTRA_GENFLAGS := -rdynamic $$(pkg-config --libs gthread-2.0)
 
 #logging.o:	C_EXTRA_DEFINES	:=	USE_STDERR
@@ -80,17 +64,6 @@ modulebase.o: C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
 timers.o    : C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
 dsmesock.o  : C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
 
-# libdsme.so and libdsme.a
-protocol.o : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags glib-2.0)
-message.o  : C_EXTRA_GENFLAGS := -fPIC
-libdsme_C_OBJS                := protocol.o message.o
-libdsme_EXTRA_LDFLAGS         := $$(pkg-config --libs glib-2.0)
-libdsme.so : LIBRARY_VERSION  := 0.2.0
-
-# libdsme_dbus_if.so
-libdsme_dbus_if_C_OBJS                   := modules/dsme_dbus_if.o
-modules/dsme_dbus_if.o: C_EXTRA_GENFLAGS := -fPIC
-libdsme_dbus_if.so    : LIBRARY_VERSION  := 0.2.0
 
 # TODO: move dsme-exec-helper to modules/
 # dsme-exec-helper
