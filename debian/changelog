@@ -1,6 +1,7 @@
 dsme (0.60.30) unstable; urgency=low
 
   * No changes
+  * Fixes: NB#137872
 
  -- Semi Malinen <semi.malinen@nokia.com>  Tue, 08 Sep 2009 17:44:00 +0000
 
