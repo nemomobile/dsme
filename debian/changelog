@@ -1,3 +1,9 @@
+dsme (0.60.30) unstable; urgency=low
+
+  * No changes
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Tue, 08 Sep 2009 17:44:00 +0000
+
 dsme (0.60.29) unstable; urgency=low
 
   * Fixes: NB#132619: Split libdsme into a separate source package
