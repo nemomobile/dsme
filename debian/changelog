@@ -1,4 +1,4 @@
-dsme (0.60.32) hardy; urgency=low
+dsme (0.60.32) unstable; urgency=low
 
   * Fixes: NB#137889: stop lifeguarding during reboot/shutdown
 
