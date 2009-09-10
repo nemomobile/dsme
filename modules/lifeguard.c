@@ -457,12 +457,16 @@ DSME_HANDLER(DSM_MSGTYPE_STATE_CHANGE_IND, conn, msg)
       /* Check permissions */
       const struct ucred* ucred = endpoint_ucred(conn);
 
-      if (!ucred) {
-          dsme_log(LOG_ERR, "getucred failed");
-          return;
-      }
-      if (ucred->uid != 0) {
-          return;
+      if (!endpoint_is_dsme(conn)) {
+          /* If the message is from outside of dsme, check the ucred */
+          if (!ucred) {
+              dsme_log(LOG_ERR, "getucred failed");
+              return;
+          }
+          if (ucred->uid != 0) {
+              dsme_log(LOG_ERR, "state change from uid %d", ucred->uid);
+              return;
+          }
       }
 
       /* Traverse through process list and change every action as ONCE */

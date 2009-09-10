@@ -116,6 +116,7 @@ const struct ucred* endpoint_ucred(const endpoint_t* sender);
 char* endpoint_name_by_pid(pid_t pid);
 char* endpoint_name(const endpoint_t* sender);
 bool endpoint_same(const endpoint_t* a, const endpoint_t* b);
+bool endpoint_is_dsme(const endpoint_t* endpoint);
 endpoint_t* endpoint_copy(const endpoint_t* endpoint);
 void endpoint_free(endpoint_t* endpoint);
 

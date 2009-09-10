@@ -475,6 +475,11 @@ bool endpoint_same(const endpoint_t* a, const endpoint_t* b)
   return same;
 }
 
+bool endpoint_is_dsme(const endpoint_t* endpoint)
+{
+    return (endpoint && endpoint->conn == 0);
+}
+
 endpoint_t* endpoint_copy(const endpoint_t* endpoint)
 {
   endpoint_t* copy = 0;
