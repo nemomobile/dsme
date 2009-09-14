@@ -1142,42 +1142,42 @@ static int increment_process_counter(const char* statfilename,
 
 static int reboot_flag(void)
 {
-	void *vptr = NULL;
-	unsigned long len = 0;
-	int ret = 1;
-	char *p;
-	
-	ret = cal_read_block(0, "r&d_mode", &vptr, &len, CAL_FLAG_USER);
-	if (ret < 0) {
-		dsme_log(LOG_ERR, "Error reading R&D mode flags, Lifeguard reboots enabled");
-		return 1;
-	}
-	p = (char*)vptr;
-	if (len >= 1 && *p) {
-		dsme_log(LOG_DEBUG, "R&D mode enabled");
+    void *vptr = NULL;
+    unsigned long len = 0;
+    int ret = 1;
+    char *p;
 
-		if (len > 1) {
-			if (strstr(p, "no-lifeguard-reset")) {
-				ret = 0;
-			} else {
-				ret = 1;
-			}
-		} else {
-			dsme_log(LOG_ERR, "No R&D mode flags found");
-			ret = 1;
-		}
-	} else {
-		ret = 1;
-		dsme_log(LOG_DEBUG, "R&D mode disabled");
-	}
+    ret = cal_read_block(0, "r&d_mode", &vptr, &len, CAL_FLAG_USER);
+    if (ret < 0) {
+        dsme_log(LOG_ERR, "Error reading R&D mode flags, Lifeguard reboots enabled");
+        return 1;
+    }
+    p = (char*)vptr;
+    if (len >= 1 && *p) {
+        dsme_log(LOG_DEBUG, "R&D mode enabled");
 
-	if (ret == 1)
-		dsme_log(LOG_DEBUG, "Lifeguard resets enabled!");
-	else
-		dsme_log(LOG_DEBUG, "Lifeguard resets disabled!");
-	
-	free(vptr);
-	return ret;
+        if (len > 1) {
+            if (strstr(p, "no-lifeguard-reset")) {
+                ret = 0;
+            } else {
+                ret = 1;
+            }
+        } else {
+            dsme_log(LOG_ERR, "No R&D mode flags found");
+            ret = 1;
+        }
+    } else {
+        ret = 1;
+        dsme_log(LOG_DEBUG, "R&D mode disabled");
+    }
+
+    if (ret == 1)
+        dsme_log(LOG_DEBUG, "Lifeguard resets enabled!");
+    else
+        dsme_log(LOG_DEBUG, "Lifeguard resets disabled!");
+
+    free(vptr);
+    return ret;
 }
 
 
