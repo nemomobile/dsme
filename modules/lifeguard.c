@@ -454,11 +454,10 @@ DSME_HANDLER(DSM_MSGTYPE_STATE_CHANGE_IND, conn, msg)
 {
   /* stop monitoring in lifeguard if we are shutting down or rebooting */
   if (msg->state == DSME_STATE_SHUTDOWN || msg->state == DSME_STATE_REBOOT) {
-      /* Check permissions */
-      const struct ucred* ucred = endpoint_ucred(conn);
-
       if (!endpoint_is_dsme(conn)) {
-          /* If the message is from outside of dsme, check the ucred */
+          /* the message is from outside of dsme; check the ucred */
+          const struct ucred* ucred = endpoint_ucred(conn);
+
           if (!ucred) {
               dsme_log(LOG_ERR, "getucred failed");
               return;
