@@ -83,7 +83,7 @@
 
 #define FILE_REBOOT_OVERRIDE  "/etc/no_lg_reboots"
 
-static char lg_reboot_enabled = 1;
+static bool lg_reboot_enabled = true;
 
 
 /**
@@ -1140,44 +1140,47 @@ static int increment_process_counter(const char* statfilename,
 }
 #endif
 
-static int reboot_flag(void)
+static bool reboot_flag(void)
 {
-    void *vptr = NULL;
-    unsigned long len = 0;
-    int ret = 1;
-    char *p;
+    void*         vptr    = NULL;
+    unsigned long len     = 0;
+    bool          reboot_enabled;
+    char*         p;
 
-    ret = cal_read_block(0, "r&d_mode", &vptr, &len, CAL_FLAG_USER);
-    if (ret < 0) {
-        dsme_log(LOG_ERR, "Error reading R&D mode flags, Lifeguard reboots enabled");
-        return 1;
+    if (cal_read_block(0, "r&d_mode", &vptr, &len, CAL_FLAG_USER) < 0) {
+        dsme_log(LOG_ERR,
+                 "Error reading R&D mode flags, Lifeguard reboots enabled");
+        return true;
     }
+
     p = (char*)vptr;
     if (len >= 1 && *p) {
         dsme_log(LOG_DEBUG, "R&D mode enabled");
 
         if (len > 1) {
             if (strstr(p, "no-lifeguard-reset")) {
-                ret = 0;
+                reboot_enabled = false;
             } else {
-                ret = 1;
+                reboot_enabled = true;
             }
         } else {
             dsme_log(LOG_ERR, "No R&D mode flags found");
-            ret = 1;
+            reboot_enabled = true;
         }
     } else {
-        ret = 1;
+        reboot_enabled = true;
         dsme_log(LOG_DEBUG, "R&D mode disabled");
     }
 
-    if (ret == 1)
+    if (reboot_enabled) {
         dsme_log(LOG_DEBUG, "Lifeguard resets enabled!");
-    else
+    } else {
         dsme_log(LOG_DEBUG, "Lifeguard resets disabled!");
+    }
 
     free(vptr);
-    return ret;
+
+    return reboot_enabled;
 }
 
 
