@@ -83,7 +83,8 @@
 
 #define FILE_REBOOT_OVERRIDE  "/etc/no_lg_reboots"
 
-static bool lg_reboot_enabled = true;
+static bool lg_reboot_enabled      = true;
+static bool lg_accepts_new_clients = true;
 
 
 /**
@@ -470,6 +471,11 @@ DSME_HANDLER(DSM_MSGTYPE_STATE_CHANGE_IND, conn, msg)
 
       /* Traverse through process list and change every action as ONCE */
       g_slist_foreach(processes, set_action, (gpointer)ONCE);
+
+      /* do not accept new clients during a shutdown/reboot sequence */
+      lg_accepts_new_clients = false;
+  } else {
+      lg_accepts_new_clients = true;
   }
 }
 
@@ -625,6 +631,12 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_START, client, msg)
       command[command_size-1] != '\0')
   {
       return;
+  }
+
+  if (!lg_accepts_new_clients) {
+      error = 1;
+      dsme_log(LOG_WARNING, "Lifeguard not taking new clients (%s)", command);
+      goto cleanup;
   }
 
   /* refuse to start the same process again */
