@@ -8,9 +8,10 @@ testdriver.o : C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
 ../modulebase.o : C_EXTRA_GENFLAGS := $$(pkg-config --cflasgs glib-2.0)
 testdriver_LIBS := pthread dl
 LD_EXTRA_GENFLAGS := -rdynamic \
-                     ../dsmesock.o ../protocol.o ../message.o \
+                     ../dsmesock.o \
                      ../logging.o \
                      ../mainloop.o \
+                     -ldsme \
                      $$(pkg-config --libs glib-2.0)
 
 all: $(BINARIES)

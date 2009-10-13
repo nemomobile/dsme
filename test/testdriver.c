@@ -22,6 +22,12 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/* INTRUSIONS */
+
+#include "../modulebase.c"
+
+/* INCLUDES */
+
 #include "dsme/modulebase.h"
 #include "dsme/modules.h"
 #include "dsme/mainloop.h"
@@ -38,9 +44,6 @@
 #include <stdlib.h>
 
 
-/* INTRUSIONS */
-
-#include "../modulebase.c"
 
 static bool message_queue_is_empty(void)
 {
@@ -367,6 +370,10 @@ static void request_shutdown_expecting_reboot(module_t* state)
   assert(msg2->runlevel == 5);
   free(msg2);
 
+  DSM_MSGTYPE_HWWD_KICK* msg3;
+  assert((msg3 = queued(DSM_MSGTYPE_HWWD_KICK)));
+  free(msg3);
+
   assert(!timer_exists());
   assert(message_queue_is_empty());
 }
@@ -384,14 +391,14 @@ static void expect_shutdown_or_reboot(module_t*    module,
   assert((ind2 = queued(DSM_MSGTYPE_SAVE_DATA_IND)));
   free(ind2);
 
-  DSM_MSGTYPE_HWWD_KICK* ind3;
-  assert((ind3 = queued(DSM_MSGTYPE_HWWD_KICK)));
-  free(ind3);
-
   assert(message_queue_is_empty());
   assert(timer_exists());
 
   trigger_timer();
+
+  DSM_MSGTYPE_HWWD_KICK* ind3;
+  assert((ind3 = queued(DSM_MSGTYPE_HWWD_KICK)));
+  free(ind3);
 
   DSM_MSGTYPE_SHUTDOWN* msg3;
   assert((msg3 = queued(DSM_MSGTYPE_SHUTDOWN)));
@@ -554,10 +561,6 @@ static void testcase5(void)
   assert((ind2 = queued(DSM_MSGTYPE_SAVE_DATA_IND)));
   free(ind2);
 
-  DSM_MSGTYPE_HWWD_KICK* ind3;
-  assert((ind3 = queued(DSM_MSGTYPE_HWWD_KICK)));
-  free(ind3);
-
   assert(message_queue_is_empty());
   assert(timer_exists());
 
@@ -567,6 +570,9 @@ static void testcase5(void)
 
   // expect shutdown
   trigger_timer();
+  DSM_MSGTYPE_HWWD_KICK* ind3;
+  assert((ind3 = queued(DSM_MSGTYPE_HWWD_KICK)));
+  free(ind3);
   DSM_MSGTYPE_SHUTDOWN* msg2;
   assert((msg2 = queued(DSM_MSGTYPE_SHUTDOWN)));
   assert(msg2->runlevel == 0);
@@ -761,10 +767,6 @@ static void testcase13(void)
   assert((ind2 = queued(DSM_MSGTYPE_SAVE_DATA_IND)));
   free(ind2);
 
-  DSM_MSGTYPE_HWWD_KICK* ind3;
-  assert((ind3 = queued(DSM_MSGTYPE_HWWD_KICK)));
-  free(ind3);
-
   assert(message_queue_is_empty());
   assert(timer_exists());
 
@@ -883,31 +885,7 @@ static void testcase16(void)
   assert(timer_exists());
 
   trigger_timer();
-
-  DSM_MSGTYPE_STATE_CHANGE_IND* ind2;
-  assert((ind2 = queued(DSM_MSGTYPE_STATE_CHANGE_IND)));
-  assert(ind2->state == DSME_STATE_SHUTDOWN);
-  free(ind2);
-
-  DSM_MSGTYPE_SAVE_DATA_IND* ind3;
-  assert((ind3 = queued(DSM_MSGTYPE_SAVE_DATA_IND)));
-  free(ind3);
-
-  DSM_MSGTYPE_HWWD_KICK* ind4;
-  assert((ind4 = queued(DSM_MSGTYPE_HWWD_KICK)));
-  free(ind4);
-
-  assert(message_queue_is_empty());
-  assert(timer_exists());
-
-  // expect shutdown
-  trigger_timer();
-  DSM_MSGTYPE_SHUTDOWN* msg2;
-  assert((msg2 = queued(DSM_MSGTYPE_SHUTDOWN)));
-  assert(msg2->runlevel == 0);
-  free(msg2);
-  assert(!timer_exists());
-  assert(message_queue_is_empty());
+  expect_shutdown(state);
 
   unload_module_under_test(state);
 }
@@ -916,7 +894,7 @@ static void testcase17(void)
 {
   /*
    * 1. overheat
-   * 2. cool down before shutdown
+   * 2. cool down before shutdown; we still have to shutdown
    */
   module_t* state = load_state_module("USER", DSME_STATE_USER);
   assert(!timer_exists());
@@ -941,8 +919,10 @@ static void testcase17(void)
   send_message(state, &msg2);
 
   assert(message_queue_is_empty());
-  assert(!timer_exists());
+  assert(timer_exists());
 
+  trigger_timer();
+  expect_shutdown(state);
   unload_module_under_test(state);
 }
 
@@ -973,6 +953,9 @@ static void testcase18(void)
   assert((ind = queued(DSM_MSGTYPE_STATE_CHANGE_IND)));
   assert(ind->state == DSME_STATE_USER);
   free(ind);
+  DSM_MSGTYPE_HWWD_KICK* ind2;
+  assert((ind2 = queued(DSM_MSGTYPE_HWWD_KICK)));
+  free(ind2);
   DSM_MSGTYPE_CHANGE_RUNLEVEL* req;
   assert((req = queued(DSM_MSGTYPE_CHANGE_RUNLEVEL)));
   assert(req->runlevel == 2);
@@ -1063,12 +1046,12 @@ static void testcase21(void)
   assert((ind = queued(DSM_MSGTYPE_STATE_CHANGE_IND)));
   assert(ind->state == DSME_STATE_MALF);
   free(ind);
-  DSM_MSGTYPE_HWWD_KICK* ind3;
-  assert((ind3 = queued(DSM_MSGTYPE_HWWD_KICK)));
-  free(ind3);
   assert(message_queue_is_empty());
   assert(timer_exists());
   trigger_timer();
+  DSM_MSGTYPE_HWWD_KICK* ind3;
+  assert((ind3 = queued(DSM_MSGTYPE_HWWD_KICK)));
+  free(ind3);
   DSM_MSGTYPE_SHUTDOWN* msg;
   assert((msg = queued(DSM_MSGTYPE_SHUTDOWN)));
   assert(msg->runlevel == 8);
@@ -1085,11 +1068,11 @@ static void testcase21(void)
   assert((ind = queued(DSM_MSGTYPE_STATE_CHANGE_IND)));
   assert(ind->state == DSME_STATE_MALF);
   free(ind);
-  assert((ind3 = queued(DSM_MSGTYPE_HWWD_KICK)));
-  free(ind3);
   assert(message_queue_is_empty());
   assert(timer_exists());
   trigger_timer();
+  assert((ind3 = queued(DSM_MSGTYPE_HWWD_KICK)));
+  free(ind3);
   assert((msg = queued(DSM_MSGTYPE_SHUTDOWN)));
   assert(msg->runlevel == 8);
   free(msg);
@@ -1135,14 +1118,13 @@ static void testcase23(void)
   assert((ind3 = queued(DSM_MSGTYPE_SAVE_DATA_IND)));
   free(ind3);
 
-  DSM_MSGTYPE_HWWD_KICK* ind4;
-  assert((ind4 = queued(DSM_MSGTYPE_HWWD_KICK)));
-  free(ind4);
-
   assert(message_queue_is_empty());
   assert(timer_exists());
 
   trigger_timer();
+  DSM_MSGTYPE_HWWD_KICK* ind4;
+  assert((ind4 = queued(DSM_MSGTYPE_HWWD_KICK)));
+  free(ind4);
   DSM_MSGTYPE_SHUTDOWN* msg2;
   assert((msg2 = queued(DSM_MSGTYPE_SHUTDOWN)));
   assert(msg2->runlevel == 0);
