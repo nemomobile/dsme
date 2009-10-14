@@ -877,10 +877,6 @@ static void testcase16(void)
   msg.overheated = true;
   send_message(state, &msg);
 
-  DSM_MSGTYPE_THERMAL_SHUTDOWN_IND* ind;
-  assert((ind = queued(DSM_MSGTYPE_THERMAL_SHUTDOWN_IND)));
-  free(ind);
-
   assert(message_queue_is_empty());
   assert(timer_exists());
 
@@ -904,10 +900,6 @@ static void testcase17(void)
       TEST_MSG_INIT(DSM_MSGTYPE_SET_THERMAL_STATE);
   msg.overheated = true;
   send_message(state, &msg);
-
-  DSM_MSGTYPE_THERMAL_SHUTDOWN_IND* ind;
-  assert((ind = queued(DSM_MSGTYPE_THERMAL_SHUTDOWN_IND)));
-  free(ind);
 
   assert(message_queue_is_empty());
   assert(timer_exists());
@@ -1104,10 +1096,6 @@ static void testcase23(void)
       TEST_MSG_INIT(DSM_MSGTYPE_SET_THERMAL_STATE);
   msg.overheated = true;
   send_message(state, &msg);
-
-  DSM_MSGTYPE_THERMAL_SHUTDOWN_IND* ind;
-  assert((ind = queued(DSM_MSGTYPE_THERMAL_SHUTDOWN_IND)));
-  free(ind);
 
   DSM_MSGTYPE_STATE_CHANGE_IND* ind2;
   assert((ind2 = queued(DSM_MSGTYPE_STATE_CHANGE_IND)));

@@ -27,7 +27,10 @@
     <note priority="medium" time="1234964310">
         wait 2 s for alarm count to go 0 before actdead-&gt;user
     </note>
-    <note priority="medium" time="1251959677">
+    <note priority="medium" time="1251959677" done="1255530093">
         do not accept new processwd clients after committing to shutdown
+        <comment>
+            done in trunk
+        </comment>
     </note>
 </todo>
