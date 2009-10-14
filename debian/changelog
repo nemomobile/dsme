@@ -1,3 +1,10 @@
+dsme (0.60.33) unstable; urgency=low
+
+  * Fixes: NB#142959: do not send THERMAL_SHUTDOWN_IND
+  * Partial fix to NB#138594: no new lifeguard clients during reboot/shutdown
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Wed, 14 Oct 2009 15:48:12 +0000
+
 dsme (0.60.32) unstable; urgency=low
 
   * Fixes: NB#137889: stop lifeguarding during reboot/shutdown
