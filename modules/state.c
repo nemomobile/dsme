@@ -52,7 +52,7 @@
 /* In non-R&D mode we shutdown after this many seconds in MALF */
 #define MALF_SHUTDOWN_TIMER 120
 
-/* Seconds from THERMAL_SHUTDOWN_IND to the start of shutdown timer */
+/* Seconds from overheating to the start of shutdown timer */
 #define DSME_THERMAL_SHUTDOWN_TIMER 8
 
 
@@ -424,11 +424,6 @@ static void stop_delayed_runlevel_timers(void)
 static void start_overheat_timer(void)
 {
   if (!overheat_timer) {
-      DSM_MSGTYPE_THERMAL_SHUTDOWN_IND msg =
-          DSME_MSG_INIT(DSM_MSGTYPE_THERMAL_SHUTDOWN_IND);
-
-      broadcast(&msg);
-
       if (!(overheat_timer = dsme_create_timer(DSME_THERMAL_SHUTDOWN_TIMER,
                                                delayed_overheat_fn,
                                                NULL)))
