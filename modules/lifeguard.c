@@ -83,8 +83,7 @@
 
 #define FILE_REBOOT_OVERRIDE  "/etc/no_lg_reboots"
 
-static bool lg_reboot_enabled      = true;
-static bool lg_accepts_new_clients = true;
+static char lg_reboot_enabled = 1;
 
 
 /**
@@ -455,10 +454,11 @@ DSME_HANDLER(DSM_MSGTYPE_STATE_CHANGE_IND, conn, msg)
 {
   /* stop monitoring in lifeguard if we are shutting down or rebooting */
   if (msg->state == DSME_STATE_SHUTDOWN || msg->state == DSME_STATE_REBOOT) {
-      if (!endpoint_is_dsme(conn)) {
-          /* the message is from outside of dsme; check the ucred */
-          const struct ucred* ucred = endpoint_ucred(conn);
+      /* Check permissions */
+      const struct ucred* ucred = endpoint_ucred(conn);
 
+      if (!endpoint_is_dsme(conn)) {
+          /* If the message is from outside of dsme, check the ucred */
           if (!ucred) {
               dsme_log(LOG_ERR, "getucred failed");
               return;
@@ -471,11 +471,6 @@ DSME_HANDLER(DSM_MSGTYPE_STATE_CHANGE_IND, conn, msg)
 
       /* Traverse through process list and change every action as ONCE */
       g_slist_foreach(processes, set_action, (gpointer)ONCE);
-
-      /* do not accept new clients during a shutdown/reboot sequence */
-      lg_accepts_new_clients = false;
-  } else {
-      lg_accepts_new_clients = true;
   }
 }
 
@@ -631,12 +626,6 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESS_START, client, msg)
       command[command_size-1] != '\0')
   {
       return;
-  }
-
-  if (!lg_accepts_new_clients) {
-      error = 1;
-      dsme_log(LOG_WARNING, "Lifeguard not taking new clients (%s)", command);
-      goto cleanup;
   }
 
   /* refuse to start the same process again */
@@ -1152,47 +1141,44 @@ static int increment_process_counter(const char* statfilename,
 }
 #endif
 
-static bool reboot_flag(void)
+static int reboot_flag(void)
 {
-    void*         vptr    = NULL;
-    unsigned long len     = 0;
-    bool          reboot_enabled;
-    char*         p;
+	void *vptr = NULL;
+	unsigned long len = 0;
+	int ret = 1;
+	char *p;
+	
+	ret = cal_read_block(0, "r&d_mode", &vptr, &len, CAL_FLAG_USER);
+	if (ret < 0) {
+		dsme_log(LOG_ERR, "Error reading R&D mode flags, Lifeguard reboots enabled");
+		return 1;
+	}
+	p = (char*)vptr;
+	if (len >= 1 && *p) {
+		dsme_log(LOG_DEBUG, "R&D mode enabled");
 
-    if (cal_read_block(0, "r&d_mode", &vptr, &len, CAL_FLAG_USER) < 0) {
-        dsme_log(LOG_ERR,
-                 "Error reading R&D mode flags, Lifeguard reboots enabled");
-        return true;
-    }
+		if (len > 1) {
+			if (strstr(p, "no-lifeguard-reset")) {
+				ret = 0;
+			} else {
+				ret = 1;
+			}
+		} else {
+			dsme_log(LOG_ERR, "No R&D mode flags found");
+			ret = 1;
+		}
+	} else {
+		ret = 1;
+		dsme_log(LOG_DEBUG, "R&D mode disabled");
+	}
 
-    p = (char*)vptr;
-    if (len >= 1 && *p) {
-        dsme_log(LOG_DEBUG, "R&D mode enabled");
-
-        if (len > 1) {
-            if (strstr(p, "no-lifeguard-reset")) {
-                reboot_enabled = false;
-            } else {
-                reboot_enabled = true;
-            }
-        } else {
-            dsme_log(LOG_ERR, "No R&D mode flags found");
-            reboot_enabled = true;
-        }
-    } else {
-        reboot_enabled = true;
-        dsme_log(LOG_DEBUG, "R&D mode disabled");
-    }
-
-    if (reboot_enabled) {
-        dsme_log(LOG_DEBUG, "Lifeguard resets enabled!");
-    } else {
-        dsme_log(LOG_DEBUG, "Lifeguard resets disabled!");
-    }
-
-    free(vptr);
-
-    return reboot_enabled;
+	if (ret == 1)
+		dsme_log(LOG_DEBUG, "Lifeguard resets enabled!");
+	else
+		dsme_log(LOG_DEBUG, "Lifeguard resets disabled!");
+	
+	free(vptr);
+	return ret;
 }
 
 
