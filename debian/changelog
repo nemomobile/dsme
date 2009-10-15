@@ -1,3 +1,9 @@
+dsme (0.60.34) hardy; urgency=low
+
+  * Revert the fix to NB#138594 to make a sales release
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Thu, 15 Oct 2009 10:02:34 +0000
+
 dsme (0.60.33) unstable; urgency=low
 
   * Fixes: NB#142959: do not send THERMAL_SHUTDOWN_IND
