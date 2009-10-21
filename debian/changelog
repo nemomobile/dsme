@@ -1,4 +1,10 @@
-dsme (0.60.34) hardy; urgency=low
+dsme (0.60.35) unstable; urgency=low
+
+  * Fixes: NB#143508: bump the version number to submit for integration
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Wed, 21 Oct 2009 14:00:29 +0000
+
+dsme (0.60.34) unstable; urgency=low
 
   * Revert the fix to NB#138594 to make a sales release
 
