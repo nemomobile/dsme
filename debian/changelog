@@ -1,3 +1,9 @@
+dsme (0.60.36) unstable; urgency=low
+
+  * Fixes: NB#144351: broadcast SET_ALARM_STATE message to dsmesock
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Tue, 27 Oct 2009 11:08:30 +0000
+
 dsme (0.60.35) unstable; urgency=low
 
   * Fixes: NB#143508: bump the version number to submit for integration
