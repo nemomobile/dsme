@@ -36,6 +36,7 @@
 #include "dsme/logging.h"
 
 #include <dsme/state.h>
+#include <dsme/protocol.h>
 
 #include <stdio.h>
 #include <limits.h>
@@ -143,7 +144,7 @@ static int seconds(time_t from, time_t to)
   return (to <= 0 || to >= INT_MAX) ? 9999 : (to < from) ? 0 : (int)(to - from);
 }
 
-static int set_alarm_state(void* dummy)
+static int set_internal_alarm_state(void* dummy)
 {
   static bool alarm_set            = false;
 
@@ -167,7 +168,7 @@ static int set_alarm_state(void* dummy)
       int transition = seconds(now, desktop < actdead ? desktop : actdead)
                      - SNOOZE_TIMEOUT;
       alarm_state_transition_timer = dsme_create_timer(transition,
-                                                       set_alarm_state,
+                                                       set_internal_alarm_state,
                                                        0);
       dsme_log(LOG_DEBUG, "next snooze in %d s", transition);
 
@@ -182,13 +183,46 @@ static int set_alarm_state(void* dummy)
       msg.alarm_set = alarm_set;
 
       dsme_log(LOG_DEBUG,
-               "broadcasting alarm state: %s",
+               "broadcasting internal alarm state: %s",
                alarm_set ? "set" : "not set");
-      broadcast(&msg);
+      broadcast_internally(&msg);
   }
 
   return 0; /* stop the interval */
 }
+
+static bool upcoming_alarms_exist()
+{
+    return actdead != INT_MAX;
+}
+
+static void set_external_alarm_state(void)
+{
+    static bool alarm_set = false;
+
+    bool alarm_previously_set = alarm_set;
+    alarm_set = upcoming_alarms_exist();
+
+    if (alarm_set != alarm_previously_set) {
+        /* inform clients about the change in upcoming alarms */
+        DSM_MSGTYPE_SET_ALARM_STATE msg =
+            DSME_MSG_INIT(DSM_MSGTYPE_SET_ALARM_STATE);
+
+        msg.alarm_set = alarm_set;
+
+        dsme_log(LOG_DEBUG,
+                 "broadcasting external alarm state: %s",
+                 alarm_set ? "set" : "not set");
+        dsmesock_broadcast(&msg);
+    }
+}
+
+static void set_alarm_state(void)
+{
+    set_internal_alarm_state(0);
+    set_external_alarm_state();
+}
+
 
 static void alarmd_queue_status_ind(const DsmeDbusMessage* ind)
 {
@@ -217,7 +251,7 @@ static void alarmd_queue_status_ind(const DsmeDbusMessage* ind)
       dsme_log(LOG_DEBUG, "got old alarms: %ld, %ld, %ld", active, desktop, actdead);
   }
 
-  set_alarm_state(0);
+  set_alarm_state();
 }
 
 static const dsme_dbus_signal_binding_t signals[] = {
@@ -259,7 +293,7 @@ void module_init(module_t* handle)
   /* attach a callback for saving alarms from the logger thread */
   dsme_log_cb_attach(save_alarm_queue_status_cb);
 
-  set_alarm_state(0);
+  set_alarm_state();
 }
 
 void module_fini(void)
