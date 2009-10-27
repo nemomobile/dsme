@@ -184,7 +184,7 @@ static int set_alarm_state(void* dummy)
       dsme_log(LOG_DEBUG,
                "broadcasting alarm state: %s",
                alarm_set ? "set" : "not set");
-      broadcast_internally(&msg);
+      broadcast(&msg);
   }
 
   return 0; /* stop the interval */
