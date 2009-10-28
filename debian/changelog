@@ -1,3 +1,9 @@
+dsme (0.60.38) unstable; urgency=low
+
+  * Fixes: NB#144351: send alarm state in addition to state query response
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Wed, 28 Oct 2009 15:52:13 +0000
+
 dsme (0.60.37) unstable; urgency=low
 
   * Fixes: NB#144351: indicate raw alarm queue changes to dsmesock clients
