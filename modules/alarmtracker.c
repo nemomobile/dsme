@@ -57,6 +57,8 @@ static time_t desktop = INT_MAX; /* next desktop alarm */
 static time_t actdead = INT_MAX; /* next actdead alarm */
 
 static bool   alarm_state_file_up_to_date = false;
+static bool   external_state_alarm_set    = false;
+
 
 static dsme_timer_t alarm_state_transition_timer = 0;
 
@@ -198,21 +200,19 @@ static bool upcoming_alarms_exist()
 
 static void set_external_alarm_state(void)
 {
-    static bool alarm_set = false;
+    bool alarm_previously_set = external_state_alarm_set;
+    external_state_alarm_set = upcoming_alarms_exist();
 
-    bool alarm_previously_set = alarm_set;
-    alarm_set = upcoming_alarms_exist();
-
-    if (alarm_set != alarm_previously_set) {
+    if (external_state_alarm_set != alarm_previously_set) {
         /* inform clients about the change in upcoming alarms */
         DSM_MSGTYPE_SET_ALARM_STATE msg =
             DSME_MSG_INIT(DSM_MSGTYPE_SET_ALARM_STATE);
 
-        msg.alarm_set = alarm_set;
+        msg.alarm_set = external_state_alarm_set;
 
         dsme_log(LOG_DEBUG,
                  "broadcasting external alarm state: %s",
-                 alarm_set ? "set" : "not set");
+                 external_state_alarm_set ? "set" : "not set");
         dsmesock_broadcast(&msg);
     }
 }
@@ -254,6 +254,7 @@ static void alarmd_queue_status_ind(const DsmeDbusMessage* ind)
   set_alarm_state();
 }
 
+
 static const dsme_dbus_signal_binding_t signals[] = {
   { alarmd_queue_status_ind, "com.nokia.alarmd", "queue_status_ind" },
   { 0, 0 }
@@ -273,9 +274,20 @@ DSME_HANDLER(DSM_MSGTYPE_DBUS_DISCONNECT, client, msg)
   dsme_dbus_unbind_signals(&bound, signals);
 }
 
+DSME_HANDLER(DSM_MSGTYPE_STATE_QUERY, client, req)
+{
+    DSM_MSGTYPE_SET_ALARM_STATE resp =
+        DSME_MSG_INIT(DSM_MSGTYPE_SET_ALARM_STATE);
+
+    resp.alarm_set = external_state_alarm_set;
+
+    endpoint_send(client, &resp);
+}
+
 module_fn_info_t message_handlers[] = {
   DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_CONNECT),
   DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_DISCONNECT),
+  DSME_HANDLER_BINDING(DSM_MSGTYPE_STATE_QUERY),
   { 0 }
 };
 
