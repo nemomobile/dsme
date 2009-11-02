@@ -26,7 +26,9 @@ C_GENFLAGS     := -DPRG_VERSION=$(VERSION) -pthread -g \
                   -Wall -Wwrite-strings -Wmissing-prototypes -Werror# -pedantic
 C_OPTFLAGS     := -O2 -s
 C_DBGFLAGS     := -g -DDEBUG -DDSME_LOG_ENABLE
-C_DEFINES      := DSME_POSIX_TIMER DSME_WD_SYNC DSME_BMEIPC
+C_DEFINES      := DSME_POSIX_TIMER DSME_WD_SYNC
+# disable battery thermal mgmt for Harmattan for now
+# C_DEFINES      += DSME_BMEIPC
 C_INCDIRS      := $(TOPDIR)/include $(TOPDIR)/modules $(TOPDIR) 
 MKDEP_INCFLAGS := $$(pkg-config --cflags-only-I glib-2.0)
 
