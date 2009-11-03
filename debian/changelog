@@ -1,3 +1,10 @@
+dsme (0.61.0) unstable; urgency=low
+
+  * Fixes: NB#120406
+  * Disable thermal sensing of battery in thermal manager
+
+ -- Semi Malinen <semi@savu.europe.nokia.com>  Mon, 02 Nov 2009 15:36:49 +0000
+
 dsme (0.60.38) unstable; urgency=low
 
   * Fixes: NB#144351: send alarm state in addition to state query response
