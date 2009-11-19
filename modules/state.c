@@ -239,12 +239,8 @@ static void try_to_change_state(dsme_state_t new_state)
           change_state(new_state);
           change_runlevel(new_state);
       } else if (current_state == DSME_STATE_USER) {
-          /* runlevel change from USER to ACTDEAD involves a reboot */
-          dsme_log(LOG_CRIT, "go to actdead via reboot");
-          new_state = DSME_STATE_REBOOT;
-          change_state(new_state);
-
           /* make a delayed runlevel change from user to actdead state */
+          change_state(new_state);
           start_delayed_actdead_timer(SHUTDOWN_TIMER_TIMEOUT);
       }
       break;
@@ -376,7 +372,7 @@ static void start_delayed_actdead_timer(unsigned seconds)
           dsme_log(LOG_CRIT, "Could not create an actdead timer; exit!");
           exit(EXIT_FAILURE);
       }
-      dsme_log(LOG_CRIT, "Reboot for actdead in %i seconds", seconds);
+      dsme_log(LOG_CRIT, "Actdead in %i seconds", seconds);
   }
 }
 
