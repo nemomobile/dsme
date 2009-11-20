@@ -1,9 +1,16 @@
+dsme (0.61.1) unstable; urgency=low
+
+  * do the USER->ACTDEAD transition directly, without rebooting
+  * add battery_empty_ind
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Fri, 20 Nov 2009 14:33:52 +0000
+
 dsme (0.61.0) unstable; urgency=low
 
   * Fixes: NB#120406
   * Disable thermal sensing of battery in thermal manager
 
- -- Semi Malinen <semi@savu.europe.nokia.com>  Mon, 02 Nov 2009 15:36:49 +0000
+ -- Semi Malinen <semi.malinen@.nokia.com>  Mon, 02 Nov 2009 15:36:49 +0000
 
 dsme (0.60.38) unstable; urgency=low
 
