@@ -346,14 +346,14 @@ static module_t* load_state_module(const char*  bootstate,
   return module;
 }
 
-static void request_shutdown_expecting_reboot(module_t* state)
+static void request_shutdown_expecting_actdead(module_t* state)
 {
   DSM_MSGTYPE_SHUTDOWN_REQ msg = TEST_MSG_INIT(DSM_MSGTYPE_SHUTDOWN_REQ);
   send_message(state, &msg);
 
   DSM_MSGTYPE_STATE_CHANGE_IND* ind;
   assert((ind = queued(DSM_MSGTYPE_STATE_CHANGE_IND)));
-  assert(ind->state == DSME_STATE_REBOOT);
+  assert(ind->state == DSME_STATE_ACTDEAD);
   free(ind);
 
   DSM_MSGTYPE_SAVE_DATA_IND* ind2;
@@ -437,7 +437,7 @@ static void testcase1(void)
   module_t* state = load_state_module("USER", DSME_STATE_USER);
   assert(!timer_exists());
 
-  request_shutdown_expecting_reboot(state);
+  request_shutdown_expecting_actdead(state);
 
   unload_module_under_test(state);
 }
@@ -456,7 +456,7 @@ static void testcase2(void)
   assert(message_queue_is_empty());
   assert(!timer_exists());
 
-  request_shutdown_expecting_reboot(state);
+  request_shutdown_expecting_actdead(state);
 
   unload_module_under_test(state);
 }
@@ -513,7 +513,7 @@ static void testcase3(void)
   assert(message_queue_is_empty());
   assert(!timer_exists());
 
-  request_shutdown_expecting_reboot(state);
+  request_shutdown_expecting_actdead(state);
 
   unload_module_under_test(state);
 }
@@ -715,14 +715,21 @@ static void testcase12(void)
   msg.empty = true;
   send_message(state, &msg);
 
-  DSM_MSGTYPE_STATE_CHANGE_IND* ind;
-  assert((ind = queued(DSM_MSGTYPE_STATE_CHANGE_IND)));
-  assert(ind->state == DSME_STATE_SHUTDOWN);
+  assert(timer_exists());
+  trigger_timer();
+
+  DSM_MSGTYPE_BATTERY_EMPTY_IND* ind;
+  assert((ind = queued(DSM_MSGTYPE_BATTERY_EMPTY_IND)));
   free(ind);
 
-  DSM_MSGTYPE_SAVE_DATA_IND* ind2;
-  assert((ind2 = queued(DSM_MSGTYPE_SAVE_DATA_IND)));
+  DSM_MSGTYPE_STATE_CHANGE_IND* ind2;
+  assert((ind2 = queued(DSM_MSGTYPE_STATE_CHANGE_IND)));
+  assert(ind2->state == DSME_STATE_SHUTDOWN);
   free(ind2);
+
+  DSM_MSGTYPE_SAVE_DATA_IND* ind3;
+  assert((ind3 = queued(DSM_MSGTYPE_SAVE_DATA_IND)));
+  free(ind3);
 
   // expect shutdown
   trigger_timer();
@@ -730,9 +737,9 @@ static void testcase12(void)
   assert((msg2 = queued(DSM_MSGTYPE_SHUTDOWN)));
   assert(msg2->runlevel == 0);
   free(msg2);
-  DSM_MSGTYPE_HWWD_KICK* ind3;
-  assert((ind3 = queued(DSM_MSGTYPE_HWWD_KICK)));
-  free(ind3);
+  DSM_MSGTYPE_HWWD_KICK* ind4;
+  assert((ind4 = queued(DSM_MSGTYPE_HWWD_KICK)));
+  free(ind4);
   assert(!timer_exists());
   assert(message_queue_is_empty());
 
@@ -810,7 +817,7 @@ static void testcase14(void)
 
   DSM_MSGTYPE_STATE_CHANGE_IND* ind;
   assert((ind = queued(DSM_MSGTYPE_STATE_CHANGE_IND)));
-  assert(ind->state == DSME_STATE_REBOOT);
+  assert(ind->state == DSME_STATE_ACTDEAD);
   free(ind);
 
   DSM_MSGTYPE_SAVE_DATA_IND* ind2;
@@ -978,7 +985,7 @@ static void testcase19(void)
   msg.alarm_set = true;
   send_message(state, &msg);
 
-  request_shutdown_expecting_reboot(state);
+  request_shutdown_expecting_actdead(state);
 
   unload_module_under_test(state);
 }
