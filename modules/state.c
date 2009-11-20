@@ -52,8 +52,9 @@
 /* In non-R&D mode we shutdown after this many seconds in MALF */
 #define MALF_SHUTDOWN_TIMER 120
 
-/* Seconds from overheating to the start of shutdown timer */
-#define DSME_THERMAL_SHUTDOWN_TIMER 8
+/* Seconds from overheating or empty battery to the start of shutdown timer */
+#define DSME_THERMAL_SHUTDOWN_TIMER       8
+#define DSME_BATTERY_EMPTY_SHUTDOWN_TIMER 8
 
 
 typedef enum {
@@ -463,7 +464,7 @@ static void start_charger_disconnect_timer(void)
   }
 }
 
-static int  delayed_charger_disconnect_fn(void* unused)
+static int delayed_charger_disconnect_fn(void* unused)
 {
   charger_state = CHARGER_DISCONNECTED;
   change_state_if_necessary();
@@ -605,15 +606,41 @@ DSME_HANDLER(DSM_MSGTYPE_SET_EMERGENCY_CALL_STATE, conn, msg)
   change_state_if_necessary();
 }
 
+static int delayed_battery_empty_fn(void* unused)
+{
+    battery_empty = true;
+    change_state_if_necessary();
 
-DSME_HANDLER(DSM_MSGTYPE_SET_BATTERY_STATE, conn, msg)
+    return 0; /* stop the interval */
+}
+
+DSME_HANDLER(DSM_MSGTYPE_SET_BATTERY_STATE, conn, battery)
 {
   dsme_log(LOG_CRIT,
            "battery %s state received",
-           msg->empty ? "empty" : "not empty");
+           battery->empty ? "empty" : "not empty");
 
-  battery_empty = msg->empty;
-  change_state_if_necessary();
+  if (battery->empty) {
+      /* we have to shut down; first send the notification */
+      DSM_MSGTYPE_BATTERY_EMPTY_IND battery_empty_ind =
+          DSME_MSG_INIT(DSM_MSGTYPE_BATTERY_EMPTY_IND);
+
+      broadcast(&battery_empty_ind);
+
+      /* then set up a delayed shutdown */
+      if (!dsme_create_timer(DSME_BATTERY_EMPTY_SHUTDOWN_TIMER,
+                             delayed_battery_empty_fn,
+                             NULL))
+      {
+          dsme_log(LOG_CRIT,
+                   "Cannot create timer; battery empty shutdown immediately!");
+          delayed_battery_empty_fn(0);
+      } else {
+          dsme_log(LOG_CRIT,
+                   "Battery empty shutdown in %d seconds",
+                   DSME_BATTERY_EMPTY_SHUTDOWN_TIMER);
+      }
+  }
 }
 
 
