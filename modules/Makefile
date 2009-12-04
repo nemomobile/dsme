@@ -54,7 +54,7 @@ dsme_dbus.o : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags dbus-glib-1)
 libdbusproxy_EXTRA_LDFLAGS := $$(pkg-config --libs dbus-glib-1) -ldsme_dbus_if
 
 libalarmtracker_C_OBJS := alarmtracker.o
-alarmtracker.o : C_EXTRA_GENFLAGS := -fPIC
+alarmtracker.o : C_EXTRA_GENFLAGS := -fPIC -D_GNU_SOURCE
 
 libthermalmanager_C_OBJS := thermalmanager.o
 thermalmanager.o : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags glib-2.0) -DDSME_THERMAL_TUNING #-DDSME_THERMAL_LOGGING
