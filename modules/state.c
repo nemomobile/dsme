@@ -720,7 +720,7 @@ static bool is_in_usb_mass_storage_mode(void)
                       "%*s%n",
                       -1,
                       &string_length) &&
-            string_length !=-0);
+            string_length != 0);
 }
 
 
