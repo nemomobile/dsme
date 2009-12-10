@@ -86,9 +86,6 @@ binary-arch: build install
 	dh_installchangelogs
 	dh_installdocs -XREADME
 	dh_installexamples
-	dh_installupstart
-	dh_installupstart --name=dsme-dbus
-	dh_installupstart --name=dsme-thermal
 	dh_installman
 	dh_link
 	dh_strip --dbg-package=dsme
