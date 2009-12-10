@@ -1,3 +1,12 @@
+dsme (0.61.2) unstable; urgency=low
+
+  * Fixes: NB#149526: compile alarmtracker with -D_GNU_SOURCE
+  * Fixes: NB#140804: do not install /etc/init.d/dsme-dbus
+  * do not install any upstart scripts
+  * do not write to console
+
+ -- Semi Malinen <semi.malinen@.nokia.com>  Thu, 10 Dec 2009 09:40:36 +0000
+
 dsme (0.61.1) unstable; urgency=low
 
   * do the USER->ACTDEAD transition directly, without rebooting
