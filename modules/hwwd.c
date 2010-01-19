@@ -123,7 +123,7 @@ module_fn_info_t message_handlers[] = {
 void module_init(module_t *handle)
 {
     if (!dsme_wd_init()) {
-        dsme_log(LOG_ERR, "dsme_wd_init() failed, WD kicking disabled");
+        dsme_log(LOG_ERR, "no WD's opened; WD kicking disabled");
     } else {
         kicking_enabled = true;
     }

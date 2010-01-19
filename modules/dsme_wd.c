@@ -52,79 +52,82 @@
 
 typedef struct wd_t {
     const char* file;   /* pathname of the watchdog device */
-    int         period; /* watchdog timeout; 0 for keeping the default */
+    int         period; /* watchdog timeout (s); 0 for keeping the default */
+    const char* flag;   /* R&D flag in cal that disables the watchdog */
 } wd_t;
 
+/* the table of HW watchdogs; notice that their order matters! */
 static const wd_t wd[] = {
-    { "/dev/twl4030_wdt", 30 }, /* set the twl wd timeout to 30 seconds */
-    { "/dev/watchdog",    14 }  /* set the omap wd timeout to 14 seconds */
+    /* path,               timeout (s), disabling R&D flag */
+    {  "/dev/twl4030_wdt", 30,          "no-ext-wd"  }, /* twl (ext) wd */
+    {  "/dev/watchdog",    14,          "no-omap-wd" }  /* omap wd      */
 };
 
 #define WD_COUNT (sizeof(wd) / sizeof(wd[0]))
-static int wd_fd[WD_COUNT];
 
-static bool  wd_enabled = true;
+/* watchdog file descriptors */
+static int  wd_fd[WD_COUNT];
 
 
 void dsme_wd_kick(void)
 {
-  if (wd_enabled) {
-      int i;
-      for (i = 0; i < WD_COUNT; ++i) {
-          if (wd_fd[i] != -1) {
-              int bytes_written;
-              while ((bytes_written = write(wd_fd[i], "*", 1)) == -1 &&
-                     errno == EAGAIN)
-              {
-                  const char msg[] = "Got EAGAIN when kicking WD ";
-                  (void)write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
-                  (void)write(STDERR_FILENO, wd[i].file, strlen(wd[i].file));
-                  (void)write(STDERR_FILENO, "\n", 1);
-              }
-              if (bytes_written != 1) {
-                  const char msg[] = "Error kicking WD ";
+  int i;
+  for (i = 0; i < WD_COUNT; ++i) {
+      if (wd_fd[i] != -1) {
+          int bytes_written;
+          while ((bytes_written = write(wd_fd[i], "*", 1)) == -1 &&
+                 errno == EAGAIN)
+          {
+              const char msg[] = "Got EAGAIN when kicking WD ";
+              (void)write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
+              (void)write(STDERR_FILENO, wd[i].file, strlen(wd[i].file));
+              (void)write(STDERR_FILENO, "\n", 1);
+          }
+          if (bytes_written != 1) {
+              const char msg[] = "Error kicking WD ";
 
-                  (void)write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
-                  (void)write(STDERR_FILENO, wd[i].file, strlen(wd[i].file));
-                  (void)write(STDERR_FILENO, "\n", 1);
+              (void)write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
+              (void)write(STDERR_FILENO, wd[i].file, strlen(wd[i].file));
+              (void)write(STDERR_FILENO, "\n", 1);
 
-                  /* must not kick later wd's if an earlier one fails */
-                  break;
-              }
+              /* must not kick later wd's if an earlier one fails */
+              break;
           }
       }
+  }
 
 #if 0 /* for debugging only */
-      static struct timespec previous_timestamp = { 0, 0 };
-      struct timespec timestamp;
+  static struct timespec previous_timestamp = { 0, 0 };
+  struct timespec timestamp;
 
-      if (clock_gettime(CLOCK_MONOTONIC, &timestamp) != -1) {
-          if (previous_timestamp.tv_sec != 0) {
-              long ms;
+  if (clock_gettime(CLOCK_MONOTONIC, &timestamp) != -1) {
+      if (previous_timestamp.tv_sec != 0) {
+          long ms;
 
-              ms = (timestamp.tv_sec - previous_timestamp.tv_sec) * 1000;
-              ms += (timestamp.tv_nsec - previous_timestamp.tv_nsec) / 1000000;
+          ms = (timestamp.tv_sec - previous_timestamp.tv_sec) * 1000;
+          ms += (timestamp.tv_nsec - previous_timestamp.tv_nsec) / 1000000;
 
-              if (ms > DSME_WD_PERIOD * 1000 + 100) {
-                  fprintf(stderr, "took %ld ms between WD kicks\n", ms);
-              }
+          if (ms > DSME_WD_PERIOD * 1000 + 100) {
+              fprintf(stderr, "took %ld ms between WD kicks\n", ms);
           }
-          previous_timestamp = timestamp;
       }
-#endif
+      previous_timestamp = timestamp;
   }
+#endif
 }
 
-static void read_cal_config(void)
+static void check_for_cal_wd_flags(bool wd_enabled[])
 {
     void*         vptr = NULL;
     unsigned long len  = 0;
     int           ret  = 0;
     char*         p;
+    int           i;
 
+    /* see if there are any R&D flags to disable any watchdogs */
     ret = cal_read_block(0, "r&d_mode", &vptr, &len, CAL_FLAG_USER);
     if (ret < 0) {
-        dsme_log(LOG_ERR, "Error reading R&D mode flags, watchdogs enabled");
+        dsme_log(LOG_ERR, "Error reading R&D mode flags, WD kicking enabled");
         return;
     }
     p = vptr;
@@ -132,15 +135,14 @@ static void read_cal_config(void)
         dsme_log(LOG_DEBUG, "R&D mode enabled");
 
         if (len > 1) {
-            if (strstr(p, "no-omap-wd")) {
-                wd_enabled = false;
-                dsme_log(LOG_NOTICE, "WD kicking disabled");
-            } else {
-                wd_enabled = true;
+            for (i = 0; i < WD_COUNT; ++i) {
+                if (strstr(p, wd[i].flag)) {
+                    wd_enabled[i] = false;
+                    dsme_log(LOG_NOTICE, "WD kicking disabled: %s", wd[i].file);
+                }
             }
         } else {
-            wd_enabled = true;
-            dsme_log(LOG_DEBUG, "No WD flags found, kicking enabled!");
+            dsme_log(LOG_DEBUG, "No WD flags found, WD kicking enabled");
         }
     }
 
@@ -150,25 +152,28 @@ static void read_cal_config(void)
 
 bool dsme_wd_init(void)
 {
-    int i;
+    int  opened_wd_count = 0;
+    bool wd_enabled[WD_COUNT];
+    int  i;
 
     for (i = 0; i < WD_COUNT; ++i) {
-        wd_fd[i] = -1;
+        wd_enabled[i] = true; /* enable all watchdogs by default */
+        wd_fd[i]      = -1;
     }
 
-    read_cal_config();
-    if (!wd_enabled) {
+    /* disable the watchdogs that have a disabling R&D flag */
+    check_for_cal_wd_flags(wd_enabled);
 
-        return false;
-
-    } else {
-        /* open watchdog devices */
-        for (i = 0; i < WD_COUNT; ++i) {
+    /* open enabled watchdog devices */
+    for (i = 0; i < WD_COUNT; ++i) {
+        if (wd_enabled[i]) {
             wd_fd[i] = open(wd[i].file, O_RDWR);
             if (wd_fd[i] == -1) {
                 dsme_log(LOG_CRIT, "Error opening WD %s", wd[i].file);
                 perror(wd[i].file);
             } else {
+                ++opened_wd_count;
+
                 if (wd[i].period != 0) {
                     dsme_log(LOG_NOTICE,
                              "Setting WD period to %d s for %s",
@@ -189,7 +194,7 @@ bool dsme_wd_init(void)
                 }
             }
         }
-
-        return true;
     }
+
+    return (opened_wd_count != 0);
 }
