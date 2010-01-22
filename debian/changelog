@@ -1,3 +1,9 @@
+dsme (0.61.3) unstable; urgency=low
+
+  * Add support for no-ext-wd R&D flag
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Fri, 22 Jan 2010 11:45:46 +0000
+
 dsme (0.61.2) unstable; urgency=low
 
   * Fixes: NB#149526: compile alarmtracker with -D_GNU_SOURCE
