@@ -40,8 +40,8 @@ static thermal_object_configuration_t surface_thermal_conf = {
       /* (min, max], interval */
       {    -1,  52,        60 / DSME_HEARTBEAT_INTERVAL }, /* NORMAL  */
       {    52,  58,        60 / DSME_HEARTBEAT_INTERVAL }, /* WARNING */
-      {    58,  65,        30 / DSME_HEARTBEAT_INTERVAL }, /* ALERT   */
-      {    65,  99,        30 / DSME_HEARTBEAT_INTERVAL }, /* FATAL   */
+      {    58,  98,        30 / DSME_HEARTBEAT_INTERVAL }, /* ALERT   */
+      {    98,  99,        30 / DSME_HEARTBEAT_INTERVAL }, /* FATAL   */
   },
   get_surface_temperature
 };

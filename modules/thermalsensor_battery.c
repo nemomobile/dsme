@@ -41,9 +41,9 @@ typedef uint8_t  byte;
 /* these need to be #defined in order to pick up thermal stuff from bme */
 #define TESTSERVER
 
-#include <bme/client_ipc.h>
-#include <bme/bme_extmsg.h>
-#include <bme/em_isi.h> 
+#include <bme/bmeipc.h>
+#include <bme/bmemsg.h>
+#include <bme/em_isi.h>
 
 
 static gboolean handle_battery_temperature_response(GIOChannel*  source,

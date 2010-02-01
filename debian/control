@@ -5,6 +5,7 @@ Maintainer: Semi Malinen <semi.malinen@nokia.com>
 Uploaders: Ismo Laitinen <ismo.laitinen@nokia.com>, David Weinehall <david.weinehall@nokia.com>, Philippe De Swert <philippe.de-swert@nokia.com>
 Build-Depends: debhelper (>= 4.1.0),
  libdsme0.2.0-dev (>= 0.61.1),
+ libbmeipc-dev,
  libcal-dev (>= 0.2.0),
  pkg-config,
  libglib2.0-dev,
