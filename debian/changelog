@@ -1,3 +1,9 @@
+dsme (0.61.4) unstable; urgency=low
+
+  * Re-enable thermal management (fatal limit set to 98 deg C for now)
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Tue, 02 Feb 2010 08:49:00 +0000
+
 dsme (0.61.3) unstable; urgency=low
 
   * Add support for no-ext-wd R&D flag
