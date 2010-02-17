@@ -1,3 +1,9 @@
+dsme (0.61.5) unstable; urgency=low
+
+  * Tag for recompilation
+
+ -- Semi Malinen <semi@kashiwa>  Wed, 17 Feb 2010 12:26:53 +0000
+
 dsme (0.61.4) unstable; urgency=low
 
   * Re-enable thermal management (fatal limit set to 98 deg C for now)

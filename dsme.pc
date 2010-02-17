@@ -4,7 +4,7 @@ libdir=${prefix}/lib
 
 Name: dsme
 Description: DSME dsmesock dynamic library
-Version: 0.61.4
+Version: 0.61.5
 Requires:
 Libs: -L${libdir} -ldsme
 Cflags: -I${includedir}
