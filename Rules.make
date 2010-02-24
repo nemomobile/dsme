@@ -236,13 +236,13 @@ ifneq "" "$(C_OBJS)$(CXX_OBJS)"
 	@$(MAKE) -o $(DEPENDNAME) --no-print-directory LOCAL_DEPEND=$(DEPENDNAME) $(C_OBJS) $(CXX_OBJS) $(DEPEND_SUBDIRS)
 endif
 ifneq "" "$(BINARIES)"
-	@echo -e $(foreach BINARY,$(BINARIES),"\n"$(BINARY): $(call TARGET_OBJS,$(BINARY)) $(call TARGET_NONSTD_LIBS,$(BINARY))) >> $(DEPENDNAME)
+	@printf "$(foreach BINARY,$(BINARIES),\n$(BINARY): $(call TARGET_OBJS,$(BINARY)) $(call TARGET_NONSTD_LIBS,$(BINARY)))\n" >> $(DEPENDNAME)
 endif
 ifneq "" "$(A_LIBRARIES)"
-	@echo -e $(foreach LIB,$(A_LIBRARIES),"\n"$(LIB).a: $(call TARGET_OBJS,$(LIB))) >> $(DEPENDNAME)
+	@printf "$(foreach LIB,$(A_LIBRARIES),\n$(LIB).a: $(call TARGET_OBJS,$(LIB)))\n" >> $(DEPENDNAME)
 endif
 ifneq "" "$(SO_LIBRARIES)"
-	@echo -e $(foreach LIB,$(SO_LIBRARIES),"\n"$(LIB).so: $(call TARGET_OBJS,$(LIB))) >> $(DEPENDNAME)
+	@printf "$(foreach LIB,$(SO_LIBRARIES),\n$(LIB).so: $(call TARGET_OBJS,$(LIB)))\n" >> $(DEPENDNAME)
 endif
 
 
