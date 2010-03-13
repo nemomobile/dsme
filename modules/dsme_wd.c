@@ -3,7 +3,7 @@
 
    This file implements hardware watchdog kicker.
    <p>
-   Copyright (C) 2004-2009 Nokia Corporation.
+   Copyright (C) 2004-2010 Nokia Corporation.
 
    @author Igor Stoppa <igor.stopaa@nokia.com>
    @author Semi Malinen <semi.malinen@nokia.com>
@@ -72,6 +72,8 @@ static int  wd_fd[WD_COUNT];
 void dsme_wd_kick(void)
 {
   int i;
+  int dummy;
+
   for (i = 0; i < WD_COUNT; ++i) {
       if (wd_fd[i] != -1) {
           int bytes_written;
@@ -79,16 +81,16 @@ void dsme_wd_kick(void)
                  errno == EAGAIN)
           {
               const char msg[] = "Got EAGAIN when kicking WD ";
-              (void)write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
-              (void)write(STDERR_FILENO, wd[i].file, strlen(wd[i].file));
-              (void)write(STDERR_FILENO, "\n", 1);
+              dummy = write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
+              dummy = write(STDERR_FILENO, wd[i].file, strlen(wd[i].file));
+              dummy = write(STDERR_FILENO, "\n", 1);
           }
           if (bytes_written != 1) {
               const char msg[] = "Error kicking WD ";
 
-              (void)write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
-              (void)write(STDERR_FILENO, wd[i].file, strlen(wd[i].file));
-              (void)write(STDERR_FILENO, "\n", 1);
+              dummy = write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
+              dummy = write(STDERR_FILENO, wd[i].file, strlen(wd[i].file));
+              dummy = write(STDERR_FILENO, "\n", 1);
 
               /* must not kick later wd's if an earlier one fails */
               break;

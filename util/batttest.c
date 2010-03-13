@@ -3,7 +3,7 @@
 
    This is just a test for battery messages..
    <p>
-   Copyright (C) 2004-2009 Nokia Corporation.
+   Copyright (C) 2004-2010 Nokia Corporation.
 
    @author Ismo Laitinen
 

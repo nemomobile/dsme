@@ -2,7 +2,7 @@
 # Build targets
 #
 BINARIES     := dsme dsme-exec-helper
-SUBDIRS      := util modules
+SUBDIRS      := util modules libiphb
 
 VERSION := 0.61.5
 
@@ -102,6 +102,8 @@ local_install:
 	mkdir -p $(DESTDIR)/etc/dsme
 	install -m 600 -o $(INSTALL_OWNER) -g $(INSTALL_GROUP) lifeguard.uids $(DESTDIR)/etc/dsme
 
+install-libiphb install-libiphb-dev install-hbtest:
+	@$(MAKE) --no-print-directory -C libiphb $@
 
 .PHONY: test
 test: all

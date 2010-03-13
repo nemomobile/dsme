@@ -3,7 +3,7 @@
 
    This is a test for processwd module.
    <p>
-   Copyright (C) 2004-2009 Nokia Corporation.
+   Copyright (C) 2004-2010 Nokia Corporation.
 
    @author Ari Saastamoinen
 

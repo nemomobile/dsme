@@ -4,7 +4,7 @@
    This program blocks until the DSME socket is ready.
    Timeout is also defined.
    <p>
-   Copyright (C) 2004-2009 Nokia Corporation.
+   Copyright (C) 2004-2010 Nokia Corporation.
 
    @author Ismo Laitinen
 

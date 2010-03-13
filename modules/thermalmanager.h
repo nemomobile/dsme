@@ -3,7 +3,7 @@
 
    DSME thermal object abstraction
    <p>
-   Copyright (C) 2009 Nokia Corporation.
+   Copyright (C) 2009-2010 Nokia Corporation.
 
    @author Semi Malinen <semi.malinen@nokia.com>
 

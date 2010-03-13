@@ -3,7 +3,7 @@
 
    Implements DSME logging functionality.
    <p>
-   Copyright (C) 2004-2009 Nokia Corporation.
+   Copyright (C) 2004-2010 Nokia Corporation.
 
    @author Yuri Zaporogets
    @author Semi Malinen <semi.malinen@nokia.com>
@@ -94,7 +94,8 @@ void dsme_log_raw(int level, const char *fmt, ...) {
   if (logopt.verbosity >= level) {
     va_list va; char *msg = 0;
     va_start(va, fmt);
-    vasprintf(&msg, fmt, va);
+    int dummy = vasprintf(&msg, fmt, va);
+    (void)dummy; /* keep the compiler happy */
     va_end(va);
     if( msg ) dsme_log_routine(level, msg), free(msg);
   }

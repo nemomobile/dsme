@@ -4,7 +4,7 @@
    Track the emergency call status by listening to MCE's call state ind.
    This is needed for device state selection by the state module.
    <p>
-   Copyright (C) 2009 Nokia Corporation.
+   Copyright (C) 2009-2010 Nokia Corporation.
 
    @author Semi Malinen <semi.malinen@nokia.com>
 

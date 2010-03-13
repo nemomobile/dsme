@@ -4,7 +4,7 @@
    This file implements process spawning and child exit signal catching.
    It also sends notifications on child exits.
    <p>
-   Copyright (C) 2004-2009 Nokia Corporation.
+   Copyright (C) 2004-2010 Nokia Corporation.
 
    @author Ari Saastamoinen
    @author Semi Malinen <semi.malinen@nokia.com>
@@ -100,6 +100,8 @@ static bool make_argv_for_exec_helper(const char* cmdline,
  */
 static void async_signal_safe_child_setup(const char* cmdline)
 {
+  int dummy;
+
   /* restore the default scheduler */
   struct sched_param sch;
   memset(&sch, 0, sizeof(sch));
@@ -107,9 +109,9 @@ static void async_signal_safe_child_setup(const char* cmdline)
   if (sched_setscheduler(0, SCHED_OTHER, &sch) == -1) {
       const char msg[] = "unable to set the scheduler: ";
 
-      (void)write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
-      (void)write(STDERR_FILENO, cmdline, strlen(cmdline));
-      (void)write(STDERR_FILENO, "\n", 1);
+      dummy = write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
+      dummy = write(STDERR_FILENO, cmdline, strlen(cmdline));
+      dummy = write(STDERR_FILENO, "\n", 1);
   }
 
   /* set the priority first to zero as dsme runs with -1,
@@ -118,9 +120,9 @@ static void async_signal_safe_child_setup(const char* cmdline)
   if (setpriority(PRIO_PROCESS, 0, 0) != 0) {
       const char msg[] = "unable to set the priority to 0: ";
 
-      (void)write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
-      (void)write(STDERR_FILENO, cmdline, strlen(cmdline));
-      (void)write(STDERR_FILENO, "\n", 1);
+      dummy = write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
+      dummy = write(STDERR_FILENO, cmdline, strlen(cmdline));
+      dummy = write(STDERR_FILENO, "\n", 1);
   }
 
   int i;
@@ -139,9 +141,9 @@ static void async_signal_safe_child_setup(const char* cmdline)
   if (setsid() < 0) {
       const char msg[] = "setsid() failed: ";
 
-      (void)write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
-      (void)write(STDERR_FILENO, cmdline, strlen(cmdline));
-      (void)write(STDERR_FILENO, "\n", 1);
+      dummy = write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
+      dummy = write(STDERR_FILENO, cmdline, strlen(cmdline));
+      dummy = write(STDERR_FILENO, "\n", 1);
   }
 }
 

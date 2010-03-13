@@ -3,7 +3,7 @@
 
    This file implements the main function and main loop of DSME component.
    <p>
-   Copyright (C) 2004-2009 Nokia Corporation.
+   Copyright (C) 2004-2010 Nokia Corporation.
 
    @author Ari Saastamoinen
    @author Ismo Laitinen <ismo.laitinen@nokia.com>
@@ -128,7 +128,10 @@ static int daemonize(void)
 
   i = open("/dev/null", O_RDWR);
   i = open("/dev/console", O_RDWR);
-  dup(i);
+  if (dup(i) == -1) {
+      dsme_log(LOG_CRIT, "daemonize: dup failed: %s", strerror(errno));
+      return -1;
+  }
 
   /* set umask */
   /* umask() */
@@ -145,7 +148,10 @@ static int daemonize(void)
   }
 
   sprintf(str, "%d\n", getpid());
-  write(i, str, strlen(str));
+  if (write(i, str, strlen(str)) == -1) {
+      dsme_log(LOG_CRIT, "daemonize: write failed: %s", strerror(errno));
+      return -1;
+  }
   close(i);
 
 
@@ -358,7 +364,10 @@ int main(int argc, char *argv[])
   }
 
   /* set running directory */
-  chdir("/");
+  if (chdir("/") == -1) {
+      dsme_log(LOG_CRIT, "chdir failed: %s", strerror(errno));
+      return EXIT_FAILURE;
+  }
 
   dsme_log(LOG_DEBUG, "Entering main loop");
   dsme_main_loop_run(process_message_queue);

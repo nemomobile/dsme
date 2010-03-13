@@ -4,7 +4,7 @@
    This module implements proxying of between DSME's internal message
    queue and D-Bus.
    <p>
-   Copyright (C) 2009 Nokia Corporation.
+   Copyright (C) 2009-2010 Nokia Corporation.
 
    @author Semi Malinen <semi.malinen@nokia.com>
 

@@ -1,9 +1,9 @@
 /**
-   @file dsme_wd.h 
+   @file dsme_wd.h
 
    This file has defines hardware watchdog kicker.
    <p>
-   Copyright (C) 2004-2009 Nokia Corporation.
+   Copyright (C) 2004-2010 Nokia Corporation.
 
    @author Igor Stoppa <igor.stopaa@nokia.com>
 

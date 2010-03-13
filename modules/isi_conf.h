@@ -3,7 +3,7 @@
 
    This is a dummy isi_conf.h to make it possible to #include bme/em_isi.h
    <p>
-   Copyright (C) 2009 Nokia Corporation.
+   Copyright (C) 2009-2010 Nokia Corporation.
 
    @author Semi Malinen <semi.malinen@nokia.com>
 

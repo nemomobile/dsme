@@ -3,7 +3,7 @@
 
    DSME mainloop abstraction
    <p>
-   Copyright (C) 2006-2009 Nokia Corporation.
+   Copyright (C) 2006-2010 Nokia Corporation.
 
    @author Semi Malinen <semi.malinen@nokia.com>
 

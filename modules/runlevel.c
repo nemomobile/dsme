@@ -3,7 +3,7 @@
 
    DSME internal runlevel control
    <p>
-   Copyright (C) 2009 Nokia Corporation.
+   Copyright (C) 2009-2010 Nokia Corporation.
 
    @author Semi Malinen <semi.malinen@nokia.com>
 
@@ -99,14 +99,18 @@ static void shutdown(dsme_runlevel_t runlevel)
           if (system("/sbin/poweroff") != 0) {
               dsme_log(LOG_ERR, "/sbin/poweroff failed, trying again in 3s");
               sleep(3);
-              system("/sbin/poweroff");
+              if (system("/sbin/poweroff") != 0) {
+                  dsme_log(LOG_ERR, "/sbin/poweroff failed again");
+              }
           }
       } else {
           dsme_log(LOG_CRIT, "Issuing reboot");
           if (system("/sbin/reboot") != 0) {
               dsme_log(LOG_ERR, "/sbin/reboot failed, trying again in 3s");
               sleep(3);
-              system("/sbin/reboot");
+              if (system("/sbin/reboot") != 0) {
+                  dsme_log(LOG_ERR, "/sbin/reboot failed again");
+              }
           }
       }
 

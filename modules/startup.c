@@ -4,7 +4,7 @@
    This file implements a policy that is used to load
    all other policies and do startup tasks for DSME.
    <p>
-   Copyright (C) 2004-2009 Nokia Corporation.
+   Copyright (C) 2004-2010 Nokia Corporation.
 
    @author Ari Saastamoinen
    @author Ismo Laitinen <ismo.laitinen@nokia.com>
@@ -84,6 +84,7 @@ const char *modules[] = {
     "libthermalobject_surface.so",
 #endif
     "libemergencycalltracker.so",
+    "libiphb.so",
     NULL
 };
 

@@ -4,7 +4,7 @@
    This file implements software watchdog for processes that want to use it.
    Proceses that do not respond to the request will be killed by signal 9.
    <p>
-   Copyright (C) 2004-2009 Nokia Corporation.
+   Copyright (C) 2004-2010 Nokia Corporation.
 
    @author Ismo Laitinen <ismo.laitinen@nokia.com>
    @author Ari Saastamoinen

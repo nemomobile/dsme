@@ -3,7 +3,7 @@
 
    This program blocks until it receives the state from dsme
    <p>
-   Copyright (C) 2004-2009 Nokia Corporation.
+   Copyright (C) 2004-2010 Nokia Corporation.
 
    @author Ari Saastamoinen
 

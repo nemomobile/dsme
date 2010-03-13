@@ -75,6 +75,11 @@ ifneq (,$(findstring testcases,$(DEB_BUILD_OPTIONS)))
 	$(MAKE) tests_install DESTDIR=$(CURDIR)/debian/tmp
 endif
 
+	# install libiphb & hbtest
+	$(MAKE) install-libiphb ROOT=../debian/libiphb0
+	$(MAKE) install-libiphb-dev ROOT=../debian/libiphb-dev
+	$(MAKE) install-hbtest ROOT=../debian/hbtest
+
 	dh_install -s
 
 # Must not depend on anything. This is to be called by
@@ -88,7 +93,9 @@ binary-arch: build install
 	dh_installexamples
 	dh_installman
 	dh_link
-	dh_strip --dbg-package=dsme
+	dh_strip --dbg-package=dsme   \
+	         --dbg-package=hbtest \
+	         --dbg-package=libiphb0
 	dh_compress
 	dh_fixperms
 	dh_makeshlibs --exclude=/usr/lib/dsme/

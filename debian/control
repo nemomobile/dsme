@@ -17,6 +17,8 @@ Package: dsme
 Section: misc
 Architecture: any
 Depends: ${shlibs:Depends}
+Replaces: iphbd
+Conflicts: iphbd
 Description: Device State Management Entity
  This package contains the Device State Management Entity which provides state
  management features such as service monitoring, process watchdog and
@@ -27,7 +29,56 @@ Section: devel
 Priority: extra
 Architecture: any
 Depends: dsme (= ${binary:Version})
+Replaces: iphbd-dbg
+Conflicts: iphbd-dbg
 Description: Device State Management Entity (with debug symbols)
  This package contains the Device State Management Entity which provides state
  management features such as service monitoring, process watchdog and
  inactivity tracking.
+
+
+Package: hbtest
+Architecture: any
+Depends: libiphb0
+Replaces: hbtest (<< 0.61.5)
+Conflicts: hbtest (<< 0.61.5)
+Description: Test tool for IP Heartbeat service
+ Command line utility to test IP Heartbeat functionality.
+
+Package: hbtest-dbg
+Priority: extra
+Architecture: any
+Depends: hbtest (= ${Source-Version})
+Replaces: hbtest-dbg (<< 0.61.5)
+Conflicts: hbtest-dbg (<< 0.61.5)
+Description: Debug symbols for hbtest
+ This package provides debug symbols for the IP Heartbeat test tool.
+
+Package: libiphb0
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}
+Replaces: libiphb0 (<< 0.61.5)
+Conflicts: libiphb0 (<< 0.61.5)
+Description: API for IP Heartbeat service
+ This package contains C API for using IP Heartbeat service.
+
+
+Package: libiphb0-dbg
+Section: libdevel
+Priority: extra
+Architecture: any
+Depends: libiphb0 (= ${Source-Version})
+Replaces: libiphb0-dbg (<< 0.61.5)
+Conflicts: libiphb0-dbg (<< 0.61.5)
+Description: Debug symbols for libiphb0
+ This package provides debug symbols for the IP Heartbeat API.
+
+Package: libiphb-dev
+Section: libdevel
+Architecture: any
+Depends: libiphb0 (= ${Source-Version}), ${shlibs:Depends}
+Replaces: libiphb-dev (<< 0.61.5)
+Conflicts: libiphb-dev (<< 0.61.5)
+Description: Development files for IP Heartbeat service
+ This package contains C headers for the IP Heartbeat API.

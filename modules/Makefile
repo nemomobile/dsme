@@ -11,7 +11,8 @@ SO_LIBRARIES    := libstartup              \
                    libdbusproxy            \
                    libalarmtracker         \
                    libthermalmanager       \
-                   libemergencycalltracker
+                   libemergencycalltracker \
+                   libiphb
 
 ifdef DSME_BMEIPC
 SO_LIBRARIES    += libthermalobject_surface
@@ -76,7 +77,11 @@ endif
 libemergencycalltracker_C_OBJS := emergencycalltracker.o
 emergencycalltracker.o : C_EXTRA_GENFLAGS := -fPIC
 
-MKDEP_INCFLAGS	:= $$(pkg-config --cflags-only-I glib-2.0 dbus-glib-1)
+libiphb_C_OBJS := iphb.o
+iphb.o : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags glib-2.0) -I ../libiphb
+libiphb_EXTRA_LDFLAGS := -lbmeipc $$(pkg-config --libs glib-2.0)
+
+MKDEP_INCFLAGS	:= $$(pkg-config --cflags-only-I glib-2.0 dbus-glib-1) -I ../libiphb
 
 #
 # Install files in this directory
@@ -97,7 +102,9 @@ INSTALL_SO_LIBRARIES    :=  libstartup.so        \
                             libdbusproxy.so      \
                             libalarmtracker.so   \
                             libthermalmanager.so \
-                            libemergencycalltracker.so
+                            libemergencycalltracker.so \
+                            libiphb.so
+
 ifdef DSME_BMEIPC
 INSTALL_SO_LIBRARIES	+=	libthermalobject_surface.so
 endif

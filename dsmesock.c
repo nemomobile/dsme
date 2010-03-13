@@ -3,7 +3,7 @@
 
    This file implements DSME side of dsme socket operations.
    <p>
-   Copyright (C) 2004-2009 Nokia Corporation.
+   Copyright (C) 2004-2010 Nokia Corporation.
 
    @author Ari Saastamoinen
    @author Semi Malinen <semi.malinen@nokia.com>

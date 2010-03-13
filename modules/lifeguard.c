@@ -5,7 +5,7 @@
    This module also listens to process quit messages and reacts
    to them according to the policy set when process was started.
    <p>
-   Copyright (C) 2004-2009 Nokia Corporation.
+   Copyright (C) 2004-2010 Nokia Corporation.
 
    @author Ismo Laitinen <ismo.laitinen@nokia.com>
    @author Ari Saastamoinen

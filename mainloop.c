@@ -3,7 +3,7 @@
 
    Implements DSME mainloop functionality.
    <p>
-   Copyright (C) 2004-2009 Nokia Corporation.
+   Copyright (C) 2004-2010 Nokia Corporation.
 
    @author Semi Malinen <semi.malinen@nokia.com>
 

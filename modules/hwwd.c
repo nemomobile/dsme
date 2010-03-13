@@ -4,9 +4,10 @@
    This file implements hardware watchdog kicker.
    The kicking is done in another, low-priority thread.
    <p>
-   Copyright (C) 2004-2009 Nokia Corporation.
+   Copyright (C) 2004-2010 Nokia Corporation.
 
    @author Ismo Laitinen <ismo.laitinen@nokia.com>
+   @author Semi Malinen <semi.malinen@nokia.com>
 
    This file is part of Dsme.
 
@@ -88,7 +89,8 @@ void dsme_handle_unresponsive_main_thread(void)
 {
     const char msg[] = 
         "dsme: mainloop frozen or seriously lagging; aborting\n";
-    (void)write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
+    int dummy = write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
+    (void)dummy;
     abort();
 }
 

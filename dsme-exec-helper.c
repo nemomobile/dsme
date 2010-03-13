@@ -5,7 +5,7 @@
    from dsme after forking. It does the non-async-signal-safe part
    of the child setup and then exec's the real target application.
    <p>
-   Copyright (C) 2009 Nokia Corporation.
+   Copyright (C) 2009-2010 Nokia Corporation.
 
    @author Semi Malinen <semi.malinen@nokia.com>
 
