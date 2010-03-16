@@ -268,6 +268,7 @@ char* dsme_dbus_endpoint_name(const DsmeDbusMessage* request)
       } else {
           name = endpoint_name_by_pid(pid);
       }
+      free(sender);
   }
 
   return name;

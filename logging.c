@@ -214,6 +214,7 @@ static void log_to_sti(int prio, const char* message)
             msg.msg_namelen = sizeof(struct sockaddr_nl);
             msg.msg_iov     = iov;
             msg.msg_iovlen  = sizeof(iov)/sizeof(*iov);
+            msg.msg_flags = 0;
 
             memset(&snl, 0, sizeof(struct sockaddr_nl));
 

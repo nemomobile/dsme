@@ -1,3 +1,13 @@
+dsme (0.61.6) unstable; urgency=low
+
+  [ Semi Malinen ]
+  * Implements iphb plug-in
+
+  [ Tapio Rantala ]
+  * Fixed defects found by coverity tool. CIDs: 3870, 24423
+
+ -- Tapio Rantala <ext-tapio.rantala@nokia.com>  Mon, 15 Mar 2010 16:03:26 +0200
+
 dsme (0.61.5) unstable; urgency=low
 
   * Tag for recompilation
