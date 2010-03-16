@@ -20,6 +20,7 @@ Architecture: any
 Depends: ${shlibs:Depends}
 Replaces: iphbd
 Conflicts: iphbd
+Provides: iphbd
 Description: Device State Management Entity
  This package contains the Device State Management Entity which provides state
  management features such as service monitoring, process watchdog and
@@ -32,6 +33,7 @@ Architecture: any
 Depends: dsme (= ${binary:Version})
 Replaces: iphbd-dbg
 Conflicts: iphbd-dbg
+Provides: iphbd-dbg
 Description: Device State Management Entity (with debug symbols)
  This package contains the Device State Management Entity which provides state
  management features such as service monitoring, process watchdog and
@@ -43,6 +45,7 @@ Architecture: any
 Depends: libiphb0
 Replaces: hbtest (<< 0.61.5)
 Conflicts: hbtest (<< 0.61.5)
+Provides: hbtest (<< 0.61.5)
 Description: Test tool for IP Heartbeat service
  Command line utility to test IP Heartbeat functionality.
 
@@ -52,6 +55,7 @@ Architecture: any
 Depends: hbtest (= ${Source-Version})
 Replaces: hbtest-dbg (<< 0.61.5)
 Conflicts: hbtest-dbg (<< 0.61.5)
+Provides: hbtest-dbg (<< 0.61.5)
 Description: Debug symbols for hbtest
  This package provides debug symbols for the IP Heartbeat test tool.
 
@@ -61,6 +65,7 @@ Architecture: any
 Depends: ${shlibs:Depends}
 Replaces: libiphb0 (<< 0.61.5)
 Conflicts: libiphb0 (<< 0.61.5)
+Provides: libiphb0 (<< 0.61.5)
 Description: API for IP Heartbeat service
  This package contains C API for using IP Heartbeat service.
 
@@ -72,6 +77,7 @@ Architecture: any
 Depends: libiphb0 (= ${Source-Version})
 Replaces: libiphb0-dbg (<< 0.61.5)
 Conflicts: libiphb0-dbg (<< 0.61.5)
+Provides: libiphb0-dbg (<< 0.61.5)
 Description: Debug symbols for libiphb0
  This package provides debug symbols for the IP Heartbeat API.
 
@@ -81,5 +87,6 @@ Architecture: any
 Depends: libiphb0 (= ${Source-Version}), ${shlibs:Depends}
 Replaces: libiphb-dev (<< 0.61.5)
 Conflicts: libiphb-dev (<< 0.61.5)
+Provides: libiphb-dev (<< 0.61.5)
 Description: Development files for IP Heartbeat service
  This package contains C headers for the IP Heartbeat API.
