@@ -4,7 +4,7 @@
 BINARIES     := dsme dsme-exec-helper
 SUBDIRS      := util modules libiphb
 
-VERSION := 0.61.5
+VERSION := 0.61.6
 
 #
 # Install files in this directory

@@ -1,7 +1,7 @@
 # -*- mode: sh -*-
 
 NAME ?= iphbd
-ROOT ?= /tmp/test-$(NAME)
+ROOT ?= $(DESTDIR)/test-$(NAME)
 
 PREFIX ?= /usr
 BINDIR ?= $(PREFIX)/bin
