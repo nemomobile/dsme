@@ -50,9 +50,7 @@
 #include <sys/mman.h>
 #include <sys/wait.h>
 
-//#define DSME_SERVER_PATH "/sbin/dsme-server"
-//#define DSME_SERVER_PATH "/home/semi/harmattan/dsme/branches/hwwd_split/echo.sh"
-#define DSME_SERVER_PATH "/home/semi/harmattan/dsme/branches/hwwd_split/dsme-server"
+#define DSME_SERVER_PATH "/sbin/dsme-server"
 #define DSME_PID_FILE    "/tmp/dsme.pid" // TODO: is this needed?
 
 #define DSME_NICE         (-20)      /* least niceness */
