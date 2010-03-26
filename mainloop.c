@@ -31,34 +31,34 @@ static gboolean   running  = FALSE;
 
 struct _GMainLoop* dsme_main_loop(void)
 {
-  if (!the_loop) {
-    the_loop = g_main_loop_new(0, FALSE);
     if (!the_loop) {
-      /* TODO: crash and burn */
-      exit(EXIT_FAILURE);
+        the_loop = g_main_loop_new(0, FALSE);
+        if (!the_loop) {
+            /* TODO: crash and burn */
+            exit(EXIT_FAILURE);
+        }
     }
-  }
 
-  return the_loop;
+    return the_loop;
 }
 
 
 void dsme_main_loop_run(void (*iteration)(void))
 {
-  GMainContext* ctx = g_main_loop_get_context(dsme_main_loop());
+    GMainContext* ctx = g_main_loop_get_context(dsme_main_loop());
 
-  running = TRUE;
-  while (running) {
-    if (iteration) {
-      iteration();
+    running = TRUE;
+    while (running) {
+        if (iteration) {
+            iteration();
+        }
+        if (running) {
+            (void)g_main_context_iteration(ctx, TRUE);
+        }
     }
-    if (running) {
-      (void)g_main_context_iteration(ctx, TRUE);
-    }
-  }
 
-  g_main_loop_unref(the_loop);
-  the_loop = 0;
+    g_main_loop_unref(the_loop);
+    the_loop = 0;
 }
 
 void dsme_main_loop_quit(void)
