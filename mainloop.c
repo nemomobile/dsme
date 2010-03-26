@@ -63,6 +63,7 @@ void dsme_main_loop_run(void (*iteration)(void))
 
 void dsme_main_loop_quit(void)
 {
-  g_main_loop_quit(dsme_main_loop());
-  running = FALSE;
+    // TODO: g_main_loop_quit() is not safe to call from a signal handler
+    g_main_loop_quit(dsme_main_loop());
+    running = FALSE;
 }
