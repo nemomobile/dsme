@@ -7,7 +7,6 @@ SO_LIBRARIES    := libstartup              \
                    librunlevel             \
                    liblifeguard            \
                    libprocesswd            \
-                   libhwwd                 \
                    libdbusproxy            \
                    libalarmtracker         \
                    libthermalmanager       \
@@ -43,11 +42,6 @@ spawn.o     : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags glib-2.0)
 
 libprocesswd_C_OBJS := processwd.o
 processwd.o : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags glib-2.0)
-
-libhwwd_C_OBJS               := hwwd.o dsme_wd.o
-hwwd.o    : C_EXTRA_GENFLAGS := -fPIC
-dsme_wd.o : C_EXTRA_GENFLAGS := -fPIC
-#libhwwd_EXTRA_LDFLAGS        := -lpthread
 
 libdbusproxy_C_OBJS := dbusproxy.o dsme_dbus.o
 dbusproxy.o : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags glib-2.0)
@@ -95,7 +89,6 @@ $(INSTALL_BINARIES): INSTALL_DIR    :=  $(DESTDIR)/sbin
 INSTALL_SO_LIBRARIES    :=  libstartup.so        \
                             libheartbeat.so      \
                             libprocesswd.so      \
-                            libhwwd.so           \
                             liblifeguard.so      \
                             libstate.so          \
                             librunlevel.so       \

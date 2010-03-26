@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <errno.h>
 
 #define OOM_ADJ_PATH            "/proc/self/oom_adj"
 #define OOM_ADJ_PROTECT_VALUE   (-17)
@@ -39,18 +40,17 @@ static bool set_oom_adj_value(int i)
 
   file = fopen(OOM_ADJ_PATH, "w");
   if (!file) {
-      perror(OOM_ADJ_PATH);
       return false;
   }
 
   if (fprintf(file, "%i", i) < 0) {
-      fprintf(stderr, "%s: Write failed\n", OOM_ADJ_PATH);
-      fclose(file);
+      int tmp = errno;
+      (void)fclose(file);
+      tmp = errno;
       return false;
   }
 
   if (fclose(file) < 0) {
-      perror(OOM_ADJ_PATH);
       return false;
   }
 

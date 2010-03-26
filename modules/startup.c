@@ -69,7 +69,6 @@
  */
 const char *modules[] = {
     "libheartbeat.so",
-    "libhwwd.so",
     "librunlevel.so",
     "libstate.so",
     "liblifeguard.so",
@@ -113,7 +112,7 @@ void module_init(module_t *handle)
     char * path;
     char name[1024];  /* TODO more dynamic length */
     const char **names;
-	FILE *conffile = fopen(MODULES_CONF, "r");
+    FILE *conffile = fopen(MODULES_CONF, "r");
 
         modulename = strdup(module_name(handle));
 	if (!modulename) {

@@ -1,7 +1,7 @@
 #
 # Build targets
 #
-BINARIES     := dsme dsme-exec-helper
+BINARIES     := dsme dsme-server dsme-exec-helper
 SUBDIRS      := util modules libiphb
 
 VERSION := 0.61.6
@@ -13,7 +13,7 @@ INSTALL_PERM  := 644
 INSTALL_OWNER := $(shell id -u)
 INSTALL_GROUP := $(shell id -g)
 
-INSTALL_BINARIES                      := dsme dsme-exec-helper
+INSTALL_BINARIES                      := dsme dsme-server dsme-exec-helper
 $(INSTALL_BINARIES)    : INSTALL_PERM := 755
 $(INSTALL_BINARIES)    : INSTALL_DIR  := $(DESTDIR)/sbin
 
@@ -22,14 +22,14 @@ $(INSTALL_BINARIES)    : INSTALL_DIR  := $(DESTDIR)/sbin
 # C_OPTFLAGS are not used for debug builds (ifdef DEBUG)
 # C_DBGFLAGS are not used for normal builds
 #
-C_GENFLAGS     := -DPRG_VERSION=$(VERSION) -pthread -g \
+C_GENFLAGS     := -DPRG_VERSION=$(VERSION) -pthread -g -std=c99 \
                   -Wall -Wwrite-strings -Wmissing-prototypes -Werror# -pedantic
 C_OPTFLAGS     := -O2 -s
 C_DBGFLAGS     := -g -DDEBUG -DDSME_LOG_ENABLE
 C_DEFINES      := DSME_POSIX_TIMER DSME_WD_SYNC
 # enable battery thermal mgmt
 C_DEFINES      += DSME_BMEIPC
-C_INCDIRS      := $(TOPDIR)/include $(TOPDIR)/modules $(TOPDIR) 
+C_INCDIRS      := $(TOPDIR)/include $(TOPDIR)/modules $(TOPDIR)
 MKDEP_INCFLAGS := $$(pkg-config --cflags-only-I glib-2.0)
 
 
@@ -53,18 +53,27 @@ endif
 #
 
 # dsme
-dsme_C_OBJS             := dsme.o modulebase.o timers.o \
-                           logging.o oom.o mainloop.o \
-                           dsme-cal.o dsmesock.o
-dsme_LIBS               := dsme dl cal
-dsme: LD_EXTRA_GENFLAGS := -rdynamic $$(pkg-config --libs gthread-2.0)
+dsme_C_OBJS       := dsme-wdd.o dsme-wdd-wd.o oom.o
+dsme: C_OPTFLAGS  := -O2 -s
+dsme: C_GENFLAGS  := -DPRG_VERSION=$(VERSION) -g -std=c99 \
+                     -Wall -Wwrite-strings -Wmissing-prototypes -Werror
+dsme_LIBS         := cal
+dsme: LD_GENFLAGS :=
+
+
+# dsme-server
+dsme-server_C_OBJS             := dsme-server.o modulebase.o timers.o \
+                                  logging.o oom.o mainloop.o          \
+                                  dsme-cal.o dsmesock.o
+dsme-server_LIBS               := dsme dl cal
+dsme-server: LD_EXTRA_GENFLAGS := -rdynamic $$(pkg-config --libs gthread-2.0)
 
 #logging.o:	C_EXTRA_DEFINES	:=	USE_STDERR
-dsme.o      : C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
-mainloop.o  : C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
-modulebase.o: C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
-timers.o    : C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
-dsmesock.o  : C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
+dsme-server.o : C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
+mainloop.o    : C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
+modulebase.o  : C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
+timers.o      : C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
+dsmesock.o    : C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
 
 
 # TODO: move dsme-exec-helper to modules/

@@ -25,7 +25,7 @@
 
 #include "thermalsensor_battery.h"
 #include "thermalmanager.h"
-#include "hwwd.h"
+#include "dsme-wdd-wd.h"
 
 #include "dsme/modules.h"
 #include "dsme/logging.h"

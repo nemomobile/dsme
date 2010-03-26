@@ -1,11 +1,11 @@
 /**
-   @file dsme_wd.h
+   @file dsme-wdd.h
 
    This file has defines hardware watchdog kicker.
    <p>
-   Copyright (C) 2004-2010 Nokia Corporation.
+   Copyright (C) 2010 Nokia Corporation.
 
-   @author Igor Stoppa <igor.stopaa@nokia.com>
+   @author Semi Malinen <semi.malinen@nokia.com>
 
    This file is part of Dsme.
 
@@ -22,23 +22,9 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef DSME_WD_H
-#define DSME_WD_H
+#ifndef DSME_WDD_H
+#define DSME_WDD_H
 
-#include <stdbool.h>
-
-/* Period for kicking; i.e. how often dsme wakes up to kick the watchdogs */
-#define DSME_WD_PERIOD 12 /* seconds */
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void dsme_wd_kick(void);
-bool dsme_wd_init(void);
-
-#ifdef __cplusplus
-}
-#endif
+#define ME "dsme wdd: "
 
 #endif

@@ -1,5 +1,5 @@
 /**
-   @file dsme_wd.c
+   @file dsme-wd-wdd.c
 
    This file implements hardware watchdog kicker.
    <p>
@@ -23,8 +23,8 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dsme_wd.h"
-#include "dsme/logging.h"
+#include "dsme-wdd-wd.h"
+#include "dsme-wdd.h"
 
 #include <cal.h>
 
@@ -57,10 +57,11 @@ typedef struct wd_t {
 } wd_t;
 
 /* the table of HW watchdogs; notice that their order matters! */
+#define SHORTEST DSME_SHORTEST_WD_PERIOD
 static const wd_t wd[] = {
     /* path,               timeout (s), disabling R&D flag */
     {  "/dev/twl4030_wdt", 30,          "no-ext-wd"  }, /* twl (ext) wd */
-    {  "/dev/watchdog",    14,          "no-omap-wd" }  /* omap wd      */
+    {  "/dev/watchdog",    SHORTEST,    "no-omap-wd" }  /* omap wd      */
 };
 
 #define WD_COUNT (sizeof(wd) / sizeof(wd[0]))
@@ -109,8 +110,8 @@ void dsme_wd_kick(void)
           ms = (timestamp.tv_sec - previous_timestamp.tv_sec) * 1000;
           ms += (timestamp.tv_nsec - previous_timestamp.tv_nsec) / 1000000;
 
-          if (ms > DSME_WD_PERIOD * 1000 + 100) {
-              fprintf(stderr, "took %ld ms between WD kicks\n", ms);
+          if (ms > DSME_HEARTBEAT_INTERVAL * 1000 + 100) {
+              fprintf(stderr, ME "took %ld ms between WD kicks\n", ms);
           }
       }
       previous_timestamp = timestamp;
@@ -129,28 +130,30 @@ static void check_for_cal_wd_flags(bool wd_enabled[])
     /* see if there are any R&D flags to disable any watchdogs */
     ret = cal_read_block(0, "r&d_mode", &vptr, &len, CAL_FLAG_USER);
     if (ret < 0) {
-        dsme_log(LOG_ERR, "Error reading R&D mode flags, WD kicking enabled");
+        fprintf(stderr,
+                ME "Error reading R&D mode flags, WD kicking enabled\n");
         return;
     }
     p = vptr;
     if (len >= 1 && *p) {
-        dsme_log(LOG_DEBUG, "R&D mode enabled");
+        fprintf(stderr, ME "R&D mode enabled\n");
 
         if (len > 1) {
             for (i = 0; i < WD_COUNT; ++i) {
                 if (strstr(p, wd[i].flag)) {
                     wd_enabled[i] = false;
-                    dsme_log(LOG_NOTICE, "WD kicking disabled: %s", wd[i].file);
+                    fprintf(stderr, ME "WD kicking disabled: %s\n", wd[i].file);
                 }
             }
         } else {
-            dsme_log(LOG_DEBUG, "No WD flags found, WD kicking enabled");
+            fprintf(stderr, ME "No WD flags found, WD kicking enabled\n");
         }
     }
 
     free(vptr);
     return;
 }
+
 
 bool dsme_wd_init(void)
 {
@@ -171,27 +174,29 @@ bool dsme_wd_init(void)
         if (wd_enabled[i]) {
             wd_fd[i] = open(wd[i].file, O_RDWR);
             if (wd_fd[i] == -1) {
-                dsme_log(LOG_CRIT, "Error opening WD %s", wd[i].file);
-                perror(wd[i].file);
+                fprintf(stderr,
+                        ME "Error opening WD %s: %s\n",
+                        wd[i].file,
+                        strerror(errno));
             } else {
                 ++opened_wd_count;
 
                 if (wd[i].period != 0) {
-                    dsme_log(LOG_NOTICE,
-                             "Setting WD period to %d s for %s",
+                    fprintf(stderr,
+                             ME "Setting WD period to %d s for %s\n",
                              wd[i].period,
                              wd[i].file);
                     /* set the wd period */
                     /* ioctl() will overwrite tmp with the time left */
                     int tmp = wd[i].period;
                     if (ioctl(wd_fd[i], WDIOC_SETTIMEOUT, &tmp) != 0) {
-                        dsme_log(LOG_CRIT,
-                                 "Error setting WD period for %s",
+                        fprintf(stderr,
+                                 ME "Error setting WD period for %s\n",
                                  wd[i].file);
                     }
                 } else {
-                    dsme_log(LOG_NOTICE,
-                             "Keeping default WD period for %s",
+                    fprintf(stderr,
+                             ME "Keeping default WD period for %s\n",
                              wd[i].file);
                 }
             }

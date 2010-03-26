@@ -611,19 +611,19 @@ module_t* load_module(const char* filename, int priority)
     if (!dlhandle) {
         dlhandle = dlopen(filename, RTLD_NOW | RTLD_GLOBAL);
     }
- 
+
     if (!dlhandle) {
         dsme_log(LOG_CRIT, "%s", dlerror());
         return 0;
     }
 
     /* Now the module should be open */
-	
+
     module = (module_t*)malloc(sizeof(module_t));
     if (!module) {
         goto error;
     }
-    
+
     module->handle = dlhandle;
     module->priority = priority;
     module->name = strdup(filename);

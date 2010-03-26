@@ -1,7 +1,7 @@
 #
 # Build targets
 #
-BINARIES	:=	batttest dsmetool dsmetest bootstate kick_wd waitfordsme dsmereboot
+BINARIES	:=	batttest dsmetool dsmetest bootstate waitfordsme dsmereboot
 
 #
 # Target composition and overrides
@@ -14,8 +14,6 @@ dsmetest_C_OBJS 	:=	dsmetest.o
 dsmetest_LIBS	:=	dsme
 bootstate_C_OBJS 	:=	bootstate.o
 bootstate_LIBS	:=	dsme
-kick_wd_C_OBJS 	:=	kick_wd.o
-kick_wd_LIBS	:=	dsme
 waitfordsme_C_OBJS 	:=	waitfordsme.o
 waitfordsme_LIBS	:=	dsme
 kicker_C_OBJS 	:=	kicker.o

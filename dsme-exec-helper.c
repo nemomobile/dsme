@@ -24,6 +24,8 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define _BSD_SOURCE
+
 #include "dsme/oom.h"
 
 #include <glib.h>

@@ -60,109 +60,30 @@
 
 static void signal_handler(int  signum);
 static void usage(const char *  progname);
-static int  daemonize(void);
 
 #define DSME_PRIORITY (-1)
-#define PID_FILE      "/tmp/dsme.pid"
 
 #define ArraySize(a) ((int)(sizeof(a)/sizeof(*a)))
+
+#define ME "DSME: "
 
 /**
    Usage
 */
 static void usage(const char *  progname)
 {
-  printf("USAGE: %s -p <startup-module> "
-           "[-p <optional-module>] [...] options\n",
+  fprintf(stderr, "USAGE: %s -p <startup-module> "
+                    "[-p <optional-module>] [...] options\n",
          progname);
-  printf("Valid options:\n");
-  printf(" -d  --daemon      "
-           "Detach from terminal and run in background\n");
+  fprintf(stderr, "Valid options:\n");
 #ifdef DSME_LOG_ENABLE
-  printf(" -l  --logging     "
-           "Logging type (syslog, sti, stderr, stdout, none)\n");
-  printf(" -v  --verbosity   Log verbosity (3..7)\n");
+  fprintf(stderr, " -l  --logging     "
+                    "Logging type (syslog, sti, stderr, stdout, none)\n");
+  fprintf(stderr, " -v  --verbosity   Log verbosity (3..7)\n");
 #endif
-  printf(" -h  --help        Help\n");
+  fprintf(stderr, " -h  --help        Help\n");
 }
 
-/**
-   Daemonizes the program
-
-   @return On success, zero is returned. On error, -1 is returned.
-*/
-static int daemonize(void)
-{
-  int  i = 0;
-  char str[10];
-
-  /* Detach from process group */
-  switch (fork()) {
-    case -1:
-      /* An error occurred */
-      dsme_log(LOG_CRIT, "daemonize: fork failed: %s", strerror(errno));
-      return -1;
-
-    default:
-      /* Parent, terminate */
-      exit(EXIT_SUCCESS);
-      /* Not reached */
-      return -1;
-
-    case 0:
-      /* Child (daemon) continues */
-      break;
-  }
-
-
-  /* Detach tty */
-  setsid();
-
-  /* Close all file descriptors and redirect stdio to /dev/null */
-  i = getdtablesize();
-  if (i == -1)
-      i = 256;
-
-  while (--i >= 0)
-      close(i);
-
-  i = open("/dev/null", O_RDWR);
-  i = open("/dev/console", O_RDWR);
-  if (dup(i) == -1) {
-      dsme_log(LOG_CRIT, "daemonize: dup failed: %s", strerror(errno));
-      return -1;
-  }
-
-  /* set umask */
-  /* umask() */
-
-  /* single instance */
-  i = open(PID_FILE, O_RDWR | O_CREAT, 0640);
-  if (i < 0) {
-      dsme_log(LOG_CRIT, "Can't open lockfile. Exiting.");
-      exit(EXIT_FAILURE);
-  }
-  if (lockf(i, F_TLOCK, 0) < 0) {
-      dsme_log(LOG_CRIT, "Already running. Exiting.");
-      exit(EXIT_FAILURE);
-  }
-
-  sprintf(str, "%d\n", getpid());
-  if (write(i, str, strlen(str)) == -1) {
-      dsme_log(LOG_CRIT, "daemonize: write failed: %s", strerror(errno));
-      return -1;
-  }
-  close(i);
-
-
-  /* signals */
-  signal(SIGTSTP, SIG_IGN);   /* ignore tty signals */
-  signal(SIGTTOU, SIG_IGN);
-  signal(SIGTTIN, SIG_IGN);
-
-
-  return 0;
-}
 
 /**
  * Signal_Handler
@@ -172,14 +93,6 @@ static int daemonize(void)
 void signal_handler(int sig)
 {
   switch (sig) {
-    case SIGPIPE:
-#if 0 /* must not syslog within a signal handler */
-      dsme_log(LOG_ERR, "SIGPIPE received, some client exited before noticed?");
-#endif
-      break;
-    case SIGHUP:
-      /*      DLOG_NOTICE, "Restarting..."); */
-      break;
     case SIGINT:
     case SIGTERM:
       dsme_main_loop_quit();
@@ -187,15 +100,14 @@ void signal_handler(int sig)
   }
 }
 
-#ifdef DSME_LOG_ENABLE  
+#ifdef DSME_LOG_ENABLE
 static int        logging_verbosity = LOG_INFO;
 static log_method logging_method    = LOG_METHOD_SYSLOG;
 #endif
 
 static void parse_options(int      argc,           /* in  */
                           char*    argv[],         /* in  */
-                          GSList** module_names,   /* out */
-                          int*     daemon)         /* out */
+                          GSList** module_names)   /* out */
 {
   int          next_option;
   const char*  program_name  = argv[0];
@@ -207,11 +119,8 @@ static void parse_options(int      argc,           /* in  */
 #ifdef DSME_LOG_ENABLE  
         { "logging",        0, NULL, 'l' },
 #endif
-        { "daemon",         0, NULL, 'd' },
         { 0, 0, 0, 0 }
   };
-
-  if (daemon)         { *daemon         = 0; }
 
   while ((next_option =
           getopt_long(argc, argv, short_options, long_options,0)) != -1)
@@ -225,9 +134,6 @@ static void parse_options(int      argc,           /* in  */
         }
           break;
 
-        case 'd': /* -d or --daemon */
-          if (daemon) *daemon = 1;
-          break;
 #ifdef DSME_LOG_ENABLE  
         case 'l': /* -l or --logging */
         {
@@ -248,7 +154,9 @@ static void parse_options(int      argc,           /* in  */
               }
           }
           if (i == ArraySize(log_method_name))
-              fprintf(stderr, "Ignoring invalid logging method %s\n", optarg);
+              fprintf(stderr,
+                      ME "Ignoring invalid logging method %s\n",
+                      optarg);
         }
           break;
         case 'v': /* -v or --verbosity */
@@ -258,7 +166,7 @@ static void parse_options(int      argc,           /* in  */
 #else
         case 'l':
         case 'v':
-          printf("Logging not compiled in\n");
+          fprintf(stderr, ME "Logging not compiled in\n");
           break;
 #endif  
         case 'h': /* -h or --help */
@@ -301,36 +209,31 @@ static bool receive_and_queue_message(dsmesock_connection_t* conn)
 int main(int argc, char *argv[])
 {
   GSList* module_names = 0;
-  int     daemon       = 0;
 
-  signal(SIGHUP,  signal_handler);
   signal(SIGINT,  signal_handler);
   signal(SIGTERM, signal_handler);
+  signal(SIGHUP,  signal_handler);
   signal(SIGPIPE, signal_handler);
 
   /* protect DSME from oom; notice that this must be done before any
    * calls to pthread_create() in order to have all threads protected
    */
   if (!protect_from_oom()) {
-      fprintf(stderr, "Couldn't protect from oom\n");
+      fprintf(stderr, ME "Couldn't protect from oom: %s\n", strerror(errno));
   }
 
   if (setpriority(PRIO_PROCESS, 0, DSME_PRIORITY) != 0) {
-      fprintf(stderr, "Couldn't set the priority\n");
+      fprintf(stderr, ME "Couldn't set the priority: %s\n", strerror(errno));
   }
 
   g_thread_init(0); /* notice that this spawns a thread */
 
   dsme_cal_init();
 
-  parse_options(argc, argv, &module_names, &daemon);
+  parse_options(argc, argv, &module_names);
 
   if (!module_names) {
       usage(argv[0]);
-      return EXIT_FAILURE;
-  }
-
-  if (daemon && daemonize() == -1) {
       return EXIT_FAILURE;
   }
 
@@ -347,7 +250,7 @@ int main(int argc, char *argv[])
   /* load modules */
   if (!modulebase_init(module_names)) {
       g_slist_free(module_names);
-#ifdef DSME_LOG_ENABLE  
+#ifdef DSME_LOG_ENABLE
       dsme_log_close();
 #endif
       return EXIT_FAILURE;
@@ -372,10 +275,6 @@ int main(int argc, char *argv[])
   dsme_log(LOG_DEBUG, "Entering main loop");
   dsme_main_loop_run(process_message_queue);
   dsme_log(LOG_CRIT, "Exited main loop, quitting");
-
-  if (remove(PID_FILE) < 0) {
-      dsme_log(LOG_ERR, "Couldn't remove lockfile");
-  }
 
   dsmesock_shutdown();
 

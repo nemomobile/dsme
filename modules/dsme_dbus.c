@@ -24,6 +24,8 @@
 
 // TODO: add D-Bus filtering
 
+#define _BSD_SOURCE
+
 #include "dsme_dbus.h"
 
 #include "dsme/logging.h"
@@ -177,7 +179,7 @@ struct Dispatcher {
   union {
     DsmeDbusMethod*  method;
     DsmeDbusHandler* handler;
-  };
+  } target;
   const char*  interface;
   const char*  name;
   const char*  rules;
@@ -283,7 +285,7 @@ static void method_dispatcher_dispatch(const Dispatcher* dispatcher,
   };
   DsmeDbusMessage* reply   = 0;
 
-  dispatcher->method(&request, &reply);
+  dispatcher->target.method(&request, &reply);
 
   dbus_connection_unref(request.connection);
   dbus_message_unref(request.msg);
@@ -300,13 +302,13 @@ static Dispatcher* method_dispatcher_new(DsmeDbusMethod* method,
 {
   Dispatcher* dispatcher = g_new(Dispatcher, 1);
 
-  dispatcher->can_dispatch = method_dispatcher_can_dispatch;
-  dispatcher->dispatch     = method_dispatcher_dispatch;
-  dispatcher->method       = method;
+  dispatcher->can_dispatch  = method_dispatcher_can_dispatch;
+  dispatcher->dispatch      = method_dispatcher_dispatch;
+  dispatcher->target.method = method;
   // NOTE: we don't bother to strdup()
-  dispatcher->interface    = interface;
-  dispatcher->name         = name;
-  dispatcher->rules        = rules;
+  dispatcher->interface     = interface;
+  dispatcher->name          = name;
+  dispatcher->rules         = rules;
 
   return dispatcher;
 }
@@ -328,7 +330,7 @@ static void handler_dispatcher_dispatch(const Dispatcher* dispatcher,
 
   dbus_message_iter_init(msg, &ind.iter);
 
-  dispatcher->handler(&ind);
+  dispatcher->target.handler(&ind);
 
   dbus_connection_unref(ind.connection);
   dbus_message_unref(ind.msg);
@@ -340,12 +342,12 @@ static Dispatcher* handler_dispatcher_new(DsmeDbusHandler* handler,
 {
   Dispatcher* dispatcher = g_new(Dispatcher, 1);
 
-  dispatcher->can_dispatch = handler_dispatcher_can_dispatch;
-  dispatcher->dispatch     = handler_dispatcher_dispatch;
-  dispatcher->handler      = handler;
+  dispatcher->can_dispatch   = handler_dispatcher_can_dispatch;
+  dispatcher->dispatch       = handler_dispatcher_dispatch;
+  dispatcher->target.handler = handler;
   // NOTE: we don't bother to strdup()
-  dispatcher->interface    = interface;
-  dispatcher->name         = name;
+  dispatcher->interface      = interface;
+  dispatcher->name           = name;
 
   return dispatcher;
 }

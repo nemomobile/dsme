@@ -1,7 +1,7 @@
 /**
-   @file hwwd.h
+   @file dsme-wdd-wd.h
 
-   HW watchdog control messages for DSME
+   This file has defines hardware watchdog kicker.
    <p>
    Copyright (C) 2004-2010 Nokia Corporation.
 
@@ -21,17 +21,29 @@
    You should have received a copy of the GNU Lesser General Public
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef DSME_HWWD_H
-#define DSME_HWWD_H
 
-#include "dsme/messages.h"
+#ifndef DSME_WDD_WD_H
+#define DSME_WDD_WD_H
 
-#define DSME_HEARTBEAT_INTERVAL 12 /* seconds */
+#include <stdbool.h>
 
-enum {
-    DSME_MSG_ENUM(DSM_MSGTYPE_HWWD_KICK,   0x00000703),
-};
+// Period for kicking; i.e. how soon the quickest watchdog will bite.
+// NOTE: This must be picked from the wd[] array in dsme-wdd-wd.c!
+#define DSME_SHORTEST_WD_PERIOD 14 // seconds
 
-typedef dsmemsg_generic_t DSM_MSGTYPE_HWWD_KICK;
+// Period for heartbeat; i.e. how often we wakeup to kick watchdogs, etc.
+// We take a 2 second window for kicking the watchdogs.
+#define DSME_HEARTBEAT_INTERVAL (DSME_SHORTEST_WD_PERIOD - 2) // seconds
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void dsme_wd_kick(void);
+bool dsme_wd_init(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
