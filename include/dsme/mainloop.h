@@ -25,9 +25,6 @@
 #ifndef DSME_MAINLOOP_H
 #define DSME_MAINLOOP_H
 
-// TODO: ugly forward declaration due to broken glib.h
-struct _GMainLoop* dsme_main_loop(void);
-
 void dsme_main_loop_run(void (*iteration)(void));
 
 void dsme_main_loop_quit(void);

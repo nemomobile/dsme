@@ -22,48 +22,120 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "dsme/mainloop.h"
+#include "dsme/logging.h"
 
+#include <stdbool.h>
 #include <glib.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <string.h>
+#include <fcntl.h>
 
-static GMainLoop* the_loop = 0;
-static gboolean   running  = FALSE;
+typedef enum { NOT_STARTED, RUNNING, STOPPED } main_loop_state_t;
 
-struct _GMainLoop* dsme_main_loop(void)
+static volatile main_loop_state_t state    = NOT_STARTED;
+static GMainLoop*                 the_loop = 0;
+static int                        signal_pipe[2];
+
+static gboolean handle_signal(GIOChannel*  source,
+                              GIOCondition condition,
+                              gpointer     data);
+
+static bool set_up_signal_pipe(void)
 {
-    if (!the_loop) {
-        the_loop = g_main_loop_new(0, FALSE);
-        if (!the_loop) {
-            /* TODO: crash and burn */
-            exit(EXIT_FAILURE);
-        }
+    /* create a non-blocking pipe for waking up the main thread */
+    if (pipe(signal_pipe) == -1) {
+        dsme_log(LOG_CRIT, "error creating wake up pipe: %s", strerror(errno));
+        goto fail;
     }
 
-    return the_loop;
+    /* set writing end of the pipe to non-blocking mode */
+    int flags;
+    errno = 0;
+    if ((flags = fcntl(signal_pipe[1], F_GETFL)) == -1 && errno != 0) {
+        dsme_log(LOG_CRIT,
+                 "error getting flags for wake up pipe: %s",
+                 strerror(errno));
+        goto close_and_fail;
+    }
+    if (fcntl(signal_pipe[1], F_SETFL, flags | O_NONBLOCK) == -1) {
+        dsme_log(LOG_CRIT,
+                 "error setting wake up pipe to non-blocking: %s",
+                 strerror(errno));
+        goto close_and_fail;
+    }
+
+    /* set up an I/O watch for the wake up pipe */
+    GIOChannel* chan  = 0;
+    guint       watch = 0;
+
+    if (!(chan = g_io_channel_unix_new(signal_pipe[0]))) {
+        goto close_and_fail;
+    }
+    watch = g_io_add_watch(chan, G_IO_IN, handle_signal, 0);
+    g_io_channel_unref(chan);
+    if (!watch) {
+        goto close_and_fail;
+    }
+
+    return true;
+
+
+close_and_fail:
+    (void)close(signal_pipe[1]);
+    (void)close(signal_pipe[0]);
+
+fail:
+    return false;
+}
+
+static gboolean handle_signal(GIOChannel*  source,
+                              GIOCondition condition,
+                              gpointer     data)
+{
+    g_main_loop_quit(the_loop);
+    return FALSE;
 }
 
 
 void dsme_main_loop_run(void (*iteration)(void))
 {
-    GMainContext* ctx = g_main_loop_get_context(dsme_main_loop());
+    if (state == NOT_STARTED) {
+        if (!(the_loop = g_main_loop_new(0, FALSE)) ||
+            !set_up_signal_pipe())
+        {
+            // TODO: crash and burn
+            exit(EXIT_FAILURE);
+        }
 
-    running = TRUE;
-    while (running) {
-        if (iteration) {
-            iteration();
+        GMainContext* ctx = g_main_loop_get_context(the_loop);
+
+        state = RUNNING;
+        while (state == RUNNING) {
+            if (iteration) {
+                iteration();
+            }
+            if (state == RUNNING) {
+                (void)g_main_context_iteration(ctx, TRUE);
+            }
         }
-        if (running) {
-            (void)g_main_context_iteration(ctx, TRUE);
-        }
+
+        g_main_loop_unref(the_loop);
+        the_loop = 0;
     }
-
-    g_main_loop_unref(the_loop);
-    the_loop = 0;
 }
 
 void dsme_main_loop_quit(void)
 {
-    // TODO: g_main_loop_quit() is not safe to call from a signal handler
-    g_main_loop_quit(dsme_main_loop());
-    running = FALSE;
+    if (state == RUNNING) {
+        state = STOPPED;
+
+        ssize_t bytes_written;
+        while ((bytes_written = write(signal_pipe[1], "*", 1)) == -1 &&
+               (errno == EINTR))
+        {
+            /* EMPTY LOOP */
+        }
+    }
 }
