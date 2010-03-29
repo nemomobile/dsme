@@ -50,6 +50,9 @@
 #include <sys/mman.h>
 #include <sys/wait.h>
 
+#define STRINGIFY(x)  STRINGIFY2(x)
+#define STRINGIFY2(x) #x
+
 #define DSME_SERVER_PATH "/sbin/dsme-server"
 #define DSME_PID_FILE    "/tmp/dsme.pid" // TODO: is this needed?
 
@@ -339,6 +342,8 @@ done_running:
   */
 int main(int argc, char *argv[])
 {
+    fprintf(stderr, "DSME %s starting up\n", STRINGIFY(PRG_VERSION));
+
     // do the first kick right away
     if (!dsme_wd_init()) {
         fprintf(stderr, ME "no WD's opened; WD kicking disabled\n");
