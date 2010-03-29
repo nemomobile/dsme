@@ -1,6 +1,7 @@
 dsme (0.61.7) unstable; urgency=low
 
   * Split dsme to two processes: hwwd kicker (dsme) and the rest (dsme-server)
+  * Fixes: NB#161098: kick hwwd upon receiving a signal
 
  -- Semi Malinen <semi.malinen@nokia.com>  Mon, 29 Mar 2010 11:13:02 +0000
 
