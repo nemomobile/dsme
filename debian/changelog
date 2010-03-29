@@ -1,3 +1,9 @@
+dsme (0.61.7) unstable; urgency=low
+
+  * Split dsme to two processes: hwwd kicker (dsme) and the rest (dsme-server)
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Mon, 29 Mar 2010 11:13:02 +0000
+
 dsme (0.61.6) unstable; urgency=low
 
   [ Semi Malinen ]
@@ -12,7 +18,7 @@ dsme (0.61.5) unstable; urgency=low
 
   * Tag for recompilation
 
- -- Semi Malinen <semi@kashiwa>  Wed, 17 Feb 2010 12:26:53 +0000
+ -- Semi Malinen <semi.malinen@nokia.com>  Wed, 17 Feb 2010 12:26:53 +0000
 
 dsme (0.61.4) unstable; urgency=low
 
