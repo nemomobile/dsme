@@ -232,7 +232,6 @@ iphb_discard_wakeups(iphb_t iphbh)
 
 int iphb_get_stats(iphb_t iphbh, struct iphb_stats *stats)
 {
-    fprintf(stderr, "iphb_get_stats\n");
   struct _iphb_req_t  req = {IPHB_STAT};
   int bytes = -1;
 
@@ -248,17 +247,14 @@ int iphb_get_stats(iphb_t iphbh, struct iphb_stats *stats)
       errno = ENOMEM;
       return (time_t)-1;
     }
-    fprintf(stderr, "recv\n");
     (void)recv(HB_INST(iphbh)->fd, b, bytes, MSG_WAITALL);
     free(b);
     
   }
 
-    fprintf(stderr, "send\n");
   if (send(HB_INST(iphbh)->fd, &req, sizeof(req), MSG_DONTWAIT|MSG_NOSIGNAL) <= 0)
     return -1;    
 
-    fprintf(stderr, "recv\n");
   if (recv(HB_INST(iphbh)->fd, stats, sizeof(*stats), MSG_WAITALL) > 0)
     return 0;
   else
