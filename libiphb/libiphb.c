@@ -59,9 +59,14 @@ static int
 suck_data(int fd)
 {
   int bytes = -1;
+  int st;
+
 
   /* suck away unread messages */
-  if (ioctl(fd, FIONREAD, &bytes) != -1 && bytes >= 0) {
+
+  st = ioctl(fd, FIONREAD, &bytes);
+
+  if (st != -1 && bytes >= 0) {
       if (bytes) {
           char *b = malloc(bytes);
           if (!b) {
@@ -96,7 +101,7 @@ iphb_I_woke_up(iphb_t iphbh)
   req.u.wait.mintime = 0;
   req.u.wait.maxtime = 0;
 
-  if (send(HB_INST(iphbh)->fd, &req, sizeof(req), MSG_DONTWAIT|MSG_NOSIGNAL) <= 0)
+  if (send(HB_INST(iphbh)->fd, &req, sizeof(req), MSG_DONTWAIT|MSG_NOSIGNAL) == -1)
     return -1;    
 
   return st;

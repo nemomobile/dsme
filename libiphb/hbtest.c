@@ -282,11 +282,11 @@ main (int argc, char *argv[])
 
     if (hb) {
         int st;
-        if (iphb_I_woke_up(hb))
+        if (iphb_I_woke_up(hb) == -1)
             fprintf(stderr, ME "\aERROR, iphb_I_woke_up() %s\n", strerror(errno));
         st = iphb_discard_wakeups(hb);
         if (st == -1)
-            fprintf(stderr, ME "\aERROR, iphb_I_woke_up() %s\n", strerror(errno));
+            fprintf(stderr, ME "\aERROR, iphb_discard_wakeups() %s\n", strerror(errno));
         else
             if (debugmode) printf(ME "discarded %d bytes\n", st);
 
