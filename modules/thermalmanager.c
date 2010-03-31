@@ -41,6 +41,7 @@
 #include "heartbeat.h"
 
 #include <dsme/state.h>
+#include <dsme/thermalmanager_dbus_if.h>
 
 #include <glib.h>
 #include <stdlib.h>
@@ -63,9 +64,9 @@ static void log_temperature(int temperature, const thermal_object_t* thermal_obj
 
 static GSList* thermal_objects = 0;
 
-static const char* const service   = "com.nokia.thermalmanager";
-static const char* const interface = "com.nokia.thermalmanager";
-static const char* const path      = "/com/nokia/thermalmanager";
+static const char* const service   = thermalmanager_service;
+static const char* const interface = thermalmanager_interface;
+static const char* const path      = thermalmanager_path;
 
 static THERMAL_STATUS current_status = THERMAL_STATUS_NORMAL;
 
@@ -112,7 +113,9 @@ static void send_thermal_indication(void)
   /* first send an indication to D-Bus */
   {
       DsmeDbusMessage* sig =
-          dsme_dbus_signal_new(path, interface, "thermal_state_change_ind");
+          dsme_dbus_signal_new(path,
+                               interface,
+                               thermalmanager_state_change_ind);
       dsme_dbus_message_append_string(sig, current_status_name());
       dsme_dbus_signal_emit(sig);
       dsme_log(LOG_INFO, "thermal status: %s", current_status_name());
@@ -260,7 +263,7 @@ static void get_thermal_state(const DsmeDbusMessage* request,
 }
 
 static const dsme_dbus_binding_t methods[] = {
-  { get_thermal_state, "get_thermal_state" },
+  { get_thermal_state, thermalmanager_get_thermal_state },
   { 0, 0 }
 };
 
