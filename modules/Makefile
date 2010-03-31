@@ -5,7 +5,6 @@ SO_LIBRARIES    := libstartup              \
                    libheartbeat            \
                    libstate                \
                    librunlevel             \
-                   liblifeguard            \
                    libprocesswd            \
                    libdbusproxy            \
                    libalarmtracker         \
@@ -35,10 +34,6 @@ libstate_C_OBJS               := state.o
 state.o    : C_EXTRA_GENFLAGS := -fPIC
 librunlevel_C_OBJS            := runlevel.o
 runlevel.o : C_EXTRA_GENFLAGS := -fPIC
-
-liblifeguard_C_OBJS := lifeguard.o spawn.o
-lifeguard.o : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags glib-2.0)
-spawn.o     : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags glib-2.0)
 
 libprocesswd_C_OBJS := processwd.o
 processwd.o : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags glib-2.0)
@@ -89,7 +84,6 @@ $(INSTALL_BINARIES): INSTALL_DIR    :=  $(DESTDIR)/sbin
 INSTALL_SO_LIBRARIES    :=  libstartup.so        \
                             libheartbeat.so      \
                             libprocesswd.so      \
-                            liblifeguard.so      \
                             libstate.so          \
                             librunlevel.so       \
                             libdbusproxy.so      \
