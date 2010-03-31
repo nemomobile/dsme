@@ -38,7 +38,6 @@
 
 #define _XOPEN_SOURCE
 
-#include "spawn.h"
 #include "heartbeat.h"
 
 #include "dsme/modules.h"
@@ -282,11 +281,6 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESSWD_DELETE, conn, msg)
   swwd_del(msg->pid);
 }
 
-DSME_HANDLER(DSM_MSGTYPE_PROCESS_EXITED, conn, msg)
-{
-  swwd_del(msg->pid);
-}
-
 /**
  * 	If socket closed remove it from checking list 
  */
@@ -326,7 +320,6 @@ module_fn_info_t message_handlers[] = {
       DSME_HANDLER_BINDING(DSM_MSGTYPE_PROCESSWD_DELETE),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_PROCESSWD_PONG),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_HEARTBEAT),
-      DSME_HANDLER_BINDING(DSM_MSGTYPE_PROCESS_EXITED),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_CLOSE),
       {0}
 };
