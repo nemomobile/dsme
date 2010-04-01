@@ -303,7 +303,7 @@ main (int argc, char *argv[])
     }
     else
     if (st >= 0) {
-      if (now - then > SLEEP_TIME)  /* allow 1 sec slippage */
+      if (now - then > SLEEP_TIME + 1)  /* allow 1 sec slippage */
 	fprintf(stderr, ME "\aERROR, select() did not fire as expected, took %d secs\n", 
 		(int)(now - then));
 
