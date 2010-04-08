@@ -50,7 +50,7 @@ static void send_usb_status(bool mounted_to_pc)
 
     dsme_log(LOG_DEBUG,
              "broadcasting usb state:%s mounted to PC",
-             msg.mounted_to_pc ? "", " not");
+             msg.mounted_to_pc ? "" : " not");
     broadcast_internally(&msg);
 }
 

@@ -23,6 +23,8 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#define _POSIX_SOURCE
+
 #include "state-internal.h"
 #include "runlevel.h"
 #include "dsme/timers.h"
@@ -697,35 +699,13 @@ static bool rd_mode_enabled(void)
   return enabled;
 }
 
-static bool scan_file(const char* filename,
-                      const char* format,
-                      int         expected_items,
-                      ...)
-{
-    FILE*   fp;
-    int     scanned_items;
-    va_list ap;
-
-    if ((fp = fopen(filename, "r")) == NULL) {
-        return false;
-    }
-
-    va_start(ap, expected_items);
-    scanned_items = vfscanf(fp, format, ap);
-    va_end(ap);
-
-    fclose(fp);
-
-    return scanned_items != EOF &&
-           (expected_items == -1 || scanned_items == expected_items);
-}
-
 module_fn_info_t message_handlers[] = {
       DSME_HANDLER_BINDING(DSM_MSGTYPE_STATE_QUERY),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SHUTDOWN_REQ),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_POWERUP_REQ),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_REBOOT_REQ),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_ALARM_STATE),
+      DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_USB_STATE),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_CHARGER_STATE),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_THERMAL_STATE),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_EMERGENCY_CALL_STATE),
