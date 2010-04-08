@@ -153,7 +153,7 @@ static dsme_runlevel_t state2runlevel(dsme_state_t state)
       case DSME_STATE_BOOT:     /* FALL THROUGH */
       case DSME_STATE_LOCAL:    /* FALL THROUGH */
       case DSME_STATE_MALF:     /* FALL THROUGH */
-      default:                  runlevel = DSME_RUNLEVEL_MALF; break;
+      default:                  runlevel = DSME_RUNLEVEL_SHUTDOWN; break;
   }
 
   return runlevel;
