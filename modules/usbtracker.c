@@ -56,7 +56,7 @@ static void send_usb_status(bool mounted_to_pc)
 
 static void usb_state_ind(const DsmeDbusMessage* ind)
 {
-    static bool mounted_to_pc = false;
+    bool mounted_to_pc = false;
 
     // TODO:
     if (strcmp(dsme_dbus_message_get_string(ind), "mass-storage") == 0) {
@@ -98,7 +98,7 @@ void module_init(module_t* handle)
    * Instead, wait for DSM_MSGTYPE_DBUS_CONNECT.
    */
 
-  dsme_log(LOG_DEBUG, "libusbracker.so loaded");
+  dsme_log(LOG_DEBUG, "libusbtracker.so loaded");
 }
 
 void module_fini(void)
