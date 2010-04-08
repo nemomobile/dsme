@@ -23,6 +23,7 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "state-internal.h"
 #include "runlevel.h"
 #include "dsme/timers.h"
 #include "dsme/modules.h"
@@ -71,6 +72,7 @@ charger_state_t charger_state          = CHARGER_STATE_UNKNOWN;
 static bool     alarm_set              = false;
 static bool     device_overheated      = false;
 static bool     emergency_call_ongoing = false;
+static bool     mounted_to_pc          = false;
 static bool     battery_empty          = false;
 static bool     shutdown_requested     = false;
 static bool     reboot_requested       = false;
@@ -111,7 +113,6 @@ static int  delayed_charger_disconnect_fn(void* unused);
 static void stop_charger_disconnect_timer(void);
 
 static bool rd_mode_enabled(void);
-static bool is_in_usb_mass_storage_mode(void);
 
 
 static const char* state_name(dsme_state_t state)
@@ -310,9 +311,10 @@ static bool is_state_change_request_acceptable(dsme_state_t requested_state)
 {
     bool acceptable = true;
 
+    // do not allow shutdown/reboot when in usb mass storage mode
     if ((requested_state == DSME_STATE_SHUTDOWN ||
          requested_state == DSME_STATE_REBOOT) &&
-        is_in_usb_mass_storage_mode())
+        mounted_to_pc)
     {
         acceptable = false;
         deny_state_change_request(requested_state, "usb");
@@ -517,6 +519,14 @@ DSME_HANDLER(DSM_MSGTYPE_SET_CHARGER_STATE, conn, msg)
 }
 
 
+DSME_HANDLER(DSM_MSGTYPE_SET_USB_STATE, conn, msg)
+{
+    mounted_to_pc = msg->mounted_to_pc;
+
+    dsme_log(LOG_CRIT, "%smounted over USB", mounted_to_pc ? "" : "not ");
+}
+
+
 /**
  * Shutdown requested.
  * We go to actdead state if alarm is set (or snoozed) or charger connected.
@@ -709,23 +719,6 @@ static bool scan_file(const char* filename,
     return scanned_items != EOF &&
            (expected_items == -1 || scanned_items == expected_items);
 }
-
-static bool is_in_usb_mass_storage_mode(void)
-{
-    int string_length = 0;
-
-    return (scan_file("/sys/devices/platform/musb_hdrc/gadget/gadget-lun0/file",
-                      "%*s%n",
-                      -1,
-                      &string_length) &&
-            string_length != 0) ||
-           (scan_file("/sys/devices/platform/musb_hdrc/gadget/gadget-lun1/file",
-                      "%*s%n",
-                      -1,
-                      &string_length) &&
-            string_length != 0);
-}
-
 
 module_fn_info_t message_handlers[] = {
       DSME_HANDLER_BINDING(DSM_MSGTYPE_STATE_QUERY),

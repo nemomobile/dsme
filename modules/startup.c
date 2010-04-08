@@ -82,6 +82,7 @@ const char *modules[] = {
     "libthermalobject_surface.so",
 #endif
     "libemergencycalltracker.so",
+    "libusbtracker.so",
     "libiphb.so",
     NULL
 };

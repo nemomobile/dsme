@@ -10,6 +10,7 @@ SO_LIBRARIES    := libstartup              \
                    libalarmtracker         \
                    libthermalmanager       \
                    libemergencycalltracker \
+                   libusbtracker           \
                    libiphb
 
 ifdef DSME_BMEIPC
@@ -66,6 +67,9 @@ endif
 libemergencycalltracker_C_OBJS := emergencycalltracker.o
 emergencycalltracker.o : C_EXTRA_GENFLAGS := -fPIC
 
+libusbtracker_C_OBJS := usbtracker.o
+usbtracker.o : C_EXTRA_GENFLAGS := -fPIC
+
 libiphb_C_OBJS := iphb.o
 iphb.o : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags glib-2.0) -I ../libiphb
 libiphb_EXTRA_LDFLAGS := -lbmeipc $$(pkg-config --libs glib-2.0)
@@ -90,6 +94,7 @@ INSTALL_SO_LIBRARIES    :=  libstartup.so        \
                             libalarmtracker.so   \
                             libthermalmanager.so \
                             libemergencycalltracker.so \
+                            libusbtracker.so     \
                             libiphb.so
 
 ifdef DSME_BMEIPC
