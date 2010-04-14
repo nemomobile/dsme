@@ -1,3 +1,10 @@
+dsme (0.61.8) unstable; urgency=low
+
+  * Remove lifeguard
+  * Add USB state tracking by listening to usb_moded on D-Bus
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Wed, 14 Apr 2010 14:54:20 +0000
+
 dsme (0.61.7) unstable; urgency=low
 
   * Split dsme to two processes: hwwd kicker (dsme) and the rest (dsme-server)
