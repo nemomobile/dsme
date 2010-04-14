@@ -24,11 +24,10 @@
    You should have received a copy of the GNU Lesser General Public
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
-// TODO: update the comment below
 /*
- * To change emergency call state, use one of these:
- * dbus-send --type=signal --system /com/nokia/dsme com.nokia.mce.signal.sig_call_state_ind string:none
- * dbus-send --type=signal --system /com/nokia/dsme com.nokia.mce.signal.sig_call_state_ind string:emergency
+ * To change usb state, use one of these:
+ * dbus-send --type=signal --system /com/nokia/dsme com.nokia.usb_moded.signal.sig_usb_state_ind string:mass-storage
+ * dbus-send --type=signal --system /com/nokia/dsme com.nokia.usb_moded.signal.sig_usb_state_ind string:none
  */
 
 #include "state-internal.h"
@@ -58,7 +57,6 @@ static void usb_state_ind(const DsmeDbusMessage* ind)
 {
     bool mounted_to_pc = false;
 
-    // TODO:
     if (strcmp(dsme_dbus_message_get_string(ind), "mass-storage") == 0) {
         mounted_to_pc = true;
     }
@@ -66,9 +64,8 @@ static void usb_state_ind(const DsmeDbusMessage* ind)
     send_usb_status(mounted_to_pc);
 }
 
-// TODO:
 static const dsme_dbus_signal_binding_t signals[] = {
-    { usb_state_ind, "com.nokia.usb_moded.signal", "state" },
+    { usb_state_ind, "com.nokia.usb_moded.signal", "sig_usb_state_ind" },
     { 0, 0 }
 };
 
