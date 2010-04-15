@@ -49,6 +49,7 @@ alarmtracker.o : C_EXTRA_GENFLAGS := -fPIC -D_GNU_SOURCE
 
 libthermalmanager_C_OBJS := thermalmanager.o
 thermalmanager.o : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags glib-2.0) -DDSME_THERMAL_TUNING #-DDSME_THERMAL_LOGGING
+libthermalmanager_EXTRA_LDFLAGS := -lthermalmanager_dbus_if
 #libthermalmanager_EXTRA_LDFLAGS := -lrt
 
 ifdef DSME_BMEIPC
