@@ -30,6 +30,10 @@
 #include "dsme/modules.h"
 #include "dsme/logging.h"
 
+#include "dsme_dbus.h"
+#include "dbusproxy.h"
+#include <dsme/thermalmanager_dbus_if.h>
+
 
 static bool get_surface_temperature(thermal_object_t*         thermal_object,
                                     temperature_handler_fn_t* callback);
@@ -52,7 +56,12 @@ static thermal_object_t surface_thermal_object = {
   false
 };
 
-static temperature_handler_fn_t* handle_temperature;
+static temperature_handler_fn_t* handle_temperature          = 0;
+static int                       latest_measured_temperature = 0;
+
+static const char* const         service   = thermalmanager_service;
+static const char* const         interface = thermalmanager_interface;
+
 
 static void report_surface_temperature(void* object, int temperature)
 {
@@ -63,6 +72,9 @@ static void report_surface_temperature(void* object, int temperature)
    * can be estimated by subtracting 7 deg C from battery temperature:
    */
   temperature = temperature - 7;
+
+  /* save the temperature for the D-Bus i/f */
+  latest_measured_temperature = temperature;
 
   if (handle_temperature) {
       thermal_object_t* thermal_object = object;
@@ -80,6 +92,39 @@ static bool get_surface_temperature(thermal_object_t*         thermal_object,
 }
 
 
+static void estimate_surface_temperature(const DsmeDbusMessage* request,
+                                         DsmeDbusMessage**      reply)
+{
+    *reply = dsme_dbus_reply_new(request);
+    dsme_dbus_message_append_int(*reply, latest_measured_temperature);
+}
+
+static const dsme_dbus_binding_t methods[] = {
+    { estimate_surface_temperature, "estimate_surface_temperature" },
+    { 0, 0 }
+};
+
+static bool bound = false;
+
+
+DSME_HANDLER(DSM_MSGTYPE_DBUS_CONNECT, client, msg)
+{
+  dsme_log(LOG_DEBUG, "DBUS_CONNECT");
+  dsme_dbus_bind_methods(&bound, methods, service, interface);
+}
+
+DSME_HANDLER(DSM_MSGTYPE_DBUS_DISCONNECT, client, msg)
+{
+  dsme_log(LOG_DEBUG, "DBUS_DISCONNECT");
+  dsme_dbus_unbind_methods(&bound, methods, service, interface);
+}
+
+module_fn_info_t message_handlers[] = {
+  DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_CONNECT),
+  DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_DISCONNECT),
+  { 0 }
+};
+
 void module_init(module_t* handle)
 {
   dsme_log(LOG_DEBUG, "libthermalobject_surface.so loaded");
@@ -89,6 +134,8 @@ void module_init(module_t* handle)
 
 void module_fini(void)
 {
+  dsme_dbus_unbind_methods(&bound, methods, service, interface);
+
   dsme_unregister_thermal_object(&surface_thermal_object);
 
   dsme_log(LOG_DEBUG, "libthermalobject_surface.so unloaded");
