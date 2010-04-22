@@ -69,6 +69,7 @@ DsmeDbusMessage* dsme_dbus_signal_new(const char* path,
                                       const char* name);
 
 void dsme_dbus_message_append_string(DsmeDbusMessage* msg, const char* s);
+void dsme_dbus_message_append_int(DsmeDbusMessage* msg, int i);
 
 int         dsme_dbus_message_get_int(const DsmeDbusMessage* msg);
 const char* dsme_dbus_message_get_string(const DsmeDbusMessage* msg);
