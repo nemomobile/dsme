@@ -78,6 +78,14 @@ void dsme_dbus_message_append_string(DsmeDbusMessage* msg, const char* s)
   }
 }
 
+void dsme_dbus_message_append_int(DsmeDbusMessage* msg, int i)
+{
+  if (msg) {
+      dbus_message_iter_append_basic(&msg->iter, DBUS_TYPE_INT32, &i);
+      // TODO: log append errors
+  }
+}
+
 static void message_iter_next(DBusMessageIter* iter)
 {
   if (dbus_message_iter_has_next(iter)) {
