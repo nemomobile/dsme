@@ -195,7 +195,7 @@ static int set_internal_alarm_state(void* dummy)
 
 static bool upcoming_alarms_exist()
 {
-    return actdead != INT_MAX;
+    return desktop != INT_MAX || actdead != INT_MAX;
 }
 
 static void set_external_alarm_state(void)
