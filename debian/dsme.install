@@ -6,4 +6,5 @@ debian/tmp/usr/sbin/waitfordsme
 debian/tmp/usr/sbin/dsmetool
 debian/tmp/usr/sbin/batttest
 debian/tmp/usr/sbin/bootstate
+debian/tmp/usr/sbin/dsmetemperature
 debian/tmp/etc/dsme/lifeguard.uids
