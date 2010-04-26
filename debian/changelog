@@ -1,3 +1,11 @@
+dsme (0.61.10) unstable; urgency=low
+
+  * Add com.nokia.thermalmanager.estimate_surface_temperature
+  * Add dsmetemperature script for logging estimated surface temperature
+  * Use both desktop and actdead alarms for externally broadcast alarms state
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Mon, 26 Apr 2010 08:59:40 +0000
+
 dsme (0.61.9) unstable; urgency=low
 
   * link thermal manager plug-in against its D-Bus interface
