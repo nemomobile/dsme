@@ -1,7 +1,7 @@
 #
 # Build targets
 #
-BINARIES     := dsme dsme-server dsme-exec-helper
+BINARIES     := dsme dsme-server
 SUBDIRS      := util modules libiphb
 
 VERSION := 0.61.10
@@ -13,7 +13,7 @@ INSTALL_PERM  := 644
 INSTALL_OWNER := $(shell id -u)
 INSTALL_GROUP := $(shell id -g)
 
-INSTALL_BINARIES                      := dsme dsme-server dsme-exec-helper
+INSTALL_BINARIES                      := dsme dsme-server
 $(INSTALL_BINARIES)    : INSTALL_PERM := 755
 $(INSTALL_BINARIES)    : INSTALL_DIR  := $(DESTDIR)/sbin
 
@@ -75,11 +75,6 @@ modulebase.o  : C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
 timers.o      : C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
 dsmesock.o    : C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
 
-
-# TODO: move dsme-exec-helper to modules/
-# dsme-exec-helper
-dsme-exec-helper_C_OBJS := dsme-exec-helper.o oom.o
-dsme-exec-helper.o : C_EXTRA_GENFLAGS := $$(pkg-config --cflags glib-2.0)
 
 
 #
