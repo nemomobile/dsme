@@ -39,12 +39,7 @@
 #include <string.h>
 #include <errno.h>
 #include <getopt.h>
-#include <signal.h>
 #include <time.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <sched.h>
 #include <sys/mman.h>

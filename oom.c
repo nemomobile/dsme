@@ -26,8 +26,6 @@
 #include "dsme/oom.h"
 
 #include <stdio.h>
-#include <sys/types.h>
-#include <unistd.h>
 #include <errno.h>
 
 #define OOM_ADJ_PATH            "/proc/self/oom_adj"
