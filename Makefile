@@ -26,7 +26,7 @@ C_GENFLAGS     := -DPRG_VERSION=$(VERSION) -pthread -g -std=c99 \
                   -Wall -Wwrite-strings -Wmissing-prototypes -Werror# -pedantic
 C_OPTFLAGS     := -O2 -s
 C_DBGFLAGS     := -g -DDEBUG -DDSME_LOG_ENABLE
-C_DEFINES      := DSME_POSIX_TIMER DSME_WD_SYNC
+C_DEFINES      :=
 # enable battery thermal mgmt
 C_DEFINES      += DSME_BMEIPC
 C_INCDIRS      := $(TOPDIR)/include $(TOPDIR)/modules $(TOPDIR)
@@ -57,6 +57,7 @@ dsme_C_OBJS       := dsme-wdd.o dsme-wdd-wd.o oom.o
 dsme: C_OPTFLAGS  := -O2 -s
 dsme: C_GENFLAGS  := -DPRG_VERSION=$(VERSION) -g -std=c99 \
                      -Wall -Wwrite-strings -Wmissing-prototypes -Werror
+dsme: C_DEFINES   :=
 dsme_LIBS         := cal
 dsme: LD_GENFLAGS :=
 
