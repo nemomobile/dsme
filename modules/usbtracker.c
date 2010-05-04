@@ -26,8 +26,8 @@
 */
 /*
  * To change usb state, use one of these:
- * dbus-send --type=signal --system /com/nokia/dsme com.nokia.usb_moded.signal.sig_usb_state_ind string:mass-storage
- * dbus-send --type=signal --system /com/nokia/dsme com.nokia.usb_moded.signal.sig_usb_state_ind string:none
+ * dbus-send --type=signal --system /com/meego/dsme com.meego.usb_moded.signal.sig_usb_state_ind string:mass_storage
+ * dbus-send --type=signal --system /com/meego/dsme com.meego.usb_moded.signal.sig_usb_state_ind string:none
  */
 
 #include "state-internal.h"
@@ -57,7 +57,7 @@ static void usb_state_ind(const DsmeDbusMessage* ind)
 {
     bool mounted_to_pc = false;
 
-    if (strcmp(dsme_dbus_message_get_string(ind), "mass-storage") == 0) {
+    if (strcmp(dsme_dbus_message_get_string(ind), "mass_storage") == 0) {
         mounted_to_pc = true;
     }
 
@@ -65,7 +65,7 @@ static void usb_state_ind(const DsmeDbusMessage* ind)
 }
 
 static const dsme_dbus_signal_binding_t signals[] = {
-    { usb_state_ind, "com.nokia.usb_moded.signal", "sig_usb_state_ind" },
+    { usb_state_ind, "com.meego.usb_moded.signal", "sig_usb_state_ind" },
     { 0, 0 }
 };
 
