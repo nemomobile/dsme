@@ -25,6 +25,7 @@
 #include "heartbeat.h"
 #include "dsme/modules.h"
 #include "dsme/logging.h"
+#include "dsme/mainloop.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -39,6 +40,14 @@ static gboolean emit_heartbeat_message(GIOChannel*  source,
                                        GIOCondition condition,
                                        gpointer     data)
 {
+    // handle errors
+    if (condition & (G_IO_ERR | G_IO_HUP)) {
+        // the wd process has probably died; remove the watch & quit
+        dsme_log(LOG_DEBUG, "heartbeat: I/O error or HUP");
+        dsme_main_loop_quit();
+        return false;
+    }
+
     // first read the byte that woke us up
     ssize_t bytes_read;
     char    c;
@@ -78,7 +87,11 @@ static bool start_heartbeat(void)
     if (!(chan = g_io_channel_unix_new(STDIN_FILENO))) {
         goto fail;
     }
-    if (!(watch = g_io_add_watch(chan, G_IO_IN, emit_heartbeat_message, 0))) {
+    if (!(watch = g_io_add_watch(chan,
+                                 (G_IO_IN | G_IO_ERR | G_IO_HUP),
+                                 emit_heartbeat_message,
+                                 0)))
+    {
         g_io_channel_unref(chan);
         goto fail;
     }
