@@ -55,9 +55,12 @@ static void send_usb_status(bool mounted_to_pc)
 
 static void usb_state_ind(const DsmeDbusMessage* ind)
 {
-    bool mounted_to_pc = false;
+    bool        mounted_to_pc = false;
+    const char* state         = dsme_dbus_message_get_string(ind);
 
-    if (strcmp(dsme_dbus_message_get_string(ind), "mass_storage") == 0) {
+    if (strcmp(state, "mass_storage") == 0 ||
+        strcmp(state, "data_in_use" ) == 0)
+    {
         mounted_to_pc = true;
     }
 
@@ -65,7 +68,7 @@ static void usb_state_ind(const DsmeDbusMessage* ind)
 }
 
 static const dsme_dbus_signal_binding_t signals[] = {
-    { usb_state_ind, "com.meego.usb_moded.signal", "sig_usb_state_ind" },
+    { usb_state_ind, "com.meego.usb_moded", "sig_usb_state_ind" },
     { 0, 0 }
 };
 
