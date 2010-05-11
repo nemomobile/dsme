@@ -25,7 +25,11 @@
 
 /*
  * How to send alarms to alarm tracker:
- * dbus-send --system --type=signal /com/nokia/alarmd com.nokia.alarmd.queue_status_ind int32:0 int32:1 int32:2 int32:3
+ * TODO: confirm with Ilya
+ * dbus-send --system --type=signal /com/nokia/timed com.nokia.timed.boot-up-event int32:0
+ * where the int32 parameter is either 0, meaning there are no pending alarms,
+ * or the time of the next/current alarm as returned by time(2).
+ * Notice that the time may be in the past for current alarms.
  */
 
 #include "dbusproxy.h"
@@ -51,10 +55,7 @@
 #define ALARM_STATE_FILE_TMP "/var/lib/dsme/alarm_queue_status.tmp"
 
 
-/* alarm queue head */
-static time_t active  = 0;       /* # of active alarms */
-static time_t desktop = INT_MAX; /* next desktop alarm */
-static time_t actdead = INT_MAX; /* next actdead alarm */
+static time_t alarm_queue_head = 0; /* time of next alarm, or 0 for none */
 
 static bool   alarm_state_file_up_to_date = false;
 static bool   external_state_alarm_set    = false;
@@ -76,7 +77,7 @@ static void save_alarm_queue_status_cb(void)
   } else {
       bool temp_file_ok = true;
 
-      if (fprintf(f, "%ld, %ld, %ld\n", active, desktop, actdead) < 0) {
+      if (fprintf(f, "%ld\n", alarm_queue_head) < 0) {
           dsme_log_raw(LOG_DEBUG, "Error writing %s", ALARM_STATE_FILE_TMP);
           temp_file_ok = false;
       }
@@ -102,10 +103,10 @@ static void save_alarm_queue_status_cb(void)
 
   if (alarm_state_file_up_to_date) {
       dsme_log_raw(LOG_DEBUG,
-      "Alarm queue status saved to file %s",
+      "Alarm queue head saved to file %s",
       ALARM_STATE_FILE);
   } else {
-      dsme_log_raw(LOG_ERR, "Saving alarm queue status failed");
+      dsme_log_raw(LOG_ERR, "Saving alarm queue head failed");
       /* do not retry to avoid spamming the log */
       alarm_state_file_up_to_date = true;
   }
@@ -120,7 +121,7 @@ static void restore_alarm_queue_status(void)
   if ((f = fopen(ALARM_STATE_FILE, "r")) == 0) {
       dsme_log(LOG_DEBUG, "%s: %s", ALARM_STATE_FILE, strerror(errno));
   } else {
-      if (fscanf(f, "%ld, %ld, %ld", &active, &desktop, &actdead) != 3) {
+      if (fscanf(f, "%ld", &alarm_queue_head) != 1) {
           dsme_log(LOG_DEBUG, "Error reading file %s", ALARM_STATE_FILE);
       } else {
           alarm_state_file_up_to_date = true;
@@ -130,13 +131,9 @@ static void restore_alarm_queue_status(void)
   }
 
   if (alarm_state_file_up_to_date) {
-      dsme_log(LOG_DEBUG,
-               "Alarm queue status restored: %ld, %ld, %ld",
-               active,
-               desktop,
-               actdead);
+      dsme_log(LOG_DEBUG, "Alarm queue head restored: %ld", alarm_queue_head);
   } else {
-      dsme_log(LOG_WARNING, "Restoring alarm queue status failed");
+      dsme_log(LOG_WARNING, "Restoring alarm queue head failed");
   }
 }
 
@@ -159,22 +156,20 @@ static int set_internal_alarm_state(void* dummy)
       alarm_state_transition_timer = 0;
   }
 
-  if (active ||
-      (seconds(now, desktop) <= SNOOZE_TIMEOUT ||
-       seconds(now, actdead) <= SNOOZE_TIMEOUT))
-  {
-      /* alarm is either active or soon-to-be-active */
-      alarm_set = true;
-  } else {
-      /* set a timer for transition from not set to soon-to-be-active */
-      int transition = seconds(now, desktop < actdead ? desktop : actdead)
-                     - SNOOZE_TIMEOUT;
-      alarm_state_transition_timer = dsme_create_timer(transition,
-                                                       set_internal_alarm_state,
-                                                       0);
-      dsme_log(LOG_DEBUG, "next snooze in %d s", transition);
+  if (alarm_queue_head != 0) {
+      /* there is a queued or active alarm */
+      if (seconds(now, alarm_queue_head) <= SNOOZE_TIMEOUT) {
+          /* alarm is either active or soon-to-be-active */
+          alarm_set = true;
+      } else {
+          /* set a timer for transition from not set to soon-to-be-active */
+          int transition = seconds(now, alarm_queue_head) - SNOOZE_TIMEOUT;
+          alarm_state_transition_timer =
+              dsme_create_timer(transition, set_internal_alarm_state, 0);
+          dsme_log(LOG_DEBUG, "next snooze in %d s", transition);
 
-      alarm_set = false;
+          alarm_set = false;
+      }
   }
 
   if (alarm_set != alarm_previously_set) {
@@ -195,7 +190,7 @@ static int set_internal_alarm_state(void* dummy)
 
 static bool upcoming_alarms_exist()
 {
-    return desktop != INT_MAX || actdead != INT_MAX;
+    return alarm_queue_head != 0;
 }
 
 static void set_external_alarm_state(void)
@@ -226,37 +221,28 @@ static void set_alarm_state(void)
 
 static void alarmd_queue_status_ind(const DsmeDbusMessage* ind)
 {
-  time_t new_active  = dsme_dbus_message_get_int(ind);
-  time_t new_desktop = dsme_dbus_message_get_int(ind);
-  time_t new_actdead = dsme_dbus_message_get_int(ind);
-#if 0 /* non-booting alarms are not considered */
-  time_t new_noboot  = dsme_dbus_message_get_int(ind);
-#endif
+    time_t new_alarm_queue_head = dsme_dbus_message_get_int(ind);
 
-  if (!alarm_state_file_up_to_date ||
-      new_active  != active        ||
-      new_desktop != desktop       ||
-      new_actdead != actdead)
-  {
-      active  = new_active;
-      desktop = new_desktop;
-      actdead = new_actdead;
+    if (!alarm_state_file_up_to_date ||
+        new_alarm_queue_head != alarm_queue_head)
+    {
+        alarm_queue_head = new_alarm_queue_head;
 
-      dsme_log(LOG_DEBUG, "got new alarms: %ld, %ld, %ld", active, desktop, actdead);
+        dsme_log(LOG_DEBUG, "got new alarm: %ld", alarm_queue_head);
 
-      /* save alarm queue status in the logger thread */
-      alarm_state_file_up_to_date = false;
-      dsme_log_wakeup();
-  } else {
-      dsme_log(LOG_DEBUG, "got old alarms: %ld, %ld, %ld", active, desktop, actdead);
-  }
+        /* save alarm queue status in the logger thread */
+        alarm_state_file_up_to_date = false;
+        dsme_log_wakeup();
+    } else {
+        dsme_log(LOG_DEBUG, "got old alarm: %ld", alarm_queue_head);
+    }
 
-  set_alarm_state();
+    set_alarm_state();
 }
 
 
 static const dsme_dbus_signal_binding_t signals[] = {
-  { alarmd_queue_status_ind, "com.nokia.alarmd", "queue_status_ind" },
+  { alarmd_queue_status_ind, "com.nokia.timed", "next_bootup_event" },
   { 0, 0 }
 };
 
