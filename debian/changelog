@@ -1,3 +1,10 @@
+dsme (0.61.13) unstable; urgency=low
+
+  * Readjust to changes in usb_moded's D-Bus i/f
+  * Listen to timed instead of alarmd for alarm tracking
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Tue, 11 May 2010 09:46:39 +0000
+
 dsme (0.61.12) unstable; urgency=low
 
   * Fixes: NB#167251: exit dsme-server process if dsme process dies uncleanly
