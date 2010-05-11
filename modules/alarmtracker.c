@@ -25,8 +25,7 @@
 
 /*
  * How to send alarms to alarm tracker:
- * TODO: confirm with Ilya
- * dbus-send --system --type=signal /com/nokia/timed com.nokia.timed.boot-up-event int32:0
+ * dbus-send --system --type=signal /com/nokia/timed com.nokia.timed.next_bootup_event int32:0
  * where the int32 parameter is either 0, meaning there are no pending alarms,
  * or the time of the next/current alarm as returned by time(2).
  * Notice that the time may be in the past for current alarms.
