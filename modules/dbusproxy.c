@@ -29,7 +29,7 @@
  *
  * TODO:
  * - dsme.conf for D-Bus configuration
- * - dsme must not die if D-Bus goes down
+ * - dsme should cope with D-Bus restarts
  */
 #include "dbusproxy.h"
 #include "dsme_dbus.h"
@@ -110,6 +110,11 @@ static const dsme_dbus_binding_t methods[] = {
 static bool bound = false;
 
 
+static const char* shutdown_action_name(dsme_state_t state)
+{
+    return (state == DSME_STATE_REBOOT ? "reboot" : "shutdown");
+}
+
 static void emit_dsme_dbus_signal(const char* name)
 {
   DsmeDbusMessage* sig = dsme_dbus_signal_new(sig_path, sig_interface, name);
@@ -122,7 +127,13 @@ DSME_HANDLER(DSM_MSGTYPE_STATE_CHANGE_IND, server, msg)
       msg->state == DSME_STATE_ACTDEAD  ||
       msg->state == DSME_STATE_REBOOT)
   {
-    emit_dsme_dbus_signal(dsme_shutdown_ind);
+    DsmeDbusMessage* sig = dsme_dbus_signal_new(sig_path,
+                                                sig_interface,
+                                                dsme_shutdown_ind);
+    dsme_dbus_message_append_string(sig, shutdown_action_name(msg->state));
+
+    dsme_dbus_signal_emit(sig);
+
   }
 }
 
@@ -143,18 +154,17 @@ DSME_HANDLER(DSM_MSGTYPE_SAVE_DATA_IND, server, msg)
 
 DSME_HANDLER(DSM_MSGTYPE_STATE_REQ_DENIED_IND, server, msg)
 {
-    const char* request = (msg->state == DSME_STATE_SHUTDOWN ?
-                           "shutdown" : "reboot");
+    const char* denied_request = shutdown_action_name(msg->state);
 
     dsme_log(LOG_CRIT,
              "proxying %s request denial due to %s to D-Bus",
-             request,
+             denied_request,
              (const char*)DSMEMSG_EXTRA(msg));
 
     DsmeDbusMessage* sig = dsme_dbus_signal_new(sig_path,
                                                 sig_interface,
                                                 dsme_state_req_denied_ind);
-    dsme_dbus_message_append_string(sig, request );
+    dsme_dbus_message_append_string(sig, denied_request);
     dsme_dbus_message_append_string(sig, DSMEMSG_EXTRA(msg));
 
     dsme_dbus_signal_emit(sig);
