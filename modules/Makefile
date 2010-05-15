@@ -5,6 +5,7 @@ SO_LIBRARIES    := libstartup              \
                    libheartbeat            \
                    libstate                \
                    librunlevel             \
+                   libupstart              \
                    libprocesswd            \
                    libdbusproxy            \
                    libalarmtracker         \
@@ -35,6 +36,9 @@ libstate_C_OBJS               := state.o
 state.o    : C_EXTRA_GENFLAGS := -fPIC
 librunlevel_C_OBJS            := runlevel.o
 runlevel.o : C_EXTRA_GENFLAGS := -fPIC
+libupstart_C_OBJS             := upstart.o
+upstart.o  : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags dbus-1)
+libupstart_EXTRA_LDFLAGS := $$(pkg-config --libs dbus-1)
 
 libprocesswd_C_OBJS := processwd.o
 processwd.o : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags glib-2.0)
@@ -90,7 +94,7 @@ INSTALL_SO_LIBRARIES    :=  libstartup.so        \
                             libheartbeat.so      \
                             libprocesswd.so      \
                             libstate.so          \
-                            librunlevel.so       \
+                            libupstart.so        \
                             libdbusproxy.so      \
                             libalarmtracker.so   \
                             libthermalmanager.so \
