@@ -466,6 +466,12 @@ out:
     return true;
 }
 
+void dsme_log_set_verbosity(int verbosity)
+{
+    dsme_log(LOG_DEBUG, "setting logging verbosity to %d\n", verbosity);
+    logopt.verbosity = verbosity;
+}
+
 
 /*
  * This routine should be called before program termination. It will close

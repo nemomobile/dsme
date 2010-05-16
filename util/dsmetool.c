@@ -27,6 +27,7 @@
 
 #include "../modules/dbusproxy.h"
 #include "../modules/state-internal.h"
+#include "../include/dsme/logging.h"
 #include <dsme/state.h>
 #include <dsme/protocol.h>
 
@@ -49,12 +50,11 @@
 #define STRINGIFY(x)  STRINGIFY2(x)
 #define STRINGIFY2(x) #x
 
-void usage(const char* name);
-static int get_version(void);
 
 static dsmesock_connection_t* conn;
 
-void usage(const char* name)
+
+static void usage(const char* name)
 {
     printf("USAGE: %s <options>\n", name);
     printf(
@@ -65,6 +65,8 @@ void usage(const char* name)
 #endif
 "  -b --reboot                     Reboot the device\n"
 "  -v --version                    Print the versions of DSME and dsmetool\n"
+"  -t --telinit <runlevel name>    Change runlevel\n"
+"  -l --loglevel <0..7>            Change DSME's logging verbosity\n"
 "  -h --help                       Print usage\n");
 }
 
@@ -213,12 +215,25 @@ static int telinit(const char* runlevel)
     return EXIT_SUCCESS;
 }
 
+static int loglevel(unsigned level)
+{
+    DSM_MSGTYPE_SET_LOGGING_VERBOSITY msg =
+        DSME_MSG_INIT(DSM_MSGTYPE_SET_LOGGING_VERBOSITY);
+    msg.verbosity = level;
+
+    connect_to_dsme();
+    send_to_dsme(&msg);
+    disconnect_from_dsme();
+
+    return EXIT_SUCCESS;
+}
+
 int main(int argc, char* argv[])
 {
     const char* program_name  = argv[0];
     int         next_option;
     int         retval        = EXIT_SUCCESS;
-    const char* short_options = "hdsbvat:";
+    const char* short_options = "hdsbvat:l:";
     const struct option long_options[] = {
         {"help",       no_argument,       NULL, 'h'},
         {"start-dbus", no_argument,       NULL, 'd'},
@@ -227,6 +242,7 @@ int main(int argc, char* argv[])
         {"version",    no_argument,       NULL, 'v'},
         {"ta-test",    no_argument,       NULL, 'a'},
         {"telinit",    required_argument, NULL, 't'},
+        {"loglevel",   required_argument, NULL, 'l'},
         {0, 0, 0, 0}
     };
 
@@ -251,6 +267,17 @@ int main(int argc, char* argv[])
             case 't':
                 return telinit(optarg);
                 break;
+            case 'l':
+                {
+                    unsigned long level;
+                    errno = 0;
+                    level = strtoul(optarg, 0, 10);
+                    if (errno != 0 || level > 7) {
+                        usage(program_name);
+                        return EXIT_FAILURE;
+                    }
+                    return loglevel(atoi(optarg));
+                }
             case 'h':
                 usage(program_name);
                 return EXIT_SUCCESS;

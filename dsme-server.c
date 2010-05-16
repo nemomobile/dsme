@@ -188,7 +188,8 @@ static void parse_options(int      argc,           /* in  */
 
 static bool receive_and_queue_message(dsmesock_connection_t* conn)
 {
-  bool keep_connection = true;
+  bool                               keep_connection = true;
+  DSM_MSGTYPE_SET_LOGGING_VERBOSITY* logging;
 
   dsmemsg_generic_t* msg;
   msg = (dsmemsg_generic_t*)dsmesock_receive(conn);
@@ -196,6 +197,10 @@ static bool receive_and_queue_message(dsmesock_connection_t* conn)
       broadcast_internally_from_socket(msg, conn);
       if (DSMEMSG_CAST(DSM_MSGTYPE_CLOSE, msg)) {
         keep_connection = false;
+      } else if ((logging = DSMEMSG_CAST(DSM_MSGTYPE_SET_LOGGING_VERBOSITY,
+                                         msg)))
+      {
+          dsme_log_set_verbosity(logging->verbosity);
       }
       free(msg);
   }

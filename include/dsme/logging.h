@@ -25,6 +25,7 @@
 #ifndef DSME_LOGGING_H
 #define DSME_LOGGING_H
 
+#include "dsme/messages.h"
 /* Even if syslog is not used, use the message levels therein */
 #include <syslog.h>
 #include <stdbool.h>
@@ -35,12 +36,12 @@ extern "C" {
 
 /* Logging methods */
 typedef enum {
-    LOG_METHOD_NONE,		/* Suppress all the messages */
-    LOG_METHOD_STI,		/* Serial trace interface */
-    LOG_METHOD_STDOUT,		/* Print messages to stdout */
-    LOG_METHOD_STDERR,		/* Print messages to stderr */
-    LOG_METHOD_SYSLOG,		/* Use syslog(3) */
-    LOG_METHOD_FILE		/* Output messages to the file */
+    LOG_METHOD_NONE,   /* Suppress all the messages */
+    LOG_METHOD_STI,    /* Serial trace interface */
+    LOG_METHOD_STDOUT, /* Print messages to stdout */
+    LOG_METHOD_STDERR, /* Print messages to stderr */
+    LOG_METHOD_SYSLOG, /* Use syslog(3) */
+    LOG_METHOD_FILE    /* Output messages to the file */
 } log_method; 
 
 
@@ -69,7 +70,7 @@ void dsme_log_raw(int level, const char *fmt, ...) __attribute__((format(printf,
 void dsme_log_wakeup(void);
 int dsme_log_cb_attach(void (*fn)(void));
 int dsme_log_cb_detach(void (*fn)(void));
-  
+
 /* Macros */
 #define dsme_log(level, fmt...) dsme_log_txt(level, fmt)
 #else
@@ -77,16 +78,27 @@ int dsme_log_cb_detach(void (*fn)(void));
 #endif
 
 
+typedef struct {
+    DSMEMSG_PRIVATE_FIELDS
+    int verbosity;
+} DSM_MSGTYPE_SET_LOGGING_VERBOSITY;
 
-/** 
+enum {
+    DSME_MSG_ENUM(DSM_MSGTYPE_SET_LOGGING_VERBOSITY, 0x00001103),
+};
+
+
+/**
    Initializes the logging subsystem.
 */
-bool dsme_log_open(log_method method, int verbosity, int usetime, 
-		     const char *prefix, int facility, int option,
-		     const char *filename);
+bool dsme_log_open(log_method method, int verbosity, int usetime,
+                   const char *prefix, int facility, int option,
+                   const char *filename);
+
+void dsme_log_set_verbosity(int verbosity);
 
 
-/** 
+/**
    Flushes and shuts down the logging subsystem.
 */
 void dsme_log_close(void);
