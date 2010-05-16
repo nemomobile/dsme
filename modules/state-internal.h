@@ -34,9 +34,12 @@ typedef struct {
     bool mounted_to_pc;
 } DSM_MSGTYPE_SET_USB_STATE;
 
+typedef dsmemsg_generic_t DSM_MSGTYPE_TELINIT;
+
 
 enum {
     DSME_MSG_ENUM(DSM_MSGTYPE_SET_USB_STATE, 0x00000317),
+    DSME_MSG_ENUM(DSM_MSGTYPE_TELINIT,       0x00000318),
 };
 
 #endif

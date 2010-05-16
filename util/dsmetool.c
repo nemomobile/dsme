@@ -26,6 +26,7 @@
 #define _GNU_SOURCE
 
 #include "../modules/dbusproxy.h"
+#include "../modules/state-internal.h"
 #include <dsme/state.h>
 #include <dsme/protocol.h>
 
@@ -88,6 +89,15 @@ static void send_to_dsme(const void* msg)
         exit(EXIT_FAILURE);
     }
 }
+
+static void send_to_dsme_with_string(const void* msg, const char* s)
+{
+    if (dsmesock_send_with_extra(conn, msg, strlen(s) + 1, s) == -1) {
+        perror("dsmesock_send_with_extra");
+        exit(EXIT_FAILURE);
+    }
+}
+
 
 static int get_version(void)
 {
@@ -191,25 +201,37 @@ static int send_ta_test_request()
     return EXIT_SUCCESS;
 }
 
+static int telinit(const char* runlevel)
+{
+    DSM_MSGTYPE_TELINIT msg = DSME_MSG_INIT(DSM_MSGTYPE_TELINIT);
+
+    connect_to_dsme();
+    send_to_dsme_with_string(&msg, runlevel);
+    // TODO: wait for OK/NOK from dsme
+    disconnect_from_dsme();
+
+    return EXIT_SUCCESS;
+}
+
 int main(int argc, char* argv[])
 {
     const char* program_name  = argv[0];
     int         next_option;
     int         retval        = EXIT_SUCCESS;
-    const char* short_options = "hdsbva";
+    const char* short_options = "hdsbvat:";
     const struct option long_options[] = {
-        {"help",               0, NULL, 'h'},
-        {"start-dbus",         0, NULL, 'd'},
-        {"stop-dbus",          0, NULL, 's'},
-        {"reboot",             0, NULL, 'b'},
-        {"version",            0, NULL, 'v'},
-        {"ta-test",            0, NULL, 'a'},
+        {"help",       no_argument,       NULL, 'h'},
+        {"start-dbus", no_argument,       NULL, 'd'},
+        {"stop-dbus",  no_argument,       NULL, 's'},
+        {"reboot",     no_argument,       NULL, 'b'},
+        {"version",    no_argument,       NULL, 'v'},
+        {"ta-test",    no_argument,       NULL, 'a'},
+        {"telinit",    required_argument, NULL, 't'},
         {0, 0, 0, 0}
     };
 
     do {
-        next_option =
-            getopt_long(argc, argv, short_options, long_options, NULL);
+        next_option = getopt_long(argc, argv, short_options, long_options, 0);
         switch (next_option) {
             case 'd':
                 return send_dbus_service_start_request();
@@ -225,6 +247,9 @@ int main(int argc, char* argv[])
                 break;
             case 'a':
                 return send_ta_test_request();
+                break;
+            case 't':
+                return telinit(optarg);
                 break;
             case 'h':
                 usage(program_name);
