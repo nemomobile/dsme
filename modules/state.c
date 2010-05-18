@@ -548,17 +548,21 @@ DSME_HANDLER(DSM_MSGTYPE_SET_USB_STATE, conn, msg)
 // handlers for telinit requests
 static void handle_telinit_NOT_SET(endpoint_t* conn)
 {
-    dsme_log(LOG_CRIT, "unknown telinit runlevel requested");
+    dsme_log(LOG_CRIT, "ignoring unknown telinit runlevel request");
 }
 
 static void handle_telinit_SHUTDOWN(endpoint_t* conn)
 {
-    dsme_log(LOG_CRIT, "telinit SHUTDOWN unimplemented");
+    if (is_state_change_request_acceptable(DSME_STATE_SHUTDOWN)) {
+        shutdown_requested = true;
+        change_state_if_necessary();
+    }
 }
 
 static void handle_telinit_USER(endpoint_t* conn)
 {
-    dsme_log(LOG_CRIT, "telinit USER unimplemented");
+    shutdown_requested = false;
+    change_state_if_necessary();
 }
 
 static void handle_telinit_ACTDEAD(endpoint_t* conn)
@@ -568,7 +572,10 @@ static void handle_telinit_ACTDEAD(endpoint_t* conn)
 
 static void handle_telinit_REBOOT(endpoint_t* conn)
 {
-    dsme_log(LOG_CRIT, "telinit REBOOT unimplemented");
+    if (is_state_change_request_acceptable(DSME_STATE_REBOOT)) {
+        reboot_requested = true;
+        change_state_if_necessary();
+    }
 }
 
 static void handle_telinit_TEST(endpoint_t* conn)
@@ -646,10 +653,7 @@ DSME_HANDLER(DSM_MSGTYPE_SHUTDOWN_REQ, conn, msg)
            (sender ? sender : "(unknown)"));
   free(sender);
 
-  if (is_state_change_request_acceptable(DSME_STATE_SHUTDOWN)) {
-      shutdown_requested = true;
-      change_state_if_necessary();
-  }
+  handle_telinit_SHUTDOWN(conn);
 }
 
 DSME_HANDLER(DSM_MSGTYPE_REBOOT_REQ, conn, msg)
@@ -660,10 +664,7 @@ DSME_HANDLER(DSM_MSGTYPE_REBOOT_REQ, conn, msg)
            (sender ? sender : "(unknown)"));
   free(sender);
 
-  if (is_state_change_request_acceptable(DSME_STATE_REBOOT)) {
-      reboot_requested = true;
-      change_state_if_necessary();
-  }
+  handle_telinit_REBOOT(conn);
 }
 
 
@@ -679,8 +680,7 @@ DSME_HANDLER(DSM_MSGTYPE_POWERUP_REQ, conn, msg)
            (sender ? sender : "(unknown)"));
   free(sender);
 
-  shutdown_requested = false;
-  change_state_if_necessary();
+  handle_telinit_USER(conn);
 }
 
 
