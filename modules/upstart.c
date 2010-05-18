@@ -40,12 +40,90 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <utmpx.h>
+#include <sys/utsname.h>
+#include <sys/time.h>
 
 
 static bool save_state_for_getbootstate(dsme_runlevel_t runlevel);
 static bool telinit(dsme_runlevel_t runlevel);
 static void shutdown(dsme_runlevel_t runlevel);
 static bool remount_mmc_readonly(void);
+
+
+static int current_runlevel_in_utmp()
+{
+    int           runlevel = 0;
+    struct utmpx  utmp;
+    struct utmpx* utmp_runlevel;
+
+    memset(&utmp, 0, sizeof utmp);
+    utmp.ut_type = RUN_LVL;
+
+    utmpxname(_PATH_UTMPX);
+    setutxent();
+    utmp_runlevel = getutxid(&utmp);
+    if (utmp_runlevel) {
+        runlevel = utmp_runlevel->ut_pid % 256;
+        int prevlevel = utmp_runlevel->ut_pid / 256;
+        dsme_log(LOG_DEBUG,
+                 "read from utmp: %c (%d), %c (%d)",
+                 prevlevel, prevlevel, runlevel, runlevel);
+    } else {
+        dsme_log(LOG_DEBUG, "could not read from utmp");
+    }
+    endutxent();
+
+    return runlevel > 0 ? runlevel : 'N';
+}
+
+/*
+ * since we are bypassing upstart's telinit,
+ * we have to update utmp & wtmp by hand.
+ * Notice that this is much simplified from
+ * how upstart does it -- perhaps too much?
+ */
+static bool save_state_in_utmp_and_wtmp(dsme_runlevel_t runlevel)
+{
+    bool         saved = false;
+    struct utmpx utmp;
+    int          prevlevel = current_runlevel_in_utmp();
+
+    runlevel += '0';
+
+    // first populate the utmpx struct
+    memset(&utmp, 0, sizeof utmp);
+    utmp.ut_type = RUN_LVL;
+    utmp.ut_pid  = runlevel + prevlevel * 256;
+    strncpy(utmp.ut_line, "~",        sizeof utmp.ut_line);
+    strncpy(utmp.ut_id,   "~~",       sizeof utmp.ut_id);
+    strncpy(utmp.ut_user, "runlevel", sizeof utmp.ut_user);
+
+    struct utsname uts;
+    if (uname(&uts) == 0) {
+        strncpy(utmp.ut_host, uts.release, sizeof utmp.ut_host);
+    }
+
+    struct timeval tv;
+    gettimeofday(&tv, 0);
+    utmp.ut_tv.tv_sec  = tv.tv_sec;
+    utmp.ut_tv.tv_usec = tv.tv_usec;
+
+    // then write the utmpx struct to both utmp & wtmp
+    utmpxname(_PATH_UTMPX);
+    setutxent();
+    if (pututxline(&utmp)) {
+        saved = true;
+        dsme_log(LOG_DEBUG,
+                 "saved to utmp: %c (%d), %c (%d)",
+                 prevlevel, prevlevel, runlevel, runlevel);
+    }
+    endutxent();
+
+    updwtmpx(_PATH_WTMPX, &utmp);
+
+    return saved;
+}
 
 
 static bool save_state_for_getbootstate(dsme_runlevel_t runlevel)
@@ -55,16 +133,16 @@ static bool save_state_for_getbootstate(dsme_runlevel_t runlevel)
 
     /* write out saved state for getbootstate */
     switch (runlevel) {
-        case '1':
+        case DSME_RUNLEVEL_TEST:
             state = "TEST";
             break;
-        case '2':
+        case DSME_RUNLEVEL_USER:
             state = "USER";
             break;
-        case '3':
+        case DSME_RUNLEVEL_LOCAL:
             state = "LOCAL";
             break;
-        case '5':
+        case DSME_RUNLEVEL_ACTDEAD:
             state = "ACT_DEAD";
             break;
         default:
@@ -196,6 +274,12 @@ static bool telinit(dsme_runlevel_t runlevel)
     int wait = false;
     if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_BOOLEAN, &wait)) {
         dsme_log(LOG_CRIT, "Cannot append to message");
+        goto done;
+    }
+
+    if (!save_state_in_utmp_and_wtmp(runlevel))
+    {
+        dsme_log(LOG_CRIT, "Error saving state in utmp");
         goto done;
     }
 

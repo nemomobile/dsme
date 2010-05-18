@@ -164,14 +164,14 @@ static dsme_runlevel_t state2runlevel(dsme_state_t state)
 
   switch (state) {
       case DSME_STATE_SHUTDOWN: runlevel = DSME_RUNLEVEL_SHUTDOWN; break;
-      case DSME_STATE_USER:     runlevel = DSME_RUNLEVEL_USER;     break;
       case DSME_STATE_TEST:     runlevel = DSME_RUNLEVEL_TEST;     break;
+      case DSME_STATE_USER:     runlevel = DSME_RUNLEVEL_USER;     break;
+      case DSME_STATE_LOCAL:    runlevel = DSME_RUNLEVEL_LOCAL;
       case DSME_STATE_ACTDEAD:  runlevel = DSME_RUNLEVEL_ACTDEAD;  break;
       case DSME_STATE_REBOOT:   runlevel = DSME_RUNLEVEL_REBOOT;   break;
 
       case DSME_STATE_NOT_SET:  /* FALL THROUGH */
       case DSME_STATE_BOOT:     /* FALL THROUGH */
-      case DSME_STATE_LOCAL:    /* FALL THROUGH */
       case DSME_STATE_MALF:     /* FALL THROUGH */
       default:                  runlevel = DSME_RUNLEVEL_SHUTDOWN; break;
   }
