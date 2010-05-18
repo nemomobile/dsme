@@ -78,6 +78,7 @@ static bool     emergency_call_ongoing = false;
 static bool     mounted_to_pc          = false;
 static bool     battery_empty          = false;
 static bool     shutdown_requested     = false;
+static bool     actdead_requested      = false;
 static bool     reboot_requested       = false;
 static bool     test                   = false;
 static bool     malf                   = false;
@@ -200,6 +201,9 @@ static dsme_state_t select_state(void)
       } else if (device_overheated) {
           dsme_log(LOG_CRIT, "Thermal shutdown!");
           state = DSME_STATE_SHUTDOWN;
+      } else if (actdead_requested) {
+          /* favor actdead requests over shutdown & reboot */
+          state = DSME_STATE_ACTDEAD;
       } else if (shutdown_requested || reboot_requested) {
           /* favor normal shutdown over reboot over actdead */
           if (shutdown_requested &&
@@ -555,6 +559,7 @@ static void handle_telinit_SHUTDOWN(endpoint_t* conn)
 {
     if (is_state_change_request_acceptable(DSME_STATE_SHUTDOWN)) {
         shutdown_requested = true;
+        actdead_requested  = false;
         change_state_if_necessary();
     }
 }
@@ -562,18 +567,23 @@ static void handle_telinit_SHUTDOWN(endpoint_t* conn)
 static void handle_telinit_USER(endpoint_t* conn)
 {
     shutdown_requested = false;
+    actdead_requested  = false;
     change_state_if_necessary();
 }
 
 static void handle_telinit_ACTDEAD(endpoint_t* conn)
 {
-    dsme_log(LOG_CRIT, "telinit ACTDEAD unimplemented");
+    if (is_state_change_request_acceptable(DSME_STATE_ACTDEAD)) {
+        actdead_requested = true;
+        change_state_if_necessary();
+    }
 }
 
 static void handle_telinit_REBOOT(endpoint_t* conn)
 {
     if (is_state_change_request_acceptable(DSME_STATE_REBOOT)) {
-        reboot_requested = true;
+        reboot_requested  = true;
+        actdead_requested = false;
         change_state_if_necessary();
     }
 }
