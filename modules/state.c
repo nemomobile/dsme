@@ -38,6 +38,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <strings.h>
 #include <signal.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -117,28 +118,43 @@ static void stop_charger_disconnect_timer(void);
 static bool rd_mode_enabled(void);
 
 
-static const char* state_name(dsme_state_t state)
-{
-  int         index;
-  const char* name = "*** UNKNOWN STATE ***";;
-
-  static const struct {
-      int         value;
-      const char* name;
-  } states[] = {
+static const struct {
+    int         value;
+    const char* name;
+} states[] = {
 #define DSME_STATE(STATE, VALUE) { VALUE, #STATE },
 #include <dsme/state_states.h>
 #undef  DSME_STATE
-  };
+};
 
-  for (index = 0; index < sizeof states / sizeof states[0]; ++index) {
-      if (states[index].value == state) {
-          name = states[index].name;
-          break;
-      }
-  }
+static const char* state_name(dsme_state_t state)
+{
+    int         index;
+    const char* name = "*** UNKNOWN STATE ***";;
 
-  return name;
+    for (index = 0; index < sizeof states / sizeof states[0]; ++index) {
+        if (states[index].value == state) {
+            name = states[index].name;
+            break;
+        }
+    }
+
+    return name;
+}
+
+static const dsme_state_t state_value(const char* name)
+{
+    int          index;
+    dsme_state_t state = DSME_STATE_NOT_SET;
+
+    for (index = 0; index < sizeof states / sizeof states[0]; ++index) {
+        if (strcasecmp(states[index].name, name) == 0) {
+            state = states[index].value;
+            break;
+        }
+    }
+
+    return state;
 }
 
 static dsme_runlevel_t state2runlevel(dsme_state_t state)
@@ -529,6 +545,95 @@ DSME_HANDLER(DSM_MSGTYPE_SET_USB_STATE, conn, msg)
 }
 
 
+// handlers for telinit requests
+static void handle_telinit_NOT_SET(endpoint_t* conn)
+{
+    dsme_log(LOG_CRIT, "unknown telinit runlevel requested");
+}
+
+static void handle_telinit_SHUTDOWN(endpoint_t* conn)
+{
+    dsme_log(LOG_CRIT, "telinit SHUTDOWN unimplemented");
+}
+
+static void handle_telinit_USER(endpoint_t* conn)
+{
+    dsme_log(LOG_CRIT, "telinit USER unimplemented");
+}
+
+static void handle_telinit_ACTDEAD(endpoint_t* conn)
+{
+    dsme_log(LOG_CRIT, "telinit ACTDEAD unimplemented");
+}
+
+static void handle_telinit_REBOOT(endpoint_t* conn)
+{
+    dsme_log(LOG_CRIT, "telinit REBOOT unimplemented");
+}
+
+static void handle_telinit_TEST(endpoint_t* conn)
+{
+    dsme_log(LOG_CRIT, "telinit TEST unimplemented");
+}
+
+static void handle_telinit_MALF(endpoint_t* conn)
+{
+    dsme_log(LOG_CRIT, "telinit MALF unimplemented");
+}
+
+static void handle_telinit_BOOT(endpoint_t* conn)
+{
+    dsme_log(LOG_CRIT, "telinit BOOT unimplemented");
+}
+
+static void handle_telinit_LOCAL(endpoint_t* conn)
+{
+    dsme_log(LOG_CRIT, "telinit LOCAL unimplemented");
+}
+
+typedef void (telinit_handler_fn_t)(endpoint_t* conn);
+
+static telinit_handler_fn_t* telinit_handler(dsme_state_t state)
+{
+    static const struct {
+        dsme_state_t          state;
+        telinit_handler_fn_t* handler;
+    } handlers[] = {
+#define DSME_STATE(STATE, VALUE) \
+        { DSME_STATE_ ## STATE, handle_telinit_ ## STATE },
+#include <dsme/state_states.h>
+#undef  DSME_STATE
+    };
+
+    int index;
+    telinit_handler_fn_t* handler = handle_telinit_NOT_SET;
+
+    for (index = 0; index < sizeof states / sizeof states[0]; ++index) {
+        if (handlers[index].state == state) {
+            handler = handlers[index].handler;
+            break;
+        }
+    }
+
+    return handler;
+}
+
+DSME_HANDLER(DSM_MSGTYPE_TELINIT, conn, msg)
+{
+    const char* runlevel = DSMEMSG_EXTRA(msg);
+    char*       sender   = endpoint_name(conn);
+
+    dsme_log(LOG_CRIT,
+             "got telinit '%s' from %s",
+             runlevel ? runlevel : "(null)",
+             sender   ? sender   : "(unknown)");
+    free(sender);
+
+    if (runlevel) {
+        telinit_handler(state_value(runlevel))(conn);
+    }
+}
+
 /**
  * Shutdown requested.
  * We go to actdead state if alarm is set (or snoozed) or charger connected.
@@ -701,6 +806,7 @@ static bool rd_mode_enabled(void)
 
 module_fn_info_t message_handlers[] = {
       DSME_HANDLER_BINDING(DSM_MSGTYPE_STATE_QUERY),
+      DSME_HANDLER_BINDING(DSM_MSGTYPE_TELINIT),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SHUTDOWN_REQ),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_POWERUP_REQ),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_REBOOT_REQ),
