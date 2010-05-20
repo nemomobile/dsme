@@ -1,7 +1,7 @@
 /**
    @file alarmtracker.c
 
-   Track the alarm state from the alarm queue indications sent by alarmd.
+   Track the alarm state from the alarm queue indications sent by timed.
    This is needed for device state selection by the state module.
    <p>
    Copyright (C) 2009-2010 Nokia Corporation.
@@ -25,7 +25,7 @@
 
 /*
  * How to send alarms to alarm tracker:
- * dbus-send --system --type=signal /com/nokia/timed com.nokia.timed.next_bootup_event int32:0
+ * dbus-send --system --type=signal /com/nokia/time com.nokia.time.next_bootup_event int32:0
  * where the int32 parameter is either 0, meaning there are no pending alarms,
  * or the time of the next/current alarm as returned by time(2).
  * Notice that the time may be in the past for current alarms.
@@ -218,7 +218,7 @@ static void set_alarm_state(void)
 }
 
 
-static void alarmd_queue_status_ind(const DsmeDbusMessage* ind)
+static void alarm_queue_status_ind(const DsmeDbusMessage* ind)
 {
     time_t new_alarm_queue_head = dsme_dbus_message_get_int(ind);
 
@@ -241,7 +241,7 @@ static void alarmd_queue_status_ind(const DsmeDbusMessage* ind)
 
 
 static const dsme_dbus_signal_binding_t signals[] = {
-  { alarmd_queue_status_ind, "com.nokia.timed", "next_bootup_event" },
+  { alarm_queue_status_ind, "com.nokia.time", "next_bootup_event" },
   { 0, 0 }
 };
 
