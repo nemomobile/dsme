@@ -1,3 +1,15 @@
+dsme (0.61.14) unstable; urgency=low
+
+  * Talk to upstart's D-Bus socket instead of running telinit
+  * Proxy state changes to D-Bus
+  * Proxy state queries from D-Bus
+  * Update timed's D-Bus i/f name
+  * Add --telinit to dsmetool
+  * Add --loglevel to dsmetool
+  * Implemented: SWP#MaSSW-1758, SWP#MaSSW-1688
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Thu, 20 May 2010 04:28:11 +0000
+
 dsme (0.61.13) unstable; urgency=low
 
   * Readjust to changes in usb_moded's D-Bus i/f
