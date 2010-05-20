@@ -60,6 +60,19 @@ static void get_version(const DsmeDbusMessage* request, DsmeDbusMessage** reply)
                                   dsme_version ? dsme_version : "unknown");
 }
 
+// list of unanswered state query replies from D-Bus
+static GSList* state_replies = 0;
+
+static void get_state(const DsmeDbusMessage* request, DsmeDbusMessage** reply)
+{
+    // first create a reply and append it to the list of yet unsent replies
+    state_replies = g_slist_append(state_replies, dsme_dbus_reply_new(request));
+
+    // then proxy the query to the internal message queue
+    DSM_MSGTYPE_STATE_QUERY query = DSME_MSG_INIT(DSM_MSGTYPE_STATE_QUERY);
+    broadcast_internally(&query);
+}
+
 static void req_powerup(const DsmeDbusMessage* request, DsmeDbusMessage** reply)
 {
   char* sender = dsme_dbus_endpoint_name(request);
@@ -100,6 +113,7 @@ static void req_shutdown(const DsmeDbusMessage* request,
 
 static const dsme_dbus_binding_t methods[] = {
   { get_version,  dsme_get_version  },
+  { get_state,    dsme_get_state    },
   { req_powerup,  dsme_req_powerup  },
   { req_reboot,   dsme_req_reboot   },
   { req_shutdown, dsme_req_shutdown },
@@ -147,18 +161,29 @@ static void emit_dsme_dbus_signal(const char* name)
 
 DSME_HANDLER(DSM_MSGTYPE_STATE_CHANGE_IND, server, msg)
 {
-  if (msg->state == DSME_STATE_SHUTDOWN ||
-      msg->state == DSME_STATE_ACTDEAD  ||
-      msg->state == DSME_STATE_REBOOT)
-  {
-    emit_dsme_dbus_signal(dsme_shutdown_ind);
-  }
+    if (state_replies) {
+        // there are yet unsent replies to state queries; sent the first one
+        GSList* first_node = state_replies;
+        DsmeDbusMessage* first_reply = (DsmeDbusMessage*)(first_node->data);
+        dsme_dbus_message_append_string(first_reply, state_name(msg->state));
+        dsme_dbus_signal_emit(first_reply); // deletes the reply
+        first_node->data = 0;
+        state_replies = g_slist_delete_link(state_replies, first_node);
+    } else {
+        // this is a broadcast state change
+        if (msg->state == DSME_STATE_SHUTDOWN ||
+            msg->state == DSME_STATE_ACTDEAD  ||
+            msg->state == DSME_STATE_REBOOT)
+        {
+            emit_dsme_dbus_signal(dsme_shutdown_ind);
+        }
 
-  DsmeDbusMessage* sig = dsme_dbus_signal_new(sig_path,
-                                               sig_interface,
-                                               dsme_state_change_ind);
-  dsme_dbus_message_append_string(sig, state_name(msg->state));
-  dsme_dbus_signal_emit(sig);
+        DsmeDbusMessage* sig = dsme_dbus_signal_new(sig_path,
+                                                    sig_interface,
+                                                    dsme_state_change_ind);
+        dsme_dbus_message_append_string(sig, state_name(msg->state));
+        dsme_dbus_signal_emit(sig);
+    }
 }
 
 DSME_HANDLER(DSM_MSGTYPE_BATTERY_EMPTY_IND, server, msg)
