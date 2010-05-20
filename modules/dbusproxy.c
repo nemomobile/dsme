@@ -151,18 +151,14 @@ DSME_HANDLER(DSM_MSGTYPE_STATE_CHANGE_IND, server, msg)
       msg->state == DSME_STATE_ACTDEAD  ||
       msg->state == DSME_STATE_REBOOT)
   {
-    DsmeDbusMessage* sig = dsme_dbus_signal_new(sig_path,
-                                                sig_interface,
-                                                dsme_shutdown_ind);
-    dsme_dbus_message_append_string(sig, shutdown_action_name(msg->state));
-    dsme_dbus_signal_emit(sig);
+    emit_dsme_dbus_signal(dsme_shutdown_ind);
   }
 
-  DsmeDbusMessage* sig2 = dsme_dbus_signal_new(sig_path,
+  DsmeDbusMessage* sig = dsme_dbus_signal_new(sig_path,
                                                sig_interface,
                                                dsme_state_change_ind);
-  dsme_dbus_message_append_string(sig2, state_name(msg->state));
-  dsme_dbus_signal_emit(sig2);
+  dsme_dbus_message_append_string(sig, state_name(msg->state));
+  dsme_dbus_signal_emit(sig);
 }
 
 DSME_HANDLER(DSM_MSGTYPE_BATTERY_EMPTY_IND, server, msg)
