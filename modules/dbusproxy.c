@@ -115,6 +115,30 @@ static const char* shutdown_action_name(dsme_state_t state)
     return (state == DSME_STATE_REBOOT ? "reboot" : "shutdown");
 }
 
+static const struct {
+    int         value;
+    const char* name;
+} states[] = {
+#define DSME_STATE(STATE, VALUE) { VALUE, #STATE },
+#include <dsme/state_states.h>
+#undef  DSME_STATE
+};
+
+static const char* state_name(dsme_state_t state)
+{
+    int         index;
+    const char* name = "UNKNOWN";;
+
+    for (index = 0; index < sizeof states / sizeof states[0]; ++index) {
+        if (states[index].value == state) {
+            name = states[index].name;
+            break;
+        }
+    }
+
+    return name;
+}
+
 static void emit_dsme_dbus_signal(const char* name)
 {
   DsmeDbusMessage* sig = dsme_dbus_signal_new(sig_path, sig_interface, name);
@@ -131,10 +155,14 @@ DSME_HANDLER(DSM_MSGTYPE_STATE_CHANGE_IND, server, msg)
                                                 sig_interface,
                                                 dsme_shutdown_ind);
     dsme_dbus_message_append_string(sig, shutdown_action_name(msg->state));
-
     dsme_dbus_signal_emit(sig);
-
   }
+
+  DsmeDbusMessage* sig2 = dsme_dbus_signal_new(sig_path,
+                                               sig_interface,
+                                               dsme_state_change_ind);
+  dsme_dbus_message_append_string(sig2, state_name(msg->state));
+  dsme_dbus_signal_emit(sig2);
 }
 
 DSME_HANDLER(DSM_MSGTYPE_BATTERY_EMPTY_IND, server, msg)
