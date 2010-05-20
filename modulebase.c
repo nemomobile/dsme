@@ -266,6 +266,21 @@ static void remove_msghandlers(module_t* module)
 
 static const module_t* currently_handling_module = 0;
 
+const module_t* current_module(void)
+{
+    return currently_handling_module;
+}
+
+void enter_module(const module_t* module)
+{
+    currently_handling_module = module;
+}
+
+void leave_module()
+{
+    currently_handling_module = 0;
+}
+
 
 // TODO: all these returns and mallocs are a mess
 static void queue_message(const endpoint_t* from,

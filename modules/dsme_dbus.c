@@ -30,6 +30,7 @@
 
 #include "dsme/logging.h"
 #include "dsme/modules.h"
+#include "dsme/modulebase.h"
 
 #include <glib.h>
 #include <dbus/dbus.h>
@@ -182,15 +183,16 @@ typedef void Dispatch(const Dispatcher* dispatcher,
                       DBusMessage*      msg);
 
 struct Dispatcher {
-  CanDispatch* can_dispatch;
-  Dispatch*    dispatch;
+  CanDispatch*    can_dispatch;
+  Dispatch*       dispatch;
   union {
     DsmeDbusMethod*  method;
     DsmeDbusHandler* handler;
   } target;
-  const char*  interface;
-  const char*  name;
-  const char*  rules;
+  const char*     interface;
+  const char*     name;
+  const char*     rules;
+  const module_t* module;
 };
 
 static bool method_dispatcher_can_dispatch(const Dispatcher*  d,
@@ -293,7 +295,9 @@ static void method_dispatcher_dispatch(const Dispatcher* dispatcher,
   };
   DsmeDbusMessage* reply   = 0;
 
+  enter_module(dispatcher->module);
   dispatcher->target.method(&request, &reply);
+  leave_module();
 
   dbus_connection_unref(request.connection);
   dbus_message_unref(request.msg);
@@ -317,6 +321,7 @@ static Dispatcher* method_dispatcher_new(DsmeDbusMethod* method,
   dispatcher->interface     = interface;
   dispatcher->name          = name;
   dispatcher->rules         = rules;
+  dispatcher->module        = current_module();
 
   return dispatcher;
 }
@@ -338,7 +343,9 @@ static void handler_dispatcher_dispatch(const Dispatcher* dispatcher,
 
   dbus_message_iter_init(msg, &ind.iter);
 
+  enter_module(dispatcher->module);
   dispatcher->target.handler(&ind);
+  leave_module();
 
   dbus_connection_unref(ind.connection);
   dbus_message_unref(ind.msg);
@@ -356,6 +363,7 @@ static Dispatcher* handler_dispatcher_new(DsmeDbusHandler* handler,
   // NOTE: we don't bother to strdup()
   dispatcher->interface      = interface;
   dispatcher->name           = name;
+  dispatcher->module         = current_module();
 
   return dispatcher;
 }
