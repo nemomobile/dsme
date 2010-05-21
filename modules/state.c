@@ -203,6 +203,7 @@ static dsme_state_t select_state(void)
           state = DSME_STATE_SHUTDOWN;
       } else if (actdead_requested) {
           /* favor actdead requests over shutdown & reboot */
+          dsme_log(LOG_CRIT, "Actdead by request");
           state = DSME_STATE_ACTDEAD;
       } else if (shutdown_requested || reboot_requested) {
           /* favor normal shutdown over reboot over actdead */

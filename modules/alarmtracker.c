@@ -169,6 +169,9 @@ static int set_internal_alarm_state(void* dummy)
 
           alarm_set = false;
       }
+  } else {
+      /* there are no alarms */
+      alarm_set = false;
   }
 
   if (alarm_set != alarm_previously_set) {
