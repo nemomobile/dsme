@@ -1,3 +1,9 @@
+dsme (0.61.15) unstable; urgency=low
+
+  * Make dsme grok alarm queue becoming empty
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Fri, 21 May 2010 05:55:08 +0000
+
 dsme (0.61.14) unstable; urgency=low
 
   * Talk to upstart's D-Bus socket instead of running telinit
