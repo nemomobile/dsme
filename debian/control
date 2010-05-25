@@ -17,7 +17,7 @@ Standards-Version: 3.7.2
 Package: dsme
 Section: misc
 Architecture: any
-Depends: ${shlibs:Depends}
+Depends: ${shlibs:Depends}, libdsme0.2.0 (>= 0.61.4)
 Replaces: iphbd
 Provides: iphbd
 Conflicts: iphbd
