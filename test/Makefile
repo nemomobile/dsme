@@ -20,7 +20,8 @@ all: $(BINARIES)
 run:
 #	valgrind -q ./testdriver
 #	valgrind -q --tool=exp-omega ./testdriver
-	rm -f vcov.out; ~/local/bin/valgrind -q --tool=exp-vcov ./testdriver
-	perl ~/local/bin/vc_annotate vcov.out > vcov.txt
+#	rm -f vcov.out; ~/local/bin/valgrind -q --tool=exp-vcov ./testdriver
+#	perl ~/local/bin/vc_annotate vcov.out > vcov.txt
+	./testdriver
 
 include $(TOPDIR)/Rules.make

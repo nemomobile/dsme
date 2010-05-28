@@ -31,7 +31,6 @@
 #include "dsme/modulebase.h"
 #include "dsme/modules.h"
 #include "dsme/mainloop.h"
-#include "../modules/hwwd.h"
 
 #include <dsme/protocol.h>
 #include <dsme/dsmesock.h>
@@ -301,7 +300,6 @@ static void run_(testcase* test, const char* name)
 
 #include <dsme/state.h>
 #include "../modules/runlevel.h"
-#include "../modules/lifeguard.h"
 
 static void set_charger_state(module_t* state, bool connected)
 {
@@ -370,9 +368,11 @@ static void request_shutdown_expecting_actdead(module_t* state)
   assert(msg2->runlevel == 5);
   free(msg2);
 
+#if 0
   DSM_MSGTYPE_HWWD_KICK* msg3;
   assert((msg3 = queued(DSM_MSGTYPE_HWWD_KICK)));
   free(msg3);
+#endif
 
   assert(!timer_exists());
   assert(message_queue_is_empty());
@@ -396,9 +396,11 @@ static void expect_shutdown_or_reboot(module_t*    module,
 
   trigger_timer();
 
+#if 0
   DSM_MSGTYPE_HWWD_KICK* ind3;
   assert((ind3 = queued(DSM_MSGTYPE_HWWD_KICK)));
   free(ind3);
+#endif
 
   DSM_MSGTYPE_SHUTDOWN* msg3;
   assert((msg3 = queued(DSM_MSGTYPE_SHUTDOWN)));
@@ -428,7 +430,8 @@ static void request_shutdown_expecting_shutdown(module_t* state)
 }
 
 
-/* TEST CASES */
+
+/* LIBSTATE TEST CASES */
 
 static void testcase1(void)
 {
@@ -570,9 +573,11 @@ static void testcase5(void)
 
   // expect shutdown
   trigger_timer();
+#if 0
   DSM_MSGTYPE_HWWD_KICK* ind3;
   assert((ind3 = queued(DSM_MSGTYPE_HWWD_KICK)));
   free(ind3);
+#endif
   DSM_MSGTYPE_SHUTDOWN* msg2;
   assert((msg2 = queued(DSM_MSGTYPE_SHUTDOWN)));
   assert(msg2->runlevel == 0);
@@ -737,9 +742,11 @@ static void testcase12(void)
   assert((msg2 = queued(DSM_MSGTYPE_SHUTDOWN)));
   assert(msg2->runlevel == 0);
   free(msg2);
+#if 0
   DSM_MSGTYPE_HWWD_KICK* ind4;
   assert((ind4 = queued(DSM_MSGTYPE_HWWD_KICK)));
   free(ind4);
+#endif
   assert(!timer_exists());
   assert(message_queue_is_empty());
 
@@ -952,9 +959,11 @@ static void testcase18(void)
   assert((ind = queued(DSM_MSGTYPE_STATE_CHANGE_IND)));
   assert(ind->state == DSME_STATE_USER);
   free(ind);
+#if 0
   DSM_MSGTYPE_HWWD_KICK* ind2;
   assert((ind2 = queued(DSM_MSGTYPE_HWWD_KICK)));
   free(ind2);
+#endif
   DSM_MSGTYPE_CHANGE_RUNLEVEL* req;
   assert((req = queued(DSM_MSGTYPE_CHANGE_RUNLEVEL)));
   assert(req->runlevel == 2);
@@ -1048,12 +1057,14 @@ static void testcase21(void)
   assert(message_queue_is_empty());
   assert(timer_exists());
   trigger_timer();
+#if 0
   DSM_MSGTYPE_HWWD_KICK* ind3;
   assert((ind3 = queued(DSM_MSGTYPE_HWWD_KICK)));
   free(ind3);
+#endif
   DSM_MSGTYPE_SHUTDOWN* msg;
   assert((msg = queued(DSM_MSGTYPE_SHUTDOWN)));
-  assert(msg->runlevel == 8);
+  assert(msg->runlevel == 0);
   free(msg);
   assert(message_queue_is_empty());
   assert(!timer_exists());
@@ -1070,10 +1081,12 @@ static void testcase21(void)
   assert(message_queue_is_empty());
   assert(timer_exists());
   trigger_timer();
+#if 0
   assert((ind3 = queued(DSM_MSGTYPE_HWWD_KICK)));
   free(ind3);
+#endif
   assert((msg = queued(DSM_MSGTYPE_SHUTDOWN)));
-  assert(msg->runlevel == 8);
+  assert(msg->runlevel == 0);
   free(msg);
   assert(message_queue_is_empty());
   assert(!timer_exists());
@@ -1117,9 +1130,11 @@ static void testcase23(void)
   assert(timer_exists());
 
   trigger_timer();
+#if 0
   DSM_MSGTYPE_HWWD_KICK* ind4;
   assert((ind4 = queued(DSM_MSGTYPE_HWWD_KICK)));
   free(ind4);
+#endif
   DSM_MSGTYPE_SHUTDOWN* msg2;
   assert((msg2 = queued(DSM_MSGTYPE_SHUTDOWN)));
   assert(msg2->runlevel == 0);
@@ -1148,6 +1163,103 @@ static void testcase23(void)
 }
 
 
+
+/* LIBREBOOTLOOPDETECTOR TESTS */
+
+#define RLD_TMPFILE "/tmp/dsme_rld_test_file"
+
+static module_t* load_rld_module()
+{
+    module_t* module;
+
+    setenv("DSME_REBOOTLOOP_FILE", RLD_TMPFILE, true);
+    setenv("DSME_REBOOTLOOP_TIME", "2", true);
+    module = load_module_under_test("../modules/librebootloopdetector.so");
+    unsetenv("DSME_REBOOTLOOP_FILE");
+    unsetenv("DSME_REBOOTLOOP_TIME");
+
+    return module;
+}
+
+static bool get_reboot_count(unsigned* count)
+{
+    bool  got = false;
+    FILE* f;
+    f = fopen(RLD_TMPFILE, "r");
+    if (f) {
+        if (fscanf(f, "%*d %d", count) == 1) {
+            got = true;
+        }
+        fclose(f);
+    }
+
+    return got;
+}
+
+static void rldtest_first_boot()
+{
+    unlink(RLD_TMPFILE);
+    module_t* rld = load_rld_module();
+    unload_module_under_test(rld);
+
+    unsigned reboot_count;
+    assert(get_reboot_count(&reboot_count));
+    assert(reboot_count == 0);
+    assert(!timer_exists());
+    assert(message_queue_is_empty());
+}
+
+static void rldtest_slow_reboot()
+{
+    fprintf(stderr, "[sleeping for 3 seconds]\n");
+    sleep(3);
+    module_t* rld = load_rld_module();
+    unload_module_under_test(rld);
+
+    unsigned reboot_count;
+    assert(get_reboot_count(&reboot_count));
+    assert(reboot_count == 0);
+    assert(!timer_exists());
+    assert(message_queue_is_empty());
+}
+
+static void rldtest_quick_reboot()
+{
+    module_t* rld = load_rld_module();
+    unload_module_under_test(rld);
+
+    unsigned reboot_count;
+    assert(get_reboot_count(&reboot_count));
+    assert(reboot_count == 1);
+    assert(!timer_exists());
+    assert(message_queue_is_empty());
+}
+
+static void rldtest_too_many_reboots()
+{
+    fprintf(stderr, "[sleeping for 3 seconds]\n");
+    sleep(3);
+    int i;
+    for (i = 0; i <= 11; ++i) {
+        assert(!timer_exists());
+        assert(message_queue_is_empty());
+
+        module_t* rld = load_rld_module();
+        unload_module_under_test(rld);
+
+        unsigned reboot_count;
+        assert(get_reboot_count(&reboot_count));
+        assert(reboot_count == i);
+    }
+
+    assert(!timer_exists());
+    DSM_MSGTYPE_SHUTDOWN_REQ* msg;
+    assert((msg = queued(DSM_MSGTYPE_SHUTDOWN_REQ)));
+    free(msg);
+    assert(message_queue_is_empty());
+}
+
+
 /* MAIN */
 
 int main(int argc, const char* argv[])
@@ -1161,34 +1273,29 @@ int main(int argc, const char* argv[])
   run(testcase4);
   run(testcase5);
   run(testcase6);
-
   run(testcase7);
   run(testcase8);
   run(testcase9);
-
   run(testcase10);
-
   run(testcase11);
-
   run(testcase12);
-
   run(testcase13);
   run(testcase14);
   run(testcase15);
-
   run(testcase16);
   run(testcase17);
-
   run(testcase18);
-
   run(testcase19);
-
   run(testcase20);
   run(testcase21);
-
   run(testcase22);
-
   run(testcase23);
+
+  run(rldtest_first_boot);
+  run(rldtest_slow_reboot);
+  run(rldtest_quick_reboot);
+  run(rldtest_too_many_reboots);
+  run(rldtest_slow_reboot);
 
   finalize();
 
