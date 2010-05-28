@@ -29,6 +29,7 @@
 #include <dsme/state.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 #include <errno.h>
 
@@ -36,7 +37,7 @@
  * minimum number of seconds since previous startup/reboot
  * for a startup to be considered normal
  */
-#define DSME_MIN_REBOOT_TIME 120 // seconds
+#define DSME_DEFAULT_MIN_REBOOT_TIME 120 // seconds
 
 /* maximum number of unnormal reboots before going to MALF */
 #define DSME_MAX_REBOOT_COUNT 10 // times
@@ -45,21 +46,15 @@
 #define DSME_DEFAULT_STARTUP_INFO_FILE "/var/lib/dsme/startup_info"
 
 
-// TODO: use env to make this module testable
-static const char* startup_info_filename()
-{
-    return DSME_DEFAULT_STARTUP_INFO_FILE;
-}
+static const char* startup_info_filename    = 0;
+static       char* startup_info_tmpfilename = 0;
+static int         minimum_reboot_time      = DSME_DEFAULT_MIN_REBOOT_TIME;
 
-static const char* startup_info_tmpfilename()
-{
-    return DSME_DEFAULT_STARTUP_INFO_FILE ".tmp";
-}
 
 static bool read_startup_info(time_t* last_startup, unsigned* reboot_count)
 {
     bool        read     = false;
-    const char* filename = startup_info_filename();
+    const char* filename = startup_info_filename;
     FILE* f;
 
     if ((f = fopen(filename, "r")) == 0) {
@@ -79,7 +74,7 @@ static bool read_startup_info(time_t* last_startup, unsigned* reboot_count)
 
 static void write_startup_info(time_t startup_time, unsigned reboot_count)
 {
-    const char* tmpfilename = startup_info_tmpfilename();
+    const char* tmpfilename = startup_info_tmpfilename;
     FILE*       f;
 
     if ((f = fopen(tmpfilename, "w+")) == 0) {
@@ -98,7 +93,7 @@ static void write_startup_info(time_t startup_time, unsigned reboot_count)
         }
 
         if (temp_file_ok) {
-            const char* filename = startup_info_filename();
+            const char* filename = startup_info_filename;
 
             if (rename(tmpfilename, filename) != 0) {
                 dsme_log(LOG_DEBUG, "Error writing %s", filename);
@@ -119,7 +114,7 @@ static bool is_in_reboot_loop()
     if (read_startup_info(&last_startup, &reboot_count)) {
         unsigned long seconds = now - last_startup;
 
-        if (seconds < DSME_MIN_REBOOT_TIME) {
+        if (seconds < minimum_reboot_time) {
             if (++reboot_count > DSME_MAX_REBOOT_COUNT) {
 
                 reboot_loop_detected = true;
@@ -136,7 +131,7 @@ static bool is_in_reboot_loop()
         } else {
             dsme_log(LOG_DEBUG,
                      "%d s or over since last reboot; resetting reboot count",
-                     DSME_MIN_REBOOT_TIME);
+                     minimum_reboot_time);
             reboot_count = 0;
         }
     } else {
@@ -167,12 +162,24 @@ static void check_for_reboot_loop()
 
 void module_init(module_t* handle)
 {
-  dsme_log(LOG_DEBUG, "rebootloopdetector.so loaded");
+    dsme_log(LOG_DEBUG, "rebootloopdetector.so loaded");
 
-  check_for_reboot_loop();
+    const char* s = getenv("DSME_REBOOTLOOP_FILE");
+    startup_info_filename = s ? s : DSME_DEFAULT_STARTUP_INFO_FILE;
+
+    startup_info_tmpfilename = malloc(strlen(startup_info_filename) + 5);
+    strcpy(startup_info_tmpfilename, startup_info_filename);
+    strcat(startup_info_tmpfilename, ".tmp");
+
+    const char* t = getenv("DSME_REBOOTLOOP_TIME");
+    minimum_reboot_time = t ? atoi(t) : DSME_DEFAULT_MIN_REBOOT_TIME;
+
+    check_for_reboot_loop();
 }
 
 void module_fini(void)
 {
-  dsme_log(LOG_DEBUG, "rebootloopdetector.so unloaded");
+    free(startup_info_tmpfilename);
+
+    dsme_log(LOG_DEBUG, "rebootloopdetector.so unloaded");
 }
