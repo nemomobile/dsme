@@ -1,3 +1,10 @@
+dsme (0.61.16) unstable; urgency=low
+
+  * Add reboot loop detection
+  * Fixes NB#170378: depend on the new libdsme
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Thu, 03 Jun 2010 10:40:18 +0000
+
 dsme (0.61.15) unstable; urgency=low
 
   * Make dsme grok alarm queue becoming empty
