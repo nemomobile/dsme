@@ -12,7 +12,8 @@ SO_LIBRARIES    := libstartup              \
                    libthermalmanager       \
                    libemergencycalltracker \
                    libusbtracker           \
-                   libiphb
+                   libiphb                 \
+                   librebootloopdetector
 
 ifdef DSME_BMEIPC
 SO_LIBRARIES    += libthermalobject_surface
@@ -81,6 +82,9 @@ libiphb_EXTRA_LDFLAGS := -lbmeipc $$(pkg-config --libs glib-2.0)
 
 MKDEP_INCFLAGS	:= $$(pkg-config --cflags-only-I glib-2.0 dbus-glib-1) -I ../libiphb
 
+librebootloopdetector_C_OBJS := rebootloopdetector.o
+rebootloopdetector.o : C_EXTRA_GENFLAGS := -fPIC
+
 #
 # Install files in this directory
 #
@@ -100,7 +104,8 @@ INSTALL_SO_LIBRARIES    :=  libstartup.so        \
                             libthermalmanager.so \
                             libemergencycalltracker.so \
                             libusbtracker.so     \
-                            libiphb.so
+                            libiphb.so           \
+                            librebootloopdetector.so
 
 ifdef DSME_BMEIPC
 INSTALL_SO_LIBRARIES	+=	libthermalobject_surface.so
