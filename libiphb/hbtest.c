@@ -129,7 +129,10 @@ main (int argc, char *argv[])
     addr.sin_family      = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
     addr.sin_port = htons(atoi(argv[2]));
-    inet_aton(argv[1], &addr.sin_addr);
+    if (inet_aton(argv[1], &addr.sin_addr) == 0) {
+        fprintf(stderr, ME "\nERROR invalid address '%s'\n", argv[1]);
+        goto close_sock_and_exit;
+    }
 
     if (debugmode) printf(ME "connecting to %s:%d, TCP keepalive period is %d\n", 
 			  inet_ntoa(addr.sin_addr), 
@@ -335,6 +338,7 @@ main (int argc, char *argv[])
   if (hb)
     iphb_close(hb);
 
+close_sock_and_exit:
   if (sock != -1)
     close(sock);
   return 0;
