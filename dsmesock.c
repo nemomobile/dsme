@@ -72,13 +72,14 @@ int dsmesock_listen(dsmesock_callback* read_and_queue)
   struct sockaddr_un laddr;
 
   dsmesock_filename = getenv("DSME_SOCKFILE");
-  if (dsmesock_filename == 0) {
+  if (dsmesock_filename == 0 || *dsmesock_filename == '\0') {
     dsmesock_filename = "/tmp/dsmesock";
   }
 
   memset(&laddr, 0, sizeof(laddr));
   laddr.sun_family = AF_UNIX;
-  strcpy(laddr.sun_path, dsmesock_filename);
+  strncpy(laddr.sun_path, dsmesock_filename, sizeof(laddr.sun_path) - 1);
+  laddr.sun_path[sizeof(laddr.sun_path) - 1] = 0;
 
   fd = socket(PF_UNIX, SOCK_STREAM, 0);
   if (fd == -1) {
