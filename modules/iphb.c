@@ -31,9 +31,12 @@
 
 #include "libiphb.h"
 #include "iphb_internal.h"
+#include "heartbeat.h"
 #include "dsme/modules.h"
+#include "dsme/modulebase.h"
 #include "dsme/logging.h"
 #include "dsme/timers.h"
+#include "dsme-wdd-wd.h"
 
 #include <stdlib.h>
 #include <fcntl.h>
@@ -52,7 +55,9 @@
 
 /**@brief  Allocated structure of one client in the linked client list in iphbd */
 typedef struct _client_t {
-    int               fd;           /*!< IPC (Unix domain) socket */
+    int               fd;           /*!< IPC (Unix domain) socket or -1 */
+    endpoint_t*       conn;         /*!< internal client endpoint (if fd == -1) */
+    void*             data;         /*!< internal client cookie (if fd == -1) */
     time_t            wait_started; /*!< 0 if client has not subscribed to wake-up call */
     unsigned short    mintime;      /*!< min time to sleep in secs */
     unsigned short    maxtime;      /*!< max time to sleep in secs */
@@ -69,19 +74,21 @@ static gboolean read_epoll(GIOChannel*  source,
                            GIOCondition condition,
                            gpointer     data);
 static int handle_wakeup_timeout(void* unused);
-int optimal_sleep_time(time_t now);
 static bool handle_client_req(struct epoll_event* event, time_t now);
-static bool handle_wait_req(struct _iphb_wait_req_t* req,
-                            client_t*                client,
-                            time_t                   now);
+static bool handle_wait_req(const struct _iphb_wait_req_t* req,
+                            client_t*                      client,
+                            time_t                         now);
 static condition_func mintime_passed;
 static condition_func maxtime_passed;
-static int wakeup_clients(condition_func should_wake_up, time_t now);
+static void wakeup_clients_if(condition_func should_wake_up, time_t now);
+static int wakeup_clients_if2(condition_func should_wake_up, time_t now);
 static bool wakeup(client_t* client, time_t now);
 static void delete_clients(void);
 static void delete_client(client_t* client);
 static void remove_client(client_t* client, client_t* prev);
 static void close_and_free_client(client_t* client);
+static void sync_hwwd_feeder(void);
+static void stop_wakeup_timer(void);
 
 
 static client_t* clients = NULL;	/* linked lits of connected clients */
@@ -252,6 +259,20 @@ static client_t* new_client(int fd)
     return client;
 }
 
+static client_t* new_internal_client(endpoint_t* conn, void* data)
+{
+    client_t* client = new_client(-1);
+    client->conn = endpoint_copy(conn);
+    client->data = data;
+
+    return client;
+}
+
+static bool is_external_client(const client_t* client)
+{
+    return client->fd != -1;
+}
+
 static void list_add_client(client_t* newclient)
 {
   client_t *client;
@@ -269,6 +290,38 @@ static void list_add_client(client_t* newclient)
   }
 }
 
+static client_t* list_find_internal_client(endpoint_t* conn, void* data)
+{
+    client_t* client = clients;
+
+    while (client) {
+        if (!is_external_client(client)       &&
+            endpoint_same(client->conn, conn) &&
+            client->data == data)
+        {
+            break;
+        }
+
+        client = client->next;
+    }
+
+    return client;
+}
+
+static int external_clients()
+{
+    int       count  = 0;
+    client_t* client = clients;
+
+    while (client) {
+        if (is_external_client(client)) {
+            ++count;
+        }
+        client = client->next;
+    }
+
+    return count;
+}
 
 
 
@@ -334,16 +387,12 @@ static gboolean read_epoll(GIOChannel*  source,
 {
     dsme_log(LOG_DEBUG, "epollfd readable");
 
-    /* stop timer, if any */
-    if (wakeup_timer) {
-        dsme_destroy_timer(wakeup_timer);
-        wakeup_timer = 0;
-    }
+    stop_wakeup_timer();
 
     struct epoll_event events[DSME_MAX_EPOLL_EVENTS];
     int                nfds;
     int                i;
-    bool               wakeup_mintime_sleepers = false;
+    condition_func*    wakeup_condition = maxtime_passed;
 
     while ((nfds = epoll_wait(epollfd, events, DSME_MAX_EPOLL_EVENTS, 0)) == -1
         && errno == EINTR)
@@ -378,34 +427,18 @@ static gboolean read_epoll(GIOChannel*  source,
                          strerror(errno));
             }
         } else if (events[i].data.ptr == &kernelfd) {
-            wakeup_mintime_sleepers = true;
+            wakeup_condition = mintime_passed;
         } else {
             /* deal with old clients */
             if (handle_client_req(&events[i], now)) {
-                wakeup_mintime_sleepers = true;
+                wakeup_condition = mintime_passed;
             }
         }
     }
 
-    // wake up clients in two passes
-    if (wakeup_clients(maxtime_passed, now) || wakeup_mintime_sleepers) {
-        dsme_log(LOG_DEBUG, "waking up clients because somebody woke up");
-        wakeup_clients(mintime_passed, now);
-    }
+    wakeup_clients_if(wakeup_condition, now);
 
-    // open or close the kernel fd as needed
-    if (!clients) {
-        close_kernel_fd();
-    } else if (kernelfd == -1) {
-        open_kernel_fd();
-    }
-
-    // set up sleep timeout
-    int sleep_time = optimal_sleep_time(now);
-    dsme_log(LOG_DEBUG, "waiting with sleep time %d s", sleep_time);
-    wakeup_timer = dsme_create_timer_high_priority(sleep_time,
-                                                   handle_wakeup_timeout,
-                                                   0);
+    sync_hwwd_feeder();
 
     // TODO: should we ever stop?
     return true;
@@ -413,43 +446,55 @@ static gboolean read_epoll(GIOChannel*  source,
 
 static int handle_wakeup_timeout(void* unused)
 {
-    dsme_log(LOG_DEBUG, "*** timeout ***");
-    bool wakeup_mintime_sleepers = false;
+    dsme_log(LOG_DEBUG, "*** TIMEOUT ***");
 
     time_t now = time(0);
 
-    // wake up clients in two passes
-    if (wakeup_clients(maxtime_passed, now) || wakeup_mintime_sleepers) {
-        dsme_log(LOG_DEBUG, "waking up clients because somebody was woken up");
-        wakeup_clients(mintime_passed, now);
-    }
+    wakeup_clients_if(maxtime_passed, now);
 
-    // set up sleep timeout
-    int sleep_time = optimal_sleep_time(now);
-    dsme_log(LOG_DEBUG, "waiting with sleep time %d s", sleep_time);
-    wakeup_timer = dsme_create_timer_high_priority(sleep_time,
-                                                   handle_wakeup_timeout,
-                                                   0);
+    sync_hwwd_feeder();
 
     return 0; /* stop the interval */
 }
 
-int optimal_sleep_time(time_t now)
+static bool is_timer_needed(int* optimal_sleep_time)
 {
-    int sleep_time = 60 * 60 * 60;
+    bool   client_found = false;
+    time_t now          = time(0);
+    int    sleep_time   = 0;
 
     client_t* client = clients;
     while (client) {
-        if (client->wait_started) {
-            if (client->wait_started + client->maxtime < now + sleep_time) {
-                sleep_time = client->wait_started + client->maxtime - now;
+        // only set up timers for external clients that are waiting
+        if (is_external_client(client) && client->wait_started) {
+            // does this client need to wake up before previous ones?
+            if (!client_found ||
+                client->wait_started + client->maxtime < now + sleep_time)
+            {
+                client_found = true;
+                // make sure to keep sleep_time >= 0
+                if (client->wait_started + client->maxtime <= now) {
+                    // this client should have been woken up already!
+                    sleep_time = 0;
+                    break;
+                } else {
+                    // we have a new shortest sleep time
+                    sleep_time = client->wait_started + client->maxtime - now;
+                }
             }
         }
 
         client = client->next;
     }
 
-    return sleep_time;
+    if (!client_found || sleep_time >= DSME_HEARTBEAT_INTERVAL) {
+        // either no client or we will wake up before the timer anyway
+        return false;
+    } else {
+        // a (short) timer has to be set up to guarantee a wakeup
+        *optimal_sleep_time = sleep_time;
+        return true;
+    }
 }
 
 
@@ -506,9 +551,9 @@ drop_client_and_fail:
     return false;
 }
 
-static bool handle_wait_req(struct _iphb_wait_req_t* req,
-                            client_t*                client,
-                            time_t                   now)
+static bool handle_wait_req(const struct _iphb_wait_req_t* req,
+                            client_t*                      client,
+                            time_t                         now)
 {
     bool client_woken = false;
 
@@ -557,6 +602,25 @@ static bool handle_wait_req(struct _iphb_wait_req_t* req,
 }
 
 
+static void wakeup_clients_if(condition_func* should_wake_up, time_t now)
+{
+    // wake up clients in two passes,
+    // giving priority to those whose maxtime has passed
+    if (wakeup_clients_if2(maxtime_passed, now) ||
+        should_wake_up == mintime_passed)
+    {
+        dsme_log(LOG_DEBUG, "waking up clients because somebody was woken up");
+        wakeup_clients_if2(mintime_passed, now);
+    }
+
+    // open or close the kernel fd as needed
+    if (!external_clients()) {
+        close_kernel_fd();
+    } else if (kernelfd == -1) {
+        open_kernel_fd();
+    }
+}
+
 static bool mintime_passed(client_t* client, time_t now)
 {
     return now >= client->wait_started + client->mintime;
@@ -567,7 +631,7 @@ static bool maxtime_passed(client_t* client, time_t now)
     return now >= client->wait_started + client->maxtime;
 }
 
-static int wakeup_clients(condition_func* should_wake_up, time_t now)
+static int wakeup_clients_if2(condition_func* should_wake_up, time_t now)
 {
     int woken_up_clients = 0;
 
@@ -607,22 +671,34 @@ next_client:
 
 static bool wakeup(client_t* client, time_t now)
 {
-    bool   woken_up               = false;
-    struct _iphb_wait_resp_t resp = { 0 };
+    bool woken_up = false;
 
-    resp.waited = now - client->wait_started;
+    if (is_external_client(client)) {
+        struct _iphb_wait_resp_t resp = { 0 };
+        resp.waited = now - client->wait_started;
 
-    client->wait_started = 0;
+        dsme_log(LOG_DEBUG,
+                 "waking up client with PID %lu who has slept %lu secs",
+                 (unsigned long)client->pid,
+                 resp.waited);
+        if (send(client->fd, &resp, sizeof(resp), MSG_DONTWAIT|MSG_NOSIGNAL) ==
+            sizeof(resp))
+        {
+            woken_up = true;
+        }
+    } else {
+        DSM_MSGTYPE_WAKEUP msg = DSME_MSG_INIT(DSM_MSGTYPE_WAKEUP);
+        msg.resp.waited = now - client->wait_started;
+        msg.data        = client->data;
 
-    dsme_log(LOG_DEBUG,
-             "waking up client with PID %lu who has slept %lu secs",
-             (unsigned long)client->pid,
-             resp.waited);
-    if (send(client->fd, &resp, sizeof(resp), MSG_DONTWAIT|MSG_NOSIGNAL) ==
-        sizeof(resp))
-    {
+        dsme_log(LOG_DEBUG,
+                 "waking up internal client who has slept %lu secs",
+                 msg.resp.waited);
+        endpoint_send(client->conn, &msg);
         woken_up = true;
     }
+
+    client->wait_started = 0;
 
     return woken_up;
 }
@@ -666,11 +742,89 @@ static void remove_client(client_t* client, client_t* prev)
 
 static void close_and_free_client(client_t* client)
 {
-    (void)epoll_ctl(epollfd, EPOLL_CTL_DEL, client->fd, 0);
-    (void)close(client->fd);
+    if (is_external_client(client)) {
+        (void)epoll_ctl(epollfd, EPOLL_CTL_DEL, client->fd, 0);
+        (void)close(client->fd);
+    } else {
+        endpoint_free(client->conn);
+    }
+
     free(client);
 }
 
+
+// synchronice to HW WD feeding process by listening to its heartbeat
+DSME_HANDLER(DSM_MSGTYPE_HEARTBEAT, conn, msg)
+{
+    dsme_log(LOG_DEBUG, "HEARTBEAT from HWWD");
+
+    stop_wakeup_timer();
+
+    time_t now = time(0);
+
+    // TODO: should we wake up mintime sleepers to sync on hwwd?
+    wakeup_clients_if(maxtime_passed, now);
+}
+
+static void sync_hwwd_feeder(void)
+{
+    kill(getppid(), SIGHUP);
+}
+
+DSME_HANDLER(DSM_MSGTYPE_WAIT, conn, msg)
+{
+    dsme_log(LOG_DEBUG, "WAIT req from an internal client");
+
+    stop_wakeup_timer();
+
+    time_t now = time(0);
+
+    client_t* client = list_find_internal_client(conn, msg->data);
+    if (!client) {
+        client = new_internal_client(conn, msg->data);
+        list_add_client(client);
+    }
+
+    handle_wait_req(&msg->req, client, now);
+
+    // we don't want to wake anyone else up for internal clients showing up
+    // TODO: or do we?
+
+    sync_hwwd_feeder();
+}
+
+DSME_HANDLER(DSM_MSGTYPE_IDLE, conn, msg)
+{
+    // the internal msg queue is empty so we will probably sleep for a while;
+    // see if we need to set up a timer to guarantee a timely wakeup
+    if (!wakeup_timer) {
+        int sleep_time;
+        if (is_timer_needed(&sleep_time)) {
+            dsme_log(LOG_DEBUG, "setting a wakeup in %d s", sleep_time);
+            wakeup_timer =
+                dsme_create_timer_high_priority(sleep_time,
+                                                handle_wakeup_timeout,
+                                                0);
+            dsme_log(LOG_DEBUG, "%s", "");
+        }
+    }
+}
+
+static void stop_wakeup_timer(void)
+{
+    if (wakeup_timer) {
+        dsme_destroy_timer(wakeup_timer);
+        wakeup_timer = 0;
+    }
+}
+
+
+module_fn_info_t message_handlers[] = {
+    DSME_HANDLER_BINDING(DSM_MSGTYPE_HEARTBEAT),
+    DSME_HANDLER_BINDING(DSM_MSGTYPE_WAIT),
+    DSME_HANDLER_BINDING(DSM_MSGTYPE_IDLE),
+    { 0 }
+};
 
 
 void module_init(module_t* handle)

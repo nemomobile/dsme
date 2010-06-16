@@ -28,6 +28,8 @@
 #ifndef IPHB_INTERNAL_H
 #define IPHB_INTERNAL_H
 
+#include <sys/types.h>
+
 #define HB_SOCKET_PATH		"/dev/shm/iphb"	    /**@brief IPC path between client and iphbd */
 #define HB_KERNEL_DEVICE        "/dev/iphb"	    /**@brief Device between kernel module and iphbd */
 #define HB_KERNEL_DEVICE_TEST   "/tmp/iphb"	    /**@brief Test device between kernel module and iphbd */
@@ -71,6 +73,25 @@ struct _iphb_req_t {
   u;
 };
 
+
+#include "dsme/messages.h"
+
+enum {
+    DSME_MSG_ENUM(DSM_MSGTYPE_WAIT,   0x00000600),
+    DSME_MSG_ENUM(DSM_MSGTYPE_WAKEUP, 0x00000601),
+};
+
+typedef struct {
+    DSMEMSG_PRIVATE_FIELDS
+    struct _iphb_wait_req_t req;
+    void*                   data;
+} DSM_MSGTYPE_WAIT;
+
+typedef struct {
+    DSMEMSG_PRIVATE_FIELDS
+    struct _iphb_wait_resp_t resp;
+    void*                    data;
+} DSM_MSGTYPE_WAKEUP;
 
 
 

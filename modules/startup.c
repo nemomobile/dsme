@@ -72,6 +72,7 @@ const char *modules[] = {
     "libupstart.so",
     "libstate.so",
     "librebootloopdetector.so",
+    "libiphb.so",
     "libprocesswd.so",
     "libdbusproxy.so",
     "libalarmtracker.so",
@@ -84,7 +85,6 @@ const char *modules[] = {
 #endif
     "libemergencycalltracker.so",
     "libusbtracker.so",
-    "libiphb.so",
     NULL
 };
 
