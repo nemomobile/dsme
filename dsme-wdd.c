@@ -307,6 +307,9 @@ static void mainloop(unsigned sleep_interval,
             if (!run) {
                 goto done_running;
             }
+
+            // interrupt may have come from the dsme server; consider it alive
+            child_ping_count = 0;
         }
 
         // kick WD's right after sleep
