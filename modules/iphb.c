@@ -151,8 +151,8 @@ static void close_kernel_fd(void)
             // TODO: do something clever?
         }
         (void)close(kernelfd);
-        kernelfd = -1;
         dsme_log(LOG_DEBUG, "closed kernel socket %d", kernelfd);
+        kernelfd = -1;
     }
 }
 
