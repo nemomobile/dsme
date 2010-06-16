@@ -45,6 +45,7 @@
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/time.h>
 
 #include <glib.h>
 
@@ -671,6 +672,14 @@ next_client:
     return woken_up_clients;
 }
 
+static long long int timestamp(void)
+{
+    struct timeval tv;
+
+    gettimeofday(&tv, 0);
+    return tv.tv_sec * 1000000ll + tv.tv_usec;
+}
+
 static bool wakeup(client_t* client, time_t now)
 {
     bool woken_up = false;
@@ -680,9 +689,11 @@ static bool wakeup(client_t* client, time_t now)
         resp.waited = now - client->wait_started;
 
         dsme_log(LOG_DEBUG,
-                 "waking up client with PID %lu who has slept %lu secs",
+                 "waking up client with PID %lu who has slept %lu secs"
+                     ", ts=%lli",
                  (unsigned long)client->pid,
-                 resp.waited);
+                 resp.waited,
+                 timestamp());
         if (send(client->fd, &resp, sizeof(resp), MSG_DONTWAIT|MSG_NOSIGNAL) ==
             sizeof(resp))
         {
