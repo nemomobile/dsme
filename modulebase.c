@@ -498,7 +498,7 @@ bool endpoint_is_dsme(const endpoint_t* endpoint)
 endpoint_t* endpoint_copy(const endpoint_t* endpoint)
 {
   endpoint_t* copy = 0;
-  
+
   if (endpoint) {
     copy = malloc(sizeof(endpoint_t));
 
@@ -519,15 +519,24 @@ void endpoint_free(endpoint_t* endpoint)
 
 void process_message_queue(void)
 {
-	while (message_queue) {
-		queued_msg_t* front = (queued_msg_t*)message_queue->data;
-		
-		message_queue = g_slist_delete_link(message_queue,
-                                                    message_queue);
-		handle_message(&front->from, front->to, front->data);
-		free(front->data);
-		free(front);
-	}
+    while (message_queue) {
+        queued_msg_t* front = (queued_msg_t*)message_queue->data;
+
+        message_queue = g_slist_delete_link(message_queue,
+                                            message_queue);
+        handle_message(&front->from, front->to, front->data);
+        free(front->data);
+        free(front);
+    }
+
+    // send an IDLE message to indicate that the message queue is empty
+    endpoint_t from = {
+        .module = 0,
+        .conn   = 0,
+        .ucred  = bogus_ucred
+    };
+    DSM_MSGTYPE_IDLE idle = DSME_MSG_INIT(DSM_MSGTYPE_IDLE);
+    handle_message(&from, 0, &idle);
 }
 
 

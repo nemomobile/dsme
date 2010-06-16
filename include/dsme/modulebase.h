@@ -98,6 +98,12 @@ int add_single_handler(u_int32_t       msg_type,
                        handler_fn_t*   callback,
                        const module_t* owner);
 
+enum {
+    DSME_MSG_ENUM(DSM_MSGTYPE_IDLE, 0x00001337),
+};
+
+typedef dsmemsg_generic_t DSM_MSGTYPE_IDLE;
+
 #ifdef __cplusplus
 }
 #endif
