@@ -428,6 +428,8 @@ static gboolean read_epoll(GIOChannel*  source,
             }
         } else if (events[i].data.ptr == &kernelfd) {
             wakeup_condition = mintime_passed;
+            // tell the driver that we have dealt with the event
+            while (read(kernelfd, 0, 0) == -1 && errno == EINTR);
         } else {
             /* deal with old clients */
             if (handle_client_req(&events[i], now)) {
