@@ -37,9 +37,10 @@ typedef enum {
 } THERMAL_STATUS;
 
 typedef struct thermal_status_configuration_t {
-  int min;      /* min and max set the status range: [min, max) */
+  int min;     /* min and max set the status range: [min, max) */
   int max;
-  int interval; /* temperature polling interval in heartbeats (hwwd periods) */
+  int mintime; /* temperature polling minimum interval in seconds */
+  int maxtime; /* temperature polling maximum interval in seconds */
 } thermal_status_configuration_t;
 
 typedef struct thermal_object_t thermal_object_t;

@@ -37,7 +37,9 @@
 #include "dsme_dbus.h"
 
 #include "dsme/modules.h"
+#include "dsme/modulebase.h"
 #include "dsme/logging.h"
+#include "iphb_internal.h"
 #include "heartbeat.h"
 
 #include <dsme/state.h>
@@ -61,6 +63,8 @@ static thermal_object_t* thermal_object_copy(
 static void log_temperature(int temperature, const thermal_object_t* thermal_object);
 #endif
 
+
+static module_t* this_module = 0;
 
 static GSList* thermal_objects = 0;
 
@@ -237,16 +241,35 @@ static void thermal_object_polling_interval_expired(void* object)
   thermal_object_t* thermal_object = object;
 
   send_temperature_request(thermal_object);
+
+  // set up heartbeat service to poll the temperature of the object
+  const thermal_status_configuration_t* conf =
+      &thermal_object->conf->state[thermal_object->status];
+
+  DSM_MSGTYPE_WAIT msg = DSME_MSG_INIT(DSM_MSGTYPE_WAIT);
+  msg.req.mintime = conf->mintime;
+  msg.req.maxtime = conf->maxtime;
+  msg.req.pid     = 0;
+  msg.data        = thermal_object;
+
+  broadcast_internally(&msg);
 }
 
 
 void dsme_register_thermal_object(thermal_object_t* thermal_object)
 {
+  enter_module(this_module);
+
 #ifdef DSME_THERMAL_TUNING
   thermal_object = thermal_object_copy(thermal_object);
 #endif
 
+  // add the thermal object to the list of know thermal objects
   thermal_objects = g_slist_append(thermal_objects, thermal_object);
+
+  thermal_object_polling_interval_expired(thermal_object);
+
+  leave_module();
 }
 
 void dsme_unregister_thermal_object(thermal_object_t* thermal_object)
@@ -270,32 +293,16 @@ static const dsme_dbus_binding_t methods[] = {
 static bool bound = false;
 
 
-DSME_HANDLER(DSM_MSGTYPE_HEARTBEAT, client, msg)
+DSME_HANDLER(DSM_MSGTYPE_WAKEUP, client, msg)
 {
-    static unsigned heartbeat_counter = 0;
-    GSList*         node;
+    thermal_object_t* thermal_object = (thermal_object_t*)(msg->data);
 
-    /*
-     * walk through thermal objects and see if their
-     * polling interval has been reached
-     */
-    for (node = thermal_objects; node != 0; node = g_slist_next(node)) {
-        thermal_object_t* thermal_object = (thermal_object_t*)(node->data);
-
-        int interval =
-            thermal_object->conf->state[thermal_object->status].interval;
-
-        if (heartbeat_counter % interval == 0) {
-            dsme_log(LOG_DEBUG,
-                     "check thermal object '%s' every %d heartbeats",
-                     thermal_object->conf->name,
-                     interval);
-            thermal_object_polling_interval_expired(thermal_object);
-        }
-    }
-
-    ++heartbeat_counter;
+    dsme_log(LOG_DEBUG,
+             "check thermal object '%s'",
+             thermal_object->conf->name);
+    thermal_object_polling_interval_expired(thermal_object);
 }
+
 
 DSME_HANDLER(DSM_MSGTYPE_DBUS_CONNECT, client, msg)
 {
@@ -318,7 +325,7 @@ DSME_HANDLER(DSM_MSGTYPE_SET_TA_TEST_MODE, client, msg)
 
 // TODO: rename module_fn_info_t to dsme_binding_t
 module_fn_info_t message_handlers[] = {
-  DSME_HANDLER_BINDING(DSM_MSGTYPE_HEARTBEAT),
+  DSME_HANDLER_BINDING(DSM_MSGTYPE_WAKEUP),
   DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_CONNECT),
   DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_DISCONNECT),
 #if 0 // TODO
@@ -334,6 +341,8 @@ module_fn_info_t message_handlers[] = {
 void module_init(module_t* handle)
 {
   dsme_log(LOG_DEBUG, "libthermalmanager.so loaded");
+
+  this_module = handle;
 }
 
 void module_fini(void)
@@ -380,12 +389,13 @@ static bool thermal_object_config_read(
                  "%d, %d, %d",
                  &new_config.state[i].min,
                  &new_config.state[i].max,
-                 &new_config.state[i].interval) != 3)
+                 &new_config.state[i].mintime) != 3)
       {
           dsme_log(LOG_CRIT, "syntax error in thermal tuning on line %d", i+1);
           success = false;
           break;
       }
+      new_config.state[i].maxtime = new_config.state[i].mintime + 10;
   }
 
   if (success) {

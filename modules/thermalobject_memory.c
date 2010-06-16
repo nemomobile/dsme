@@ -34,11 +34,11 @@ static bool get_memory_temperature(int* temperature);
 static thermal_object_configuration_t memory_thermal_conf = {
   "memory",
   {
-      /* (min, max], interval */
-      {    -1,  55,        30 / DSME_HEARTBEAT_INTERVAL }, /* NORMAL  */
-      {    55,  60,         5 / DSME_HEARTBEAT_INTERVAL }, /* WARNING */
-      {    60,  82,         1 / DSME_HEARTBEAT_INTERVAL }, /* ALERT   */
-      {    82,  99,         1 / DSME_HEARTBEAT_INTERVAL }  /* FATAL   */
+      /* (min, max], [mintime, maxtime] */
+      {    -1,  55,        24,      30 }, /* NORMAL  */
+      {    55,  60,         5,       5 }, /* WARNING */
+      {    60,  82,         1,       1 }, /* ALERT   */
+      {    82,  99,         1,       1 }  /* FATAL   */
   },
   get_memory_temperature
 };
