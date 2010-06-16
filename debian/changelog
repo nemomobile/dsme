@@ -1,3 +1,12 @@
+dsme (0.61.18) unstable; urgency=low
+
+  * Fixes: NB#168688: sync iphb & hwwd
+  * use iphb for processwd & thermal manager
+  * add a new internal message: IDLE
+  * fix coverity findings
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Wed, 16 Jun 2010 22:12:23 +0000
+
 dsme (0.61.17) unstable; urgency=low
 
   * Fixes NB#159310: add D-Bus policy configuration

@@ -4,7 +4,7 @@
 BINARIES     := dsme dsme-server
 SUBDIRS      := util modules libiphb
 
-VERSION := 0.61.17
+VERSION := 0.61.18
 
 #
 # Install files in this directory
