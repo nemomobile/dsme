@@ -66,10 +66,10 @@ static gboolean emit_heartbeat_message(GIOChannel*  source,
             // EMPTY LOOP
         }
 
-        // send the heartbeat message */
+        // send the heartbeat message
         const DSM_MSGTYPE_HEARTBEAT beat = DSME_MSG_INIT(DSM_MSGTYPE_HEARTBEAT);
         broadcast_internally(&beat);
-        dsme_log(LOG_DEBUG, "heartbeat");
+        //dsme_log(LOG_DEBUG, "heartbeat");
         return true;
     } else {
         // got an EOF (or a read error); remove the watch
