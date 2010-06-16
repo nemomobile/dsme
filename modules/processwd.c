@@ -38,7 +38,7 @@
 
 #define _XOPEN_SOURCE
 
-#include "heartbeat.h"
+#include "iphb_internal.h"
 
 #include "dsme/modules.h"
 #include "dsme/logging.h"
@@ -54,7 +54,6 @@
 #include <sys/types.h>
 #include <signal.h>
 
-#define PING_HEARTBEAT_DIVISOR 2 /* ping every 2 heartbeats */
 
 /**
  * @ingroup processwd
@@ -70,6 +69,7 @@
 
 
 static void ping_all(void);
+static void subscribe_to_wakeup(void);
 
 
 typedef struct {
@@ -146,18 +146,12 @@ static int abort_timeout_func(void* data)
   return 0; /* stop the interval */
 }
 
-DSME_HANDLER(DSM_MSGTYPE_HEARTBEAT, conn, msg)
+DSME_HANDLER(DSM_MSGTYPE_WAKEUP, conn, msg)
 {
-    static unsigned heartbeat_counter = 0;
+    dsme_log(LOG_DEBUG, "processwd: ping");
+    ping_all();
 
-    if (heartbeat_counter % PING_HEARTBEAT_DIVISOR == 0) {
-        dsme_log(LOG_DEBUG,
-                 "processwd: ping every %d heartbeats",
-                 PING_HEARTBEAT_DIVISOR);
-        ping_all();
-    }
-
-    ++heartbeat_counter;
+    subscribe_to_wakeup();
 }
 
 static void ping_all(void)
@@ -203,6 +197,17 @@ static void ping_all(void)
             dsme_log(LOG_DEBUG, "sent ping to pid %i", proc->pid);
         }
     }
+}
+
+static void subscribe_to_wakeup(void)
+{
+    DSM_MSGTYPE_WAIT msg = DSME_MSG_INIT(DSM_MSGTYPE_WAIT);
+    msg.req.mintime = 24;
+    msg.req.maxtime = 30;
+    msg.req.pid     = 0;
+    msg.data        = 0;
+
+    broadcast_internally(&msg);
 }
 
 /**
@@ -319,7 +324,7 @@ module_fn_info_t message_handlers[] = {
       DSME_HANDLER_BINDING(DSM_MSGTYPE_PROCESSWD_CREATE),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_PROCESSWD_DELETE),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_PROCESSWD_PONG),
-      DSME_HANDLER_BINDING(DSM_MSGTYPE_HEARTBEAT),
+      DSME_HANDLER_BINDING(DSM_MSGTYPE_WAKEUP),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_CLOSE),
       {0}
 };
@@ -327,6 +332,8 @@ module_fn_info_t message_handlers[] = {
 void module_init(module_t *handle)
 {
   dsme_log(LOG_DEBUG, "libprocesswd.so loaded");
+
+  subscribe_to_wakeup();
 }
 
 void module_fini(void)
@@ -336,6 +343,8 @@ void module_fini(void)
     swwd_entry_delete((dsme_swwd_entry_t*)(processes->data));
     processes = g_slist_delete_link(processes, processes);
   }
+
+  // TODO: cancel wakeup subscription
 
   dsme_log(LOG_DEBUG, "libprocesswd.so unloaded");
 }
