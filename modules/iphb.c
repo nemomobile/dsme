@@ -368,7 +368,7 @@ static void send_stats(client_t *client)
 
 static bool epoll_add(int fd, void* ptr)
 {
-  struct epoll_event ev;
+  struct epoll_event ev = { 0, { 0 } };
   ev.events   = EPOLLIN;
   ev.data.ptr = ptr;
   if (epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &ev) == -1) {
