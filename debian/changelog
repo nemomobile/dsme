@@ -1,3 +1,9 @@
+dsme (0.61.19) unstable; urgency=low
+
+  * add initial support for the security framework
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Sat, 03 Jul 2010 19:00:39 +0000
+
 dsme (0.61.18) unstable; urgency=low
 
   * Fixes: NB#168688: sync iphb & hwwd
