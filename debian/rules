@@ -105,6 +105,7 @@ binary-arch: build install
 	dh_gencontrol
 	dh_md5sums
 	dh_builddeb
+	aegis-deb-add -control debian/dsme/DEBIAN/control .. debian/dsme.aegis=_aegis
 # Build architecture independant packages using the common target.
 binary-indep: build install
 #	$(MAKE) -f debian/rules DH_OPTIONS=-i binary-common
