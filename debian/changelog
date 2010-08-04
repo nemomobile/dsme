@@ -1,3 +1,9 @@
+dsme (0.61.20) unstable; urgency=low
+
+  * make dsme grok currently active alarms
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Wed, 04 Aug 2010 13:38:15 +0000
+
 dsme (0.61.19) unstable; urgency=low
 
   * add initial support for the security framework
