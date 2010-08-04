@@ -17,7 +17,7 @@ bootstate_LIBS	:=	dsme
 waitfordsme_C_OBJS 	:=	waitfordsme.o
 waitfordsme_LIBS	:=	dsme
 kicker_C_OBJS 	:=	kicker.o
-kicker_LIBS	:=	dsme cal
+kicker_LIBS	:=	dsme
 dsmereboot_C_OBJS := dsmereboot.o
 dsmereboot_LIBS := dsme
 

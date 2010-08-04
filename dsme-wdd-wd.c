@@ -26,7 +26,7 @@
 #include "dsme-wdd-wd.h"
 #include "dsme-wdd.h"
 
-#include <cal.h>
+#include "dsme-rd-mode.h"
 
 #include <fcntl.h>
 #include <sys/ioctl.h>
@@ -111,25 +111,17 @@ void dsme_wd_kick(void)
 #endif
 }
 
-static void check_for_cal_wd_flags(bool wd_enabled[])
+static void check_for_wd_flags(bool wd_enabled[])
 {
-    void*         vptr = NULL;
     unsigned long len  = 0;
-    int           ret  = 0;
-    char*         p;
+    const char*   p = NULL;
     int           i;
 
-    /* see if there are any R&D flags to disable any watchdogs */
-    ret = cal_read_block(0, "r&d_mode", &vptr, &len, CAL_FLAG_USER);
-    if (ret < 0) {
-        fprintf(stderr,
-                ME "Error reading R&D mode flags, WD kicking enabled\n");
-        return;
-    }
-    p = vptr;
-    if (len >= 1 && *p) {
+    p = dsme_rd_mode_get_flags();
+    if (p) {
         fprintf(stderr, ME "R&D mode enabled\n");
 
+        len = strlen(p);
         if (len > 1) {
             for (i = 0; i < WD_COUNT; ++i) {
                 if (strstr(p, wd[i].flag)) {
@@ -142,7 +134,6 @@ static void check_for_cal_wd_flags(bool wd_enabled[])
         }
     }
 
-    free(vptr);
     return;
 }
 
@@ -159,7 +150,7 @@ bool dsme_wd_init(void)
     }
 
     /* disable the watchdogs that have a disabling R&D flag */
-    check_for_cal_wd_flags(wd_enabled);
+    check_for_wd_flags(wd_enabled);
 
     /* open enabled watchdog devices */
     for (i = 0; i < WD_COUNT; ++i) {

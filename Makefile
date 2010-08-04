@@ -53,20 +53,20 @@ endif
 #
 
 # dsme
-dsme_C_OBJS       := dsme-wdd.o dsme-wdd-wd.o oom.o
+dsme_C_OBJS       := dsme-wdd.o dsme-wdd-wd.o oom.o dsme-rd-mode.o
 dsme: C_OPTFLAGS  := -O2 -s
 dsme: C_GENFLAGS  := -DPRG_VERSION=$(VERSION) -g -std=c99 \
                      -Wall -Wwrite-strings -Wmissing-prototypes -Werror
 dsme: C_DEFINES   :=
-dsme_LIBS         := cal
+dsme_LIBS         :=
 dsme: LD_GENFLAGS :=
 
 
 # dsme-server
 dsme-server_C_OBJS             := dsme-server.o modulebase.o timers.o \
                                   logging.o oom.o mainloop.o          \
-                                  dsme-cal.o dsmesock.o
-dsme-server_LIBS               := dsme dl cal
+                                  dsmesock.o dsme-rd-mode.o
+dsme-server_LIBS               := dsme dl
 dsme-server: LD_EXTRA_GENFLAGS := -rdynamic $$(pkg-config --libs gthread-2.0)
 
 #logging.o:	C_EXTRA_DEFINES	:=	USE_STDERR

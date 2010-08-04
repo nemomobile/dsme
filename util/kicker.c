@@ -41,7 +41,7 @@
 #include <linux/watchdog.h>
 #include <errno.h>
 
-#include <cal.h>
+#include "../dsme-rd-mode.h"
 
 #define OOM_ADJ_VALUE -17
 
@@ -90,29 +90,16 @@ static int protect_from_oom(void)
       return 0;
 }
 
-static int read_cal_config(void)
+static int read_rd_mode_config(void)
 {
-      struct cal* kicker_cal;
-      void *vptr = NULL;
       unsigned long len = 0;
-      int ret = 0;
-      char *p;
+      const char *p;
 
-      if (cal_init(&kicker_cal) < 0) {
-              fprintf(stderr, "Kicker: cal_init() failed\n");
-              return -1;
-      }
-
-      ret = cal_read_block(kicker_cal, "r&d_mode", &vptr, &len, CAL_FLAG_USER);
-      if (ret < 0) {
-              fprintf(stderr, "Kicker: error reading R&D mode flags, watchdog enabled\n");
-              cal_finish(kicker_cal);
-              return -1;
-      }
-      p = (char*)vptr;
-      if (len >= 1 && *p) {
+      p = dsme_rd_mode_get_flags();
+      if (p) {
               fprintf(stderr, "R&D mode enabled\n");
 
+              len = strlen(p);
               if (len > 1) {
                       if (strstr(p, "no-omap-wd")) {
                               wd_enabled = false;
@@ -126,10 +113,6 @@ static int read_cal_config(void)
               }
       }
 
-      free(vptr);
-
-      cal_finish(kicker_cal);
-
       return 0;
 }
 
@@ -140,7 +123,7 @@ static bool init_wd(void)
           wd_fd[i] = -1;
       }
 
-      read_cal_config();
+      read_rd_mode_config();
       if (!wd_enabled) {
           return false;
       }

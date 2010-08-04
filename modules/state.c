@@ -32,7 +32,7 @@
 #include "dsme/logging.h"
 #include <dsme/state.h>
 
-#include <cal.h>
+#include "dsme-rd-mode.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -792,25 +792,15 @@ DSME_HANDLER(DSM_MSGTYPE_STATE_QUERY, client, msg)
  */
 static bool rd_mode_enabled(void)
 {
-  void*         vptr = NULL;
-  unsigned long len  = 0;
   bool          enabled;
-  char*         p;
 
-  if (cal_read_block(0, "r&d_mode", &vptr, &len, CAL_FLAG_USER) < 0) {
-      dsme_log(LOG_CRIT, "Error reading R&D mode flag, assuming disabled");
-      return false;
-  }
-
-  p = (char*)vptr;
-  if (len >= 1 && *p) {
+  if (dsme_rd_mode_enabled()) {
       dsme_log(LOG_CRIT, "R&D mode enabled");
       enabled = true;
   } else {
       enabled = false;
       dsme_log(LOG_CRIT, "R&D mode disabled");
   }
-  free(vptr);
 
   return enabled;
 }

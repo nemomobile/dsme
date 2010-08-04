@@ -39,7 +39,6 @@
 #include "dsme/dsmesock.h"
 #include "dsme/protocol.h"
 #include "dsme/logging.h"
-#include "dsme/dsme-cal.h"
 #include "dsme/messages.h"
 #include "dsme/oom.h"
 
@@ -232,8 +231,6 @@ int main(int argc, char *argv[])
   }
 
   g_thread_init(0); /* notice that this spawns a thread */
-
-  dsme_cal_init();
 
   parse_options(argc, argv, &module_names);
 
