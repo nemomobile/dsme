@@ -1,3 +1,9 @@
+dsme (0.61.21) unstable; urgency=low
+
+  * Fixes: NB#177993: stop using libcal (read R&D flags from environment)
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Wed, 04 Aug 2010 14:44:23 +0000
+
 dsme (0.61.20) unstable; urgency=low
 
   * make dsme grok currently active alarms
