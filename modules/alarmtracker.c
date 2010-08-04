@@ -157,7 +157,9 @@ static int set_internal_alarm_state(void* dummy)
 
   if (alarm_queue_head != 0) {
       /* there is a queued or active alarm */
-      if (seconds(now, alarm_queue_head) <= SNOOZE_TIMEOUT) {
+      if (alarm_queue_head == 1 || /* 1 means there is an active alarm */
+          seconds(now, alarm_queue_head) <= SNOOZE_TIMEOUT)
+      {
           /* alarm is either active or soon-to-be-active */
           alarm_set = true;
       } else {
