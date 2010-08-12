@@ -1,3 +1,9 @@
+dsme (0.61.22) unstable; urgency=low
+
+  * Use lower priority for some heartbeat logging (Fixes: NB#178773)
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Thu, 12 Aug 2010 09:19:58 +0000
+
 dsme (0.61.21) unstable; urgency=low
 
   * Fixes: NB#177993: stop using libcal (read R&D flags from environment)
