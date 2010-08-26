@@ -1,3 +1,9 @@
+dsme (0.61.23) unstable; urgency=low
+
+  * Power on timer module implemented.
+
+ -- Simo Piiroinen <simo.piiroinen@nokia.com>  Thu, 26 Aug 2010 12:23:42 +0300
+
 dsme (0.61.22) unstable; urgency=low
 
   * Use lower priority for some heartbeat logging (Fixes: NB#178773)

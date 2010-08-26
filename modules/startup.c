@@ -85,6 +85,7 @@ const char *modules[] = {
 #endif
     "libemergencycalltracker.so",
     "libusbtracker.so",
+    "libpowerontimer.so",
     NULL
 };
 
