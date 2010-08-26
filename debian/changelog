@@ -1,6 +1,10 @@
 dsme (0.61.23) unstable; urgency=low
 
+  [ Simo Piiroinen ]
   * Power on timer module implemented.
+
+  [ Matias Muhonen ]
+  * Thermal management tuning: MaSSW-2006
 
  -- Simo Piiroinen <simo.piiroinen@nokia.com>  Thu, 26 Aug 2010 12:23:42 +0300
 
