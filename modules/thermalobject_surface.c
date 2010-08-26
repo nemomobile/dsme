@@ -7,6 +7,7 @@
    Copyright (C) 2009-2010 Nokia Corporation
 
    @author Semi Malinen <semi.malinen@nokia.com>
+   @author Matias Muhonen <ext-matias.muhonen@nokia.com>
 
    This file is part of Dsme.
 
