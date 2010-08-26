@@ -42,10 +42,10 @@ static thermal_object_configuration_t surface_thermal_conf = {
   "surface",
   {
       /* (min, max], [mintime, maxtime] */
-      {    -1,  52,        55,      60 }, /* NORMAL  */
-      {    52,  58,        55,      60 }, /* WARNING */
-      {    58,  98,        20,      30 }, /* ALERT   */
-      {    98,  99,        20,      30 }, /* FATAL   */
+      {    -1,  55,        55,      60 }, /* NORMAL  */
+      {    55,  57,        55,      60 }, /* WARNING */
+      {    57,  59,        20,      30 }, /* ALERT   */
+      {    59,  99,        20,      30 }, /* FATAL   */
   },
   get_surface_temperature
 };
