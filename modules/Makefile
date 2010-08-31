@@ -106,7 +106,6 @@ INSTALL_SO_LIBRARIES    :=  libstartup.so        \
                             libheartbeat.so      \
                             libprocesswd.so      \
                             libstate.so          \
-                            libupstart.so        \
                             libdbusproxy.so      \
                             libalarmtracker.so   \
                             libthermalmanager.so \
@@ -115,6 +114,11 @@ INSTALL_SO_LIBRARIES    :=  libstartup.so        \
                             libiphb.so           \
                             librebootloopdetector.so
 
+ifdef DSME_SYSVINIT
+INSTALL_SO_LIBRARIES    +=      librunlevel.so
+else
+INSTALL_SO_LIBRARIES    +=      libupstart.so
+endif
 ifdef DSME_BMEIPC
 INSTALL_SO_LIBRARIES	+=	libthermalobject_surface.so
 endif
