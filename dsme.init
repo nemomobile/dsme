@@ -1,0 +1,89 @@
+#!/bin/sh
+
+### BEGIN INIT INFO
+# Provides:             dsme
+# Default-Start:        2 3 4 5
+# Default-Stop:         0 1 6
+# Required-Start:
+# Required-Stop:
+# Short-Description:    DSME
+### END INIT INFO
+
+# fastinit function library
+. /etc/rc.d/init.d/functions
+
+service=dsme
+prog=dsme
+
+start() {
+	# Get boot state
+        GETBOOTSTATE=/sbin/getbootstate
+        if [ -x $GETBOOTSTATE ]; then
+            export BOOTSTATE=`getbootstate 2>/dev/null`
+        else
+            # A reasonable default to prevent reboot/shutdown
+            export BOOTSTATE="USER"
+        fi
+
+        touch /tmp/$BOOTSTATE
+        echo $BOOTSTATE > /tmp/STATE
+
+        if [ -x /etc/resource_limits.conf ]; then
+            source /etc/resource_limits.conf
+        fi
+
+        # Get R&D flags
+        CALTOOL=/usr/bin/cal-tool
+        RDMODE_CONF_FILE=/etc/dsme/rdmode
+        if [ -x $CALTOOL ]; then
+            $CALTOOL --get-rd-mode | grep -q enabled \
+            && export DSME_RD_FLAGS=`$CALTOOL --get-rd-flags`
+        elif [ -f $RDMODE_CONF_FILE ]; then
+            export DSME_RD_FLAGS=`cat $RDMODE_CONF_FILE`
+        fi
+
+        echo -n "Starting DSME in state '$BOOTSTATE': "
+	pid=`pidofproc $prog`
+	if [ $? -ne 0 ]; then
+		exec /sbin/$prog -p /usr/lib/dsme/libstartup.so &> /dev/null &
+		RETVAL=$?
+		[ $RETVAL -eq 0 ] && touch /var/lock/subsys/$service
+	else
+		RETVAL=0
+	fi
+        #exec /sbin/dsme -l stderr -v 7 -p /usr/lib/dsme/libstartup.so
+	success
+	echo
+	return $RETVAL
+}
+
+stop() {
+    echo -n "Stopping DSME: "
+    killproc $prog
+    RETVAL=$?
+    [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/$service
+    echo
+    return $RETVAL
+}
+
+case "$1" in
+  start)
+	start
+        ;;
+  stop)
+	stop
+        ;;
+  restart|reload)
+	stop
+	start
+	;;
+  status)
+	status $prog
+	RETVAL=$?
+        ;;
+  *)
+        echo "Usage: $0 {start|stop|restart|reload|status}"
+        RETVAL=1
+esac
+
+exit $RETVAL
