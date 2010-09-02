@@ -29,6 +29,8 @@ C_DBGFLAGS     := -g -DDEBUG -DDSME_LOG_ENABLE
 C_DEFINES      :=
 # enable battery thermal mgmt
 C_DEFINES      += DSME_BMEIPC
+# enable powerontimer plugin
+C_DEFINES      += DSME_POWERON_TIMER
 C_INCDIRS      := $(TOPDIR)/include $(TOPDIR)/modules $(TOPDIR)
 MKDEP_INCFLAGS := $$(pkg-config --cflags-only-I glib-2.0)
 
@@ -52,6 +54,9 @@ ifneq (,$(findstring DSME_MEMORY_THERMAL_MGMT,$(C_DEFINES)))
 export DSME_MEMORY_THERMAL_MGMT = yes
 endif
 
+ifneq (,$(findstring DSME_POWERON_TIMER,$(C_DEFINES)))
+export DSME_POWERON_TIMER = yes
+endif
 #
 # Target composition and overrides
 #

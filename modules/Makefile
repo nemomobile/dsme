@@ -23,7 +23,9 @@ ifdef DSME_MEMORY_THERMAL_MGMT
 SO_LIBRARIES    += libthermalobject_memory
 endif
 
+ifdef DSME_POWERON_TIMER
 SO_LIBRARIES    += libpowerontimer
+endif
 
 #
 # Target composition and overrides
@@ -58,12 +60,14 @@ thermalmanager.o : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags glib-2.0) -D
 libthermalmanager_EXTRA_LDFLAGS := -lthermalmanager_dbus_if
 #libthermalmanager_EXTRA_LDFLAGS := -lrt
 
+ifdef DSME_POWERON_TIMER
 libpowerontimer_C_OBJS := powerontimer.o powerontimer_backend.o
 powerontimer.o : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags glib-2.0) #-DDSME_POWERON_LOGGING
 powerontimer_backend.o        : C_EXTRA_GENFLAGS := -fPIC $$(pkg-config --cflags glib-2.0) #-DDSME_POWERON_LOGGING
 
 #libpowerontimer_EXTRA_LDFLAGS := -lpoweronmanager_dbus_if
 libpowerontimer_EXTRA_LDFLAGS := -lcal -lrt
+endif
 
 ifdef DSME_BMEIPC
 libthermalobject_surface_C_OBJS := thermalobject_surface.o thermalsensor_battery.o
@@ -126,7 +130,9 @@ ifdef DSME_MEMORY_THERMAL_MGMT
 INSTALL_SO_LIBRARIES	+=	libthermalobject_memory.so
 endif
 
+ifdef DSME_POWERON_TIMER
 INSTALL_SO_LIBRARIES    +=      libpowerontimer.so
+endif
 
 $(INSTALL_SO_LIBRARIES): INSTALL_PERM := 755
 $(INSTALL_SO_LIBRARIES): INSTALL_DIR  := $(DESTDIR)/usr/lib/dsme
