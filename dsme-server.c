@@ -56,6 +56,7 @@
 #include <fcntl.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <sched.h>
 
 static void signal_handler(int  signum);
 static void usage(const char *  progname);
@@ -226,8 +227,23 @@ int main(int argc, char *argv[])
       fprintf(stderr, ME "Couldn't protect from oom: %s\n", strerror(errno));
   }
 
+  /* Set static priority for RT-scheduling */
+  int scheduler;
+  struct sched_param param;
+  scheduler = sched_getscheduler(0);
+  if(sched_getparam(0, &param) == 0) {
+      param.sched_priority = sched_get_priority_min(scheduler);
+      if(sched_setparam(0, &param) != 0) {
+          fprintf(stderr, ME "Couldn't set static priority: %s\n", strerror(errno));
+      }
+  }
+  else {
+      fprintf(stderr, ME "Couldn't get scheduling params: %s\n", strerror(errno));
+  }
+
+  /* Set nice value for cases when dsme-server is not under RT-scheduling*/
   if (setpriority(PRIO_PROCESS, 0, DSME_PRIORITY) != 0) {
-      fprintf(stderr, ME "Couldn't set the priority: %s\n", strerror(errno));
+      fprintf(stderr, ME "Couldn't set dynamic priority: %s\n", strerror(errno));
   }
 
   g_thread_init(0); /* notice that this spawns a thread */
