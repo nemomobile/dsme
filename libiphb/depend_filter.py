@@ -3,7 +3,7 @@
 # =============================================================================
 # File: depend_filter.py
 #
-# Copyright (C) 2007-2010 Nokia. All rights reserved.
+# Copyright (C) 2007-2010 Nokia.
 #
 # Author: Simo Piiroinen <simo.piiroinen@nokia.com>
 #
