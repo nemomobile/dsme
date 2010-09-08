@@ -3,9 +3,23 @@
 # =============================================================================
 # File: depend_filter.py
 #
-# Copyright (C) 2007 Nokia. All rights reserved.
+# Copyright (C) 2007-2010 Nokia. All rights reserved.
 #
 # Author: Simo Piiroinen <simo.piiroinen@nokia.com>
+#
+# This file is part of Dsme.
+#
+# Dsme is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License
+# version 2.1 as published by the Free Software Foundation.
+#
+# Dsme is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -----------------------------------------------------------------------------
 #
