@@ -70,9 +70,9 @@ static void report_surface_temperature(void* object, int temperature)
   /*
    * Based on measurement findings brought forth in Thermal measurement
    * results/manager review session on 2009-05-18, the surface temperature
-   * can be estimated by subtracting 7 deg C from battery temperature:
+   * can be estimated by subtracting 1 deg C from battery temperature:
    */
-  temperature = temperature - 7;
+  temperature = temperature - 1;
 
   /* save the temperature for the D-Bus i/f */
   latest_measured_temperature = temperature;
