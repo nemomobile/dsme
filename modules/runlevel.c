@@ -52,7 +52,7 @@ static bool change_runlevel(dsme_runlevel_t runlevel)
   char command[32];
 
   snprintf(command, sizeof(command), "telinit -t 0 %i", runlevel);
-  dsme_log(LOG_CRIT, "Issuing telinit %i", runlevel);
+  dsme_log(LOG_NOTICE, "Issuing telinit %i", runlevel);
 
   if (system(command) != 0) {
       dsme_log(LOG_CRIT, "failed to change runlevel, trying again in 2s");
@@ -77,10 +77,10 @@ static void shutdown(dsme_runlevel_t runlevel)
       (runlevel != DSME_RUNLEVEL_SHUTDOWN) &&
       (runlevel != DSME_RUNLEVEL_MALF))
   {
-      dsme_log(LOG_DEBUG, "Shutdown request to bad runlevel (%d)", runlevel);
+      dsme_log(LOG_WARNING, "Shutdown request to bad runlevel (%d)", runlevel);
       return;
   }
-  dsme_log(LOG_CRIT,
+  dsme_log(LOG_NOTICE,
            runlevel == DSME_RUNLEVEL_SHUTDOWN ? "Shutdown" :
            runlevel == DSME_RUNLEVEL_REBOOT   ? "Reboot"   :
                                                 "Malf");
@@ -138,7 +138,7 @@ static bool remount_mmc_readonly(void)
   /* Let's try to find the MMC in /proc/mounts */
   mounts_file = fopen("/proc/mounts", "r");
   if (!mounts_file) {
-      dsme_log(LOG_CRIT, "Can't open /proc/mounts. Leaving MMC as is");
+      dsme_log(LOG_WARNING, "Can't open /proc/mounts. Leaving MMC as is");
       return false;
   }
 
@@ -161,7 +161,7 @@ static bool remount_mmc_readonly(void)
       pid_t pid;
       pid_t rc;
 
-      dsme_log(LOG_CRIT, "MMC seems to be mounted, trying to mount read-only (%s %s).", device, mntpoint);
+      dsme_log(LOG_WARNING, "MMC seems to be mounted, trying to mount read-only (%s %s).", device, mntpoint);
 
       args[1] = (char*)&device;
       args[2] = (char*)&mntpoint;
@@ -173,22 +173,22 @@ static bool remount_mmc_readonly(void)
           execv("/bin/mount", args);
           execv("/sbin/mount", args);
 
-          dsme_log(LOG_CRIT, "remount failed, no mount cmd found");
+          dsme_log(LOG_ERR, "remount failed, no mount cmd found");
           return false;
       } 
       while ((rc = wait(&status)) != pid)
           if (rc < 0 && errno == ECHILD)
               break;
       if (rc != pid || WEXITSTATUS(status) != 0) {
-          dsme_log(LOG_CRIT, "mount return value != 0, no can do.");
+          dsme_log(LOG_ERR, "mount return value != 0, no can do.");
           return false;
       }
 
-      dsme_log(LOG_CRIT, "MMC remounted read-only");
+      dsme_log(LOG_NOTICE, "MMC remounted read-only");
       return true;
 
   } else {
-      dsme_log(LOG_CRIT, "MMC not mounted");
+      dsme_log(LOG_NOTICE, "MMC not mounted");
       return true;
   }
 }

@@ -636,7 +636,7 @@ module_t* load_module(const char* filename, int priority)
     }
 
     if (!dlhandle) {
-        dsme_log(LOG_CRIT, "%s", dlerror());
+        dsme_log(LOG_WARNING, "%s", dlerror());
         return 0;
     }
 
@@ -673,7 +673,7 @@ module_t* load_module(const char* filename, int priority)
     return module;
 
 error:
-    dsme_log(LOG_CRIT, "%s", dlerror());
+    dsme_log(LOG_WARNING, "%s", dlerror());
     if (module) {
         remove_msghandlers(module);
         free(module);
@@ -691,7 +691,9 @@ bool modulebase_init(const struct _GSList* module_names)
 
     for (modname = module_names; modname; modname = g_slist_next(modname)) {
         if (load_module((const char*)modname->data, 0) == NULL) {
-            dsme_log(LOG_CRIT, "Error loading start-up module: %s", dlerror());
+            dsme_log(LOG_CRIT,
+                     "Error loading start-up module: %s",
+                     (const char*)modname->data);
             return false;
         }
     }

@@ -258,7 +258,7 @@ static int pot_import_cal_data(pot_cal_data *pot,
   err = 0;
 
   // FIXME: silence this later, but I want to see this in logs for now ..
-  dsme_log(LOG_CRIT, LOGPFIX"data block (v%"PRId32") %s",
+  dsme_log(LOG_INFO, LOGPFIX"data block (v%"PRId32") %s",
            v0->version, "imported");
 
 cleanup:
@@ -326,7 +326,7 @@ static int pot_write_cal(const pot_cal_data *pot)
 
   // FIXME: silence this later, but I want to see this logged until
   // the shutdown problems have been sorted out ...
-  dsme_log(LOG_CRIT, LOGPFIX"cal write OK");
+  dsme_log(LOG_INFO, LOGPFIX"cal write OK");
 
   err = 0;
 
@@ -402,7 +402,7 @@ void pot_update_cal(bool user_mode, bool force_save)
     pot_cal_read_done = true;
     pot_read_cal(&cal);
     // FIXME: remove/tone down debug logging at some stage
-    dsme_log(LOG_CRIT, LOGPFIX"read cal: on = %s, up = %s, rb = %"PRId32", wr = %"PRId32"",
+    dsme_log(LOG_INFO, LOGPFIX"read cal: on = %s, up = %s, rb = %"PRId32", wr = %"PRId32"",
              prettytime(cal.poweron),
              prettytime(cal.uptime),
              cal.reboots,
@@ -457,7 +457,7 @@ void pot_update_cal(bool user_mode, bool force_save)
       pending_save = false;
 
       // FIXME: remove/tone down debug logging at some stage
-      dsme_log(LOG_CRIT, LOGPFIX"write cal: on = %s, up = %s, rb = %"PRId32", wr = %"PRId32"",
+      dsme_log(LOG_INFO, LOGPFIX"write cal: on = %s, up = %s, rb = %"PRId32", wr = %"PRId32"",
                prettytime(cal.poweron),
                prettytime(cal.uptime),
                cal.reboots,

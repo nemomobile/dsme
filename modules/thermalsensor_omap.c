@@ -81,7 +81,7 @@ bool dsme_omap_is_blacklisted(void)
                if (sscanf(line, "CPU revision : %d", &revision) == 1) {
                    if (revision == 2) {
                        blacklisted = true;
-                       dsme_log(LOG_INFO, "blacklisted OMAP thermal sensor");
+                       dsme_log(LOG_NOTICE, "blacklisted OMAP thermal sensor");
                    }
                    break;
                }

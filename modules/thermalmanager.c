@@ -122,7 +122,7 @@ static void send_thermal_indication(void)
                                thermalmanager_state_change_ind);
       dsme_dbus_message_append_string(sig, current_status_name());
       dsme_dbus_signal_emit(sig);
-      dsme_log(LOG_INFO, "thermal status: %s", current_status_name());
+      dsme_log(LOG_NOTICE, "thermal status: %s", current_status_name());
   }
 
   /* then broadcast an indication internally */
@@ -136,7 +136,7 @@ static void send_thermal_indication(void)
       } else if (overheated) {
           send_overheat_status(false);
           overheated = false;
-          dsme_log(LOG_CRIT, "Device no longer overheated");
+          dsme_log(LOG_NOTICE, "Device no longer overheated");
       }
   }
 }
@@ -318,7 +318,7 @@ DSME_HANDLER(DSM_MSGTYPE_DBUS_DISCONNECT, client, msg)
 DSME_HANDLER(DSM_MSGTYPE_SET_TA_TEST_MODE, client, msg)
 {
     is_in_ta_test = true;
-    dsme_log(LOG_CRIT, "thermal manager: set TA test mode");
+    dsme_log(LOG_NOTICE, "thermal manager: set TA test mode");
 }
 #endif
 
@@ -391,7 +391,7 @@ static bool thermal_object_config_read(
                  &new_config.state[i].max,
                  &new_config.state[i].mintime) != 3)
       {
-          dsme_log(LOG_CRIT, "syntax error in thermal tuning on line %d", i+1);
+          dsme_log(LOG_ERR, "syntax error in thermal tuning on line %d", i+1);
           success = false;
           break;
       }
@@ -412,12 +412,12 @@ static void thermal_object_try_to_read_config(thermal_object_t* thermal_object)
   if ((f = thermal_tuning_file(thermal_object->conf->name))) {
 
       if (thermal_object_config_read(thermal_object->conf, f)) {
-          dsme_log(LOG_INFO,
+          dsme_log(LOG_NOTICE,
                    "(re)read thermal tuning file for %s;"
                    " thermal values may have changed",
                    thermal_object->conf->name);
       } else {
-          dsme_log(LOG_INFO,
+          dsme_log(LOG_NOTICE,
                    "thermal tuning file for %s discarded;"
                    " no change in thermal values",
                    thermal_object->conf->name);

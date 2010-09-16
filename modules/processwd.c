@@ -105,7 +105,7 @@ static void swwd_entry_delete(dsme_swwd_entry_t * proc)
   if (proc) {
       if (proc->kill_timer) {
           dsme_destroy_timer(proc->kill_timer);
-          dsme_log(LOG_INFO, "killing process (pid: %i)", proc->pid);
+          dsme_log(LOG_NOTICE, "killing process (pid: %i)", proc->pid);
           kill(proc->pid, SIGKILL); 
       }
       endpoint_free(proc->client);
@@ -136,7 +136,7 @@ static int abort_timeout_func(void* data)
 
       proc->kill_timer = 0; /* the timer has expired */
 
-      dsme_log(LOG_INFO, "killing process (pid: %i)", pid);
+      dsme_log(LOG_NOTICE, "killing process (pid: %i)", pid);
       kill(pid, SIGKILL); 
 
       swwd_entry_delete(proc);
@@ -219,7 +219,7 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESSWD_CREATE, client, msg)
 
   if (g_slist_find_custom(processes, (void *)msg->pid, compare_pids)) {
       /* Already there - just ignore and return */
-      dsme_log(LOG_INFO, "Process WD requested for existing pid\n");
+      dsme_log(LOG_DEBUG, "Process WD requested for existing pid\n");
       return;
   }
 
@@ -244,7 +244,7 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESSWD_PONG, conn, msg)
   node = g_slist_find_custom(processes, (void*)msg->pid, compare_pids);
   if (!node) {
       /* Already there - just ignore and return */
-      dsme_log(LOG_INFO, "ProcessWD PONG for non-existing pid %i", msg->pid);
+      dsme_log(LOG_WARNING, "ProcessWD PONG for non-existing pid %i", msg->pid);
       return;
   }
 
@@ -278,7 +278,7 @@ static void swwd_del(pid_t pid)
   proc = (dsme_swwd_entry_t*)(node->data);
   swwd_entry_delete(proc);
   processes = g_slist_delete_link(processes, node);
-  dsme_log(LOG_INFO, "removed exited process (pid %d) from process wd", pid);
+  dsme_log(LOG_DEBUG, "removed exited process (pid %d) from process wd", pid);
 }
 
 DSME_HANDLER(DSM_MSGTYPE_PROCESSWD_DELETE, conn, msg)
@@ -306,7 +306,7 @@ DSME_HANDLER(DSM_MSGTYPE_CLOSE, conn, msg)
       deleted = node;
       node = g_slist_next(node);
       processes = g_slist_delete_link(processes, deleted);
-      dsme_log(LOG_INFO, "removed process with closed socket from process wd");
+      dsme_log(LOG_DEBUG, "removed process with closed socket from process wd");
   }
 }
 

@@ -76,7 +76,7 @@ static void get_state(const DsmeDbusMessage* request, DsmeDbusMessage** reply)
 static void req_powerup(const DsmeDbusMessage* request, DsmeDbusMessage** reply)
 {
   char* sender = dsme_dbus_endpoint_name(request);
-  dsme_log(LOG_CRIT,
+  dsme_log(LOG_NOTICE,
            "powerup request received over D-Bus from %s",
            sender ? sender : "(unknown)");
   free(sender);
@@ -88,7 +88,7 @@ static void req_powerup(const DsmeDbusMessage* request, DsmeDbusMessage** reply)
 static void req_reboot(const DsmeDbusMessage* request, DsmeDbusMessage** reply)
 {
   char* sender = dsme_dbus_endpoint_name(request);
-  dsme_log(LOG_CRIT,
+  dsme_log(LOG_NOTICE,
            "reboot request received over D-Bus from %s",
            sender ? sender : "(unknown)");
   free(sender);
@@ -101,7 +101,7 @@ static void req_shutdown(const DsmeDbusMessage* request,
                          DsmeDbusMessage**      reply)
 {
   char* sender = dsme_dbus_endpoint_name(request);
-  dsme_log(LOG_CRIT,
+  dsme_log(LOG_NOTICE,
            "shutdown request received over D-Bus from %s",
            sender ? sender : "(unknown)");
   free(sender);
@@ -200,7 +200,7 @@ DSME_HANDLER(DSM_MSGTYPE_STATE_REQ_DENIED_IND, server, msg)
 {
     const char* denied_request = shutdown_action_name(msg->state);
 
-    dsme_log(LOG_CRIT,
+    dsme_log(LOG_WARNING,
              "proxying %s request denial due to %s to D-Bus",
              denied_request,
              (const char*)DSMEMSG_EXTRA(msg));
