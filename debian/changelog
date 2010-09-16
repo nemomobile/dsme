@@ -1,3 +1,18 @@
+dsme (0.61.24) unstable; urgency=low
+
+  [ Markus Lehtonen ]
+  * Add build-time option to exclude upstart.
+  * Introduce MeeGo style (SysV) init script.
+  * Make libpowerontimer build-time configurable.
+  * Lower the static priority of dsme-server.
+
+  [ Semi Malinen ]
+  * tune syslog and console logging (Fixes: NB#184690)
+  * reduce nagging for nonoptimal iphb waiting times (Fixes: NB#192322)
+  * thermal management tuning
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Thu, 16 Sep 2010 09:52:20 +0000
+
 dsme (0.61.23) unstable; urgency=low
 
   [ Simo Piiroinen ]
