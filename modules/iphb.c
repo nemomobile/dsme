@@ -576,10 +576,7 @@ static bool handle_wait_req(const struct _iphb_wait_req_t* req,
         client->mintime      = req->mintime;
         client->maxtime      = req->maxtime;
     } else {
-        if (req->mintime &&
-            (req->maxtime == req->mintime ||
-             req->mintime / (req->maxtime - req->mintime) < 5))
-        {
+        if (req->mintime && req->maxtime == req->mintime) {
             dsme_log(client->pid ? LOG_WARNING : LOG_DEBUG,
                      "client with pid %lu signaled interest of waiting with"
                        " nonoptimal times (min=%d/max=%d)",
@@ -587,7 +584,7 @@ static bool handle_wait_req(const struct _iphb_wait_req_t* req,
                      (int)req->mintime,
                      (int)req->maxtime);
         } else {
-            dsme_log(client->pid ? LOG_WARNING : LOG_DEBUG,
+            dsme_log(LOG_DEBUG,
                      "client with pid %lu signaled interest of waiting"
                        " (min=%d/max=%d)",
                      (unsigned long)client->pid,
