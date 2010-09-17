@@ -1,0 +1,1706 @@
+commit acaa7fba388552c4894076fcf5a192b6ef0459fc
+Author: Markus Lehtonen <markus.lehtonen@nokia.com>
+
+    Convert DSME to use autotools
+
+commit 601099561b088919ed2665a401add9f3b58eb9db
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    bump version to 0.61.24
+
+commit 83ca81b99bef1742e2e58a097edbabeffd6dee33
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    reduce nagging for nonoptimal iphb waiting times (Fixes: NB#192322)
+
+commit ea34895cdd18aea8d1620b1886145b71756e3ed6
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    Tune syslog and console logging (Fixes: NB#184690)
+
+commit 93842e2881fd8df934535384c133126e8142aeb4
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    update surface temperature estimation
+
+commit f904758aa337c37f286bf34929643b4f62aa2b56
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix licensing in depend_filter.py; this time for real
+
+commit 515f81994fae8bc455d67e5faeb8fe4c5598156b
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix licensing in depend_filter.py
+
+commit 29e7115a76adf0b692140d8e5662d63bb9ee611d
+Author: Markus Lehtonen <markus.lehtonen@nokia.com>
+
+    Add start/stop priority to SysV init script
+
+commit 7a49645dfbfdd22c6fbcb8dc72920d419e306151
+Author: Markus Lehtonen <markus.lehtonen@nokia.com>
+
+    Lower the static priority of dsme-server.
+
+commit 3867cf82f04080fe84d504267c0bd20eaefb2f55
+Author: Markus Lehtonen <markus.lehtonen@nokia.com>
+
+    Make libpowerontimer build-time configurable
+
+commit a3ffd31424c777fb141cf7e10b05808530be1864
+Author: Markus Lehtonen <markus.lehtonen@nokia.com>
+
+    Introduce MeeGo style (SysV) init script.
+
+commit 71c00a787b2d7f6f25c9b02b2b7d3d49b193365e
+Author: Markus Lehtonen <markus.lehtonen@nokia.com>
+
+    Add build-time option to exclude upstart.
+
+commit eabab62a1b3ec66ba8bd48afd762b60ba14733b8
+Author: Simo Piiroinen <simo.piiroinen@nokia.com>
+
+    Changelog formatting fixed
+
+commit a4fc28c2ff1254a5c31db24cb4f787d4c170441e
+Author: Matias Muhonen <ext-matias.muhonen@nokia.com>
+
+    Add changelog entry for thermal management tuning
+
+commit b0a5961f7867dea699c17290f92d695478ac683e
+Author: Matias Muhonen <ext-matias.muhonen@nokia.com>
+
+    Thermal management tuning, forget to add the author tags
+
+commit 41ae4124f6379281fe3401886069bee5a641f726
+Author: Matias Muhonen <ext-matias.muhonen@nokia.com>
+
+    Thermal management tuning
+
+commit 8addcd1afbba153ca97f7587c9b5dab70fddc499
+Author: Simo Piiroinen <simo.piiroinen@nokia.com>
+
+    Power on timer module implemented
+
+commit 88d6715f4eab73c1ecc1f58918b2b8264381552b
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    bump version to 0.61.22
+
+commit 7d3a51c89b276dd5088a7e96e20b1abb6ebe8661
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    use lower logging level for internal iphb wait requests
+
+commit d41918f3bfa12f7abed779335bbf46e6c68cafa1
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    bump version to 0.61.21
+
+commit 146fc70662c842e8f2019a2f88f1efdb95b8831b
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    add module for obtaining RD flags
+
+commit 9d8e23321affa05380c7bfd7c3c3e6302ef50277
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    remove obsolete CAL related files
+
+commit 25d3ded614a8da09481c4aa6a615870d4339857c
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    get RD flags from environment instead of CAL
+
+commit 324127b6fccdf03fc82b798c1aea1c3619cac08d
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    bump version to 0.61.20
+
+commit 513025f554c1ad6bf1b895bee34a95754190e43c
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    make dsme grok active alarms
+
+commit 42e687ce6e14170257ba44e4d31d630facfe68d8
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    bump version to 0.61.19
+
+commit e997d17f5ffafb88760b5632349955f6bc8a3293
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    first stab at aegis support for DeviceStateControl token
+
+commit 61c1c0b84d2c88f10ec361038136aa56c5333851
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    make valgrind happy
+
+commit ed34b96de2c587a55220c9ce06a7853d95b7a146
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    bump version to 0.61.18
+
+commit 6466e8990dd22770ff10c7f0a58ab2a79f1efcd8
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor edit
+
+commit f08f746569be2a3c4e5627123c3d8696e0b0d79f
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    add silly timestamp logging for testing
+
+commit 3bc78a7cf03154613bc81a739ca8e309f24a9dd2
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    ack events to iphb kernel module
+
+commit bb3c460a874c8c8a3ac6d8361cb064f9aae4acd9
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    make thermal manager use iphb
+
+commit 1be595f03aa57bcf33a05a60842e21308ac0a644
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    make processwd use iphb
+
+commit 43d194f6477d7eec5ed4c058f61db5afe5b8df2a
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    support internal clients and syncing with hwwd in iphb module
+
+commit 40e46131aea89174383f52e589f335e36215eca6
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    prepare hwwd feeder for syncing with iphb
+
+commit d34657bb6b5c3222244909c04d12f5407708e736
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor edit
+
+commit 8476c0a30b37b4989ec6d869396db5753603bbae
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    add IDLE message
+
+commit d453368421466616a533d2be84662b850223a928
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix a coverity finding
+
+commit 3238cdc674c337cadef7efaf15604d76bd319355
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix a coverity finding
+
+commit dc59ddcf58321e833ee51468e81e917184f5ac00
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix a coverity finding
+
+commit d3294ed29d3c8a901232bd1dc3e36fb77f3ec9a1
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    bump version
+
+commit 852153ea86f601ef63514db73d0d1b6d4b1cf214
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    By Matias Muhonen: fix NB#159310 by adding D-Bus policy configuration
+
+commit 317260615806cc07d67b24a5f66cbf3c261a3346
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    bump version
+
+commit a9ae3dfce666327933c618c7e7a860f32cbb5eed
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    take reboot detection into use
+
+commit 54bf47e200796bc8f60b0d3428509f30277d3c78
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    make reboot loop detector more testable
+
+commit fa0266bc3179fb562277aef5cd457821a503fe5a
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    add test cases for reboot loop detector
+
+commit bab57218d67e4ffd0926f885ad15dcedd0597699
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    first cut at reboot loop detection
+
+commit 1a03e68b9104660ab001234c17728c3d8d27873e
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#170378: depend on the new libdsme
+
+commit f39703ffa09e12b1b2eb8d86fce4863315b7f570
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    bump version
+
+commit 0274e7ce10a3c8b8211abb853b81b2c442e980c1
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    make dsme grok alarm queue becoming empty
+
+commit 56bb11816f48fc915f5a5f4a3b2cd0cc926957ac
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    bump version
+
+commit 19c979949a33aa1c448e8e29377e5b02ed858b42
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    update dependency on new libdsme
+
+commit 0f3c621c3443ac99c99bb862054675b8cb83da0d
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    proxy state queries from D-Bus
+
+commit 94d76433ac668ede75fbacf4b03266b2ef2fe16e
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    support replies from internal message queue to D-Bus handlers
+
+commit a2099c7475d1084e05f538285d92823688e211df
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    do not parameterize shutdown ind on D-Bus
+
+commit 5ba4666a8593b740283585528e28c21adab8d400
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    proxy state changes to D-Bus
+
+commit b528a5713a5e4ce50d20e3c9ff9f6e15b04fabfc
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    update timed D-Bus i/f name
+
+commit 559eb884de28a8ccd8879ab7d4308f718dc7df37
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    save runlevel to /var/lib/dsme/saved_state, utmp & wtmp
+
+commit 204ad40cd6b8c6157f785a1dbc0658f4a694e7d0
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    first cut at supporting telinit ACTDEAD
+
+commit 1cb2f53d4e68d0236793ed20fe9e6c8510ed6e65
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    support all current state change requests also via DSM_MSGTYPE_TELINIT
+
+commit 325f1d791cb5d9dd48aeec2d8507d019d42cb0a5
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    add skeleton support for DSM_MSGTYPE_TELINIT
+
+commit 52a931f736b56a7cb844b93552674d0df5a5e54e
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    add support for changing logging verbosity on the run
+
+commit c762d362a83213a330cfdc82d82870306ede3ad8
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    support --telinit in dsmetool
+
+commit dcafcc9aab821894a2b737de2d5e097653f66c45
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    add upstart module
+
+commit 4196938c398b6f1ef9955c7567818b9cb81c97a7
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor edit: remove unused THERMAL_SHUTDOWN_IND from dbusproxy
+
+commit d9633eca568fd148b0546e8e773424b5bcc8517f
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    Port fix to NB#139135 from Fremantle: parameterize shutdown ind on D-Bus
+
+commit bdf9bf5485a242c25e4e58d6a4a57068514edf78
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    bump version
+
+commit ef75297a353aba54365c2391e59cac946ab2855b
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix comment
+
+commit f0d82ce984442ab48e1b35c3b22642040ad7912e
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    port from using alarmd to using timed
+
+commit 4b87b50e745f221e333a7de0fa034adb0a6e94a3
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    readjust to changes in usb_moded's D-Bus i/f
+
+commit c360094b6db494557f76e3b98acb7d42d9e7e723
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    bump version
+
+commit af5d6cd19106a7d0420a2f3f6e6c5b4d3878b59d
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    Fixes: NB#167251: exit dsme-server process if dsme process dies uncleanly
+
+commit 56cf101e406e76a75c84be0413e737553c8634f5
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    adjust to changes in usb_moded's D-Bus i/f
+
+commit db9114951caab1753783ff9cd3a36f1a51127d15
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    remove unnecessary #includes
+
+commit 4de0fc3f2d133b6e76ecf825de3d826063fc45fb
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    remove deprecated flags from Makefile
+
+commit 0998fcec60d94f85b6e06c9a64242d6db1a61c73
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 279962268e904a0cdbef71fad2089fa3bf588178
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    remove dsme-exec-helper since it is no longer used
+
+commit 4910c56d7953d30da4f7aca6d2621c190cb0d019
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    install dsmetemperature
+
+commit 839b6a80bbf3bc874dea8c10ff2926b867cbcb99
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit f001910292b9c9864c283b679c841696cb18509c
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    also consider desktop alarms when broadcasting DSM_MSGTYPE_SET_ALARM_STATE
+
+commit 42717cdede51f5dd657584eddaa133191be44f10
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    Add a script for logging estimated surface temperature.
+
+commit d9e3c8ec0fbb2a593fef9301e7729dc742536ce2
+Merge: 49f3ff2 2739e7a
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    Merge branch 'master' of ssh://gitorious.org/dsme/dsme
+
+commit 2739e7ae1460f1b485964e1662f74e42b082ee14
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    support estimate_surface_temperature on System Bus
+
+commit da18fe889738c03851f4dbf00a0a6b76ee2c329f
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    support appending ints to D-Bus messages
+
+commit 49f3ff2511f523fcc67aad05d41c535b8b24e10d
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    bump version
+
+commit eaa8c57227a46e28375126023d4864f261a8ff30
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    link thermal manager plug-in against its D-Bus interface
+
+commit 1fdc71ed7bb8afd8881460ead76c74a68448c83c
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    bump version
+
+commit 4b044343d51010db69b1b38dae7a8f09e311bb9c
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    update usb_moded signal name
+
+commit 5a6e9e5cb6d0a6d97dd4339357884ac721c8352f
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix USB state tracking
+
+commit b0092194cc6658f2167418c8535ecd64a1f7c258
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix compilation errors
+
+commit 0f0611d17595348ea8b794c2a676703345fa8860
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    first cut at tracking usb state via usb_moded
+
+commit 16d353105e35f7957c5918203b80600fd284c1bf
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    there is no runlevel for MALF; use RUNLEVEL_SHUTDOWN instead
+
+commit be5b430906683e24b1c9912592f5127cc212ae97
+Author: Raimo Vuonnala <raimo.vuonnala@nokia.com>
+
+    Allow 1 sec slippage for wakeup
+
+commit 234213ee6c8f10ab39f145082328ea50d7c3ec19
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    use libdsme instead of hardcoding D-Bus i/f
+
+commit 6a1dc030825b8a02955ba59a210dd703702e0e19
+Author: Raimo Vuonnala <raimo.vuonnala@nokia.com>
+
+    - I_woke_up errorcode fix
+
+commit 142bcba38420a8bb0210d77222e2ae7b40033061
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    remove left-overs from lifeguard
+
+commit 629e8156a9ede28633927d60ff2d0734537bd85e
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    remove lifeguard
+
+commit 8a6475edf8d9f5da11fb581420cc7804ca420959
+Author: Raimo Vuonnala <raimo.vuonnala@nokia.com>
+
+    Added HBTEST
+
+commit a6d52848a4e101aaa047c3c7b710e3c07bc37568
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    remove console debug messages
+
+commit f2cb3abda012ade00829612b55a15bcf804b6bf1
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    update changelog
+
+commit febde1e35d79fc5aedb3a1cc993be4acb677ef68
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 3fc90f06032decbf975dda9de9d1bb0e046d0b27
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    print version number on console
+
+commit f8a74322e9b035e398d354de042eecca1b285a21
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    also install dsme-server
+
+commit a599483e3ccdc43f1a062f29cdc4e7923485f96e
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix dsme-server path
+
+commit eeed6e4c625824ce7a0e87a761793eca6363baa1
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    do not use g_main_loop_quit() from a signal handler
+
+commit e714647e32837d4034de18033e421dadb5aa9098
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    indent
+
+commit 3ee13babac5ba976d5c4933f4dccfd520d865e0a
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    add a TODO note
+
+commit 8585ddf446ade884d0f55db8e94d8a9790e763b3
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    merge the hwwd split branch to trunk
+
+commit 6ed472e76e9a95d20761c59c8c5414f9fd1a5506
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    bump version numbers, fix libiphb install dir
+
+commit 054d7f9112dd35140eb2a99dc0efe76bfe33a18b
+Author: Tapio Rantala <ext-tapio.rantala@nokia.com>
+
+    Attempt to clean up dependencies
+
+commit 813a988a8c9e61feed83c88d25e376d163f57819
+Author: Tapio Rantala <ext-tapio.rantala@nokia.com>
+
+    Add Provides-statements
+
+commit eab019346e42ac239e990002c6f083089f630a54
+Author: Tapio Rantala <ext-tapio.rantala@nokia.com>
+
+    Fixed defects found by coverity tool
+
+commit 735a5f058e082ff63e3cf65579def48b157b6705
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    merge the iphb branch to trunk
+
+commit 6a4f37dda651cc8a7d3da2a7b6e8147c84e466bc
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    use printf instead of echo -e for SUSv3 compatibility
+
+commit b9f9261d80ca75ca8ac3f8d3b63fe87ce01b7afe
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 6fe78b4abd197cd9a17f08d5a01e77735e76403f
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 685e7e8e7e61be8b835097d2395386ea9e991566
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    re-enable thermal mgr; use 98 deg C as the fatal limit
+
+commit e8b1a5d70900412aa5003887d89b16f05db3dd5e
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 06a0549631bfbe777805b1bd92af7130ae90ef9e
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    add support for no-ext-wd
+
+commit 703f64da71b7ac85e77e14da5b3b4f40f320d554
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 1eba8a23d6f0a52c0df38da01aeb92d74239cecc
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    do not install upstart init files
+
+commit ea577cd1b041207dc0126509e22a528577910782
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix a typo
+
+commit 7a5d4e8eba0bbbc85ab19749c27f18ee889d7a1a
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    stop spamming console with LOG_CRIT messages
+
+commit ac73fbc43c8e179e7e9e6800b189bb9b5ced0529
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#149526: define _GNU_SOURCE for alarmtracker
+
+commit dff5f55e439642dd63a29a09dff5685be64e6869
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    update build dependency to libdsme
+
+commit d7132e972cfa3112e2efb4d01124cad1b3ff9fe4
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 1880d2936db5763d8287fbffcaa5623bed1fef9e
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    update module tests
+
+commit d2ad03d6681f4a8c32fedd887e32cb84775a68a8
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    add battery_empty_ind
+
+commit e94271363c35dd3148caa93c83c1828876ddefc7
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    do not reboot when going to actdead
+
+commit acc87e2d43c4a46bf57d1fa2883f00d47b3d6e96
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 6ac112c73798f0bfb2edcac02e62878b464626a6
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    temporarily drop libbmeipc-dev from build dependencies
+
+commit 45b9663bca8fbe7a1bbc07504f895e1d1b3a746c
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    disable battery thermal management for Harmattan development
+
+commit 7b1971319fcde58344e106b53f1dc0a39140526b
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 08016f40111347fe134535e17cea5c43319f1045
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#144351: send alarm state in addition to normal state query response
+
+commit 2fc9519cc7e243003a13d18ec264c437a03ed81e
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#144351: reflect alarm queue changes to dsmesock clients
+
+commit 259f499a13c0d263e730f0f99c51b05a735cb3f5
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit aa903e80816859675bb42fca51a4d59e7823718b
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#144351: broadcast alarm state message
+
+commit 5b0a2c85ca34ad61e86851ca96e865280932747e
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 64a0241035fba376176a646c39685a2a3575b3c7
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 5ce12a8464863baa3a096abb05383dd0b3b47fe3
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    revert partial fix to NB#138594 to make sales release with fix to NB#142959 only
+
+commit 8c720c3c7d509e0cc931f6872a89998fc6d984e8
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit e20839fb5880d36495eccfdd420b14606009ebe0
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    reflect THERMAL_SHUTDOWN_IND removal in module tests
+
+commit 8b84f348c1b5e8a0cb6c6277edb0dce2351bee12
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#142959: do not send THERMAL_SHUTDOWN_IND
+
+commit 3330dbfffcaaa99b806d0260d3e48611a682e6a0
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    update state module tests
+
+commit 15644792acc6b706b1f26a05e402ae0f23f2a8d2
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#138594: do not accept new lifeguard clients during reboot/shutdown
+
+commit a64b45944cd60a9a498a411ef5445f3db0933749
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor edit: use bool for a boolean
+
+commit 91f259a63e7afcfaf0795f775f441c61f8e665a3
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor edit: indent
+
+commit 7bccd930fac415ea5ab3cd60eb7ed68cfa4a8045
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor edit: only get ucred if needed
+
+commit f3fa61fa52ca58862fca5ad423b2a68b67c1b558
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    add _GNU_SOURCE to dsmetool.c
+
+commit 887f762b3b61700fa282ddd5400e570f09d75b9c
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix changelog
+
+commit c12d355beda015e9433d5fe8f831f5b8e872737f
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    bump version
+
+commit 918c605c16f77d02b2925cc7c39b8bd3cb879719
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    Stop lifeguarding during a reboot/shutdown
+
+commit 46369c753af8ad8068eb978558bf6d2aecd524da
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    bump version
+
+commit 224f5bce8c3c2cf4d6efbf5f217efd16ae3474c0
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    remove dsmetool-session
+
+commit 223d2700566ea7b042d87ad90219cd66ee209d7a
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix the changelog
+
+commit d931b8b2eae3e11c04f6133d18e9063d00631ad3
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit ba1edafa4917c76d856a3bc88868c6e8f4f224c8
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#132619: Split libdsme into a separate source package
+
+commit e3dbebf9b5191a0d1885d3d45b393bc9bb8d5a34
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    Fixes: NB#127507: partial fix: retry write() to wd device in case of EAGAIN
+
+commit c4ed0659145153aec80103837078e2d549cc0eb7
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    update todo list
+
+commit 0d2268af3784c603ddb5185a14c264bdab32d04e
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    put back the 2s delay before shutdown/reboot (NB#127466 was de-prioritized)
+
+commit d741baf4e26a852000088c94f99938dbe543d52d
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit f24943c24b6cd0a96677e884aa6a076bb69abc00
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#127466: remove the 2s delay before shutdown/reboot
+
+commit d7b2d25a02ba05078b8d9a23653594b9b830f7d0
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    do not interrupt thermal shutdown sequence even if the temps come down
+
+commit fa8102d9a13c81ea4150460309086e6f28fd58ee
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix the changelog
+
+commit 54c1da6cca3e55dc2e6e33178d27c15eaa05a443
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 8ab10d9e0f3a2f3a8d0df09eac6d33f2b11b9ff7
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#127507: merge changes from the hwwd_high_prio_thread branch
+
+commit 232f8f4507ede2f0751db386b6ab44cab7df0ba0
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    protect from OOM killer before spawning threads
+
+commit 361cf1cd9ca50a399931d888ad1a764264dbf05c
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#127507: call g_thread_init() to set up GLib for multi-threading
+
+commit 49571f02b169c979e953755eeeaec03de9586c84
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 37cf385b96b1354555b01e909f3902f9db6f63bf
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    use -pthread for .so's as well
+
+commit 4679bac63d51dcf02d3207e925da40a7efed6482
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    use the proper logging method from the logger thread
+
+commit 8df80cc16c2e44cf55cff334f4000ad9ff6d2d3e
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    add the missing -pthread flag
+
+commit 53b5acefc78407bdc045f6ea0051774e002dc65c
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    lower scheduling priority of child immediately after fork
+
+commit 5d6bdba638e0655c39984a6af8cb308089f12355
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor edit: remove unnecessary logging
+
+commit 2439acc303ce8ea3331debaa090114f8f5d21076
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    install dsme-exec-helper to /sbin/
+
+commit e3d6b83a49e57c1368e89c20c5bfd346154cca63
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#127507: first cut at providing dsme-exec-helper
+
+commit e067ec852198ca5f3f81e237c60c05438df249d4
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    log if hwwd kicking happens more than 100 ms later than anticipated
+
+commit 657ac201b260424e0de2056f687d1e053b3f3f56
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#127507: do not try to fopen() thermal tuning file unless in TA test
+
+commit 307172eaf120e0f6a3a71a91c16f899cf3836888
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#127507: off-load alarm queue status saving to the logger thread
+
+commit 999f4a29d74098b654d854dcd0cb7c04deafbc33
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit ed8ee145aef64521827b2d7db26f7f0d483733bb
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    log ping counts
+
+commit 2dbfb77b9b39d72401f5cf6d93b79921374db66f
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fflush() before fork(); use _exit() in child
+
+commit 1e5175a8d50c7cacd4db64f1bcb99a281f5987ac
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#127507: replace g_spawn_async() with fork'n'exec() to unblock parent
+
+commit 6c2ff70d98f2e10710f22e3ff7dcbb0349808ee5
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor edit: increase logging verbosity when exiting dsme
+
+commit 7d3c015601c23dc2d9ba19b7a1e1eb830e76dab6
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#127507: remove logging and related calls from setup_child()
+
+commit 1147eff0c7cb78275d228ecf63ea4aad115c7f4e
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    remove all child watches when unloading lifeguard
+
+commit 7a9f763ccc8b129ca3c7648fc117c288755fe137
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor edit: fix a typo
+
+commit 20f7734dec1c959386bcb13535f40a5fd9fdd260
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor edit: use the correct state for checking reboot request acceptability
+
+commit 108f458904a8a1939db62f81ecf6dfe434b43d16
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    do not try to load usbtracker module
+
+commit 52a3a5608d126f5c25e56229a1a2240308eac6d7
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    introduce USB mass storage mode detection
+
+commit 4e7e5347d009fcd27c5bdc11722f9224e8a6802c
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    remove USB tracker module
+
+commit 4012394b9fa03b976fd33d2913b573617ea5d3e5
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix erroneous dsme_log calls
+
+commit f4dd4c248a2c4f9f1e941a83345f655e9427263a
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    improve logging
+
+commit a905ff0b073c6e6b550fefa066e8eb9e16649f60
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    spawn_proc: use _exit in the child branch of the fork
+
+commit 542cbc4c4d59638d9399a0a7825948cebf6a7c4c
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit d147d5118f17b18995f2f2ecc52e9464b7dbb7d0
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#123145: only prevent shutdown/reboot in USER mode
+
+commit 9879037198b923f58f8bc2123954ea03b8c1bf42
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    update changelog
+
+commit f513beeb367c48cb7b0504efa959c70e966b9368
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix a memory leak
+
+commit 57d381203cff514a988800438d4cdf4eb69a96db
+Author: Simo Piiroinen <simo.piiroinen@nokia.com>
+
+    - updating lifeguard statistics files is moved
+      from main thread to logging thread
+
+commit 2b5caed65520e84983ee3491f9065a77dafab50e
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 1cd6f3bc5e31f30722d0a283274926d5c47f6954
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#123145: fix usb state detection
+
+commit beb85ea4e456d8a99a18a83e19eabfa39f7b8c5e
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    TA testing: use units of hwwd period instead of s for thermal polling freq
+
+commit c2eee7dceb810a5f491286e1ad44e88344bc6f55
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    use a proper syslog format string
+
+commit 9eb346dcbb24525ed53076862ba92e15e5126293
+Author: Pekka Lundstrom <pekka.lundstrom@nokia.com>
+
+    git-svn-id: https://projects.maemo.org/svn/dsm/dsme/trunk@13286 db81c003-b5ea-0310-aa99-ed7f6e1db739
+
+commit 1a522e858d6d7ce88a81ec9b153a1190de7fc8d5
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit b3931fbd7955f7a92f4eb9d82872416ffad1d6a5
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    do not insall kicker as it is no longer used
+
+commit 4fa2265d043fd50f7b08de2f4376afff5db8c151
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    update memory thermal object to use hwwd heartbeat timings
+
+commit ecd467376253d06327a6ff98c1d993c2bda044d2
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#129544: synchronize thermal manager to hwwd
+
+commit a40e7d59e3da442a8309de6ab3132153da199914
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 0a122a610c3878b0803e7ebddca8f99957f2084b
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#127619: kick hwwd's every 12 s and processwd's every 24 s
+
+commit bbbf66eeeae4e9cbf8efef268544d20e43494bdc
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#123145: first cut at denying reboot/shutdown when USB connected to PC
+
+commit 296a52cb5e5073aa44d9904eab0a44bd29bc458d
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    add usb tracker plugin
+
+commit 99826e77c2f7210afd3eac08b4d8a275b0cba819
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit a6139df1f53ba9d966255f0afd2145f85fee0f1f
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#124471: fix K to degrees C conversion heuristics
+
+commit 24c7716fdd6d5cc424c4c1bccaeefeb81e9865b9
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 6f86b7aa095ba3e9df2e1e100200737077728c40
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    revert the botched attempt at posixifying dsmetool-session
+
+commit 4aa032bfa9ffa9989f3f1ddc07e65f9a7084d720
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit e6c8b379b22e1a3e31a41a77037cd52cc91e5815
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#101783: allow setting oom_adj for non-root clients
+
+commit 1107b3e493be54e13164460de70bfc0d0dd3a5e3
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor edit: lower logging verbosity in thermal manager
+
+commit a3a0dcde16ee424d7cd39acc60f83f7294fd3939
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 082c1d3365581008d2ff309e1025d62f4d107150
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    off-load logging to a separate thread to prevent main thread from blocking
+
+commit 35a73427d80309223674bb52f8e30251a80923f8
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor edit: indent
+
+commit 1266d8d8f73f5ece2d389a8954264c96d9d364ed
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor edit: indent
+
+commit e6c745ae586b73b84724dc77ad78ab66d182a855
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    attempt to posixify dsmetool-session
+
+commit cf5b22f89e82b2348de017aa2ee6b11024de0d51
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 6c5b7581d5294004e9000448636814631977f7d1
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    log if hwwd is kicked a second or more late
+
+commit 16b14a170053888a1ddae910fc3ebdc436f5f3cd
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    log the sender of a shutdown/reboot/powerup request from D-Bus
+
+commit 7b1509259e383bea604d6ce08053be8e53d4a854
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    make wd kick period only 5 seconds
+
+commit 5cb6ad641b10fe27053d91c7f2a3dc8fefd1dd9d
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 7b5120638b1ea2c890bb1485ab290b43f14cd317
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    log when reboot/shutdown/powerup received from D-Bus
+
+commit 4c450078d00de1891258681b0ba8b11681f6ce81
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    split endpoint_name_by_pid() off of endpoint_name()
+
+commit 69f87aca0c826d42f1f9397bddd492091f6b7049
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor edit: fix the todo list
+
+commit 1d94871e422cb2677e586455e6b97ea094506b3d
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor edit: fix a log message
+
+commit b9fa32d61aba8ebad91437141720ea66a44105ac
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    ugly code to log the sender of a shutdown/reboot/powerup request
+
+commit 73afcaca7a8c36ae13426a0ba89a4447324103d2
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    start dsme's dbus services also in actdead
+
+commit 0493cbfa3ab1625476c202b41407d7f8c52f40f4
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    always kick hw wd's just before changing runlevel
+
+commit 1f20ebb13213c91f85e6161f67ae0c3fe56cdfaa
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    kick HW WD's from the main thread
+
+commit b7cb27bfd576e9555f67f25634f3694708624152
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor edit: rearrange code
+
+commit c5cface0751bf72ef9cd42ad9421451cf31cbaad
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    update test cases
+
+commit 2d17cd9ba42bc36c40da929142fb82094a227985
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor edit
+
+commit bdd75b7ab2a70188973305c5af01c22a201203b2
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor edit: improve logging
+
+commit ff3240348cbbad8797dd920c434f74c22e7fef45
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    Use BOOTSTATE instead of RUNLEVEL for state initial selection
+
+commit b6a7736a3677e4e2ee81d3b0c1a1343d1e854d50
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 685642b0141eccd9396b61ad2bb2e50498484a65
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor edit: improve logging
+
+commit ceba7499c2f9b192beabb807457554fc276ba808
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#112871, NB#118702: re-enable mlockall()
+
+commit a229cbca3be03ce58c1fc836aee501166f9021bc
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    /etc/event.d/dsme: wait for dsme socket in post-start; remove respawn
+
+commit 3d539f7cf7f4daf04817fb3d3b528a860d446dc2
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#118399: dsmetool now times out at 5 seconds if no response to stop msg
+
+commit 22cf4701f9fcaeacbeb8ea309cc9fb62c47c751d
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 5e294eb1dfd1986946aff821dca829e22cff2b87
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#117923: kick watchdogs before the shutdown starts
+
+commit 6acf933c1793094cafa4311730df8c26defc3fb3
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    copy oom_adj value from message to process struct
+
+commit e838e82013b7a5bd46a5d874d598ec4ef6f62eed
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    change surface temperature estimation according to latest findings
+
+commit 957986776e46cd21b8760109596c44eda541e5e1
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    add the missing short option from previous commit
+
+commit 5a1eacbd3b52592332f9550af3d652bee4d603b9
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#101783: allow oom_adj value to be specified on dsmetool command line
+
+commit b39a30e9719412892d0cba03229ed88afe8ec2de
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor edit: fix changelog
+
+commit dbdd14589fee814298f5c2ae621c9d664de8ba8e
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor fix: remove thermaltool from util/Makefile
+
+commit c2c3e204ceb6c07e734e8477d855071391357379
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 1603f1193385d319c84f76e1ad0bc2d852e7c0f5
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#111827: dsmetool now reports if -k fails
+
+commit d3018c04450765a3648d2a0820b9aebc0b9a99c4
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    Potential fix for NB#116253
+
+commit e10b47dc7f182d9e5863f120c0997c684f914918
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#102544: add dsmetool flag -b to request reboot
+
+commit d9461779ec79c1a92969084ed682227293f8894c
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#100976: do not write to alarm state file if no change in alarm state
+
+commit 6cbcb664f2d518be82f227ac47645a89eb778be6
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#115416: write fewer lines to console from lifeguard
+
+commit 0f86dc593e410b36c8b70793b5f3c780300ac145
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#102069: re-enable hwwd kicking
+
+commit 76ea17e74bf995eead775d9e8b901498028a8289
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    change 'dsmetool -e' to 'dsmetool -s' for stopping D-Bus services
+
+commit fc2fa5994b3088d71d910082d55a1851ff9a3633
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    change 'dsmetool -e' to 'dsmetool -s' for stopping D-Bus services
+
+commit 46d2af7ed886318973ba064ef91a2aa6c92dbcb3
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor edit: indent
+
+commit a1db63c135887a84e40d1243522718ff521a0a06
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    add util/dsmereboot; remove util/thermaltool
+
+commit 6cf34b8e3753d757b7788544546fd6beb6a28d74
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#103369: source /etc/resource_limits.conf
+
+commit fc9c9ed0ea5b9faadd5b0f433e5efa496d907f28
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit e467f7d349fa4d0693bf6b855a723dd20020db44
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#116394: give sysinfod some time to get its D-Bus interface up
+
+commit 02a4762223275ca6d80f4f12c880c424ffe6609e
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 968a65c330497109b3989f01fb93289867ba2260
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor edit
+
+commit 5376086b5e913dcecd3a0013f9341ec7d3aec716
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    restore default scheduler for children; do not mlockall()
+
+commit be6695c230364673e5c1a377eebc2c0b576f381b
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 49d664118b570fb95d4c37cc7430380d1d6a7592
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    disable hwwd's until glib supports monotonic timeouts
+
+commit b5bf95c4d1bd2e75faf2e92ae099950e6cd4573b
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    do not kick omap wd if kicking twl wd fails
+
+commit b566495fc923c0cdcf29fd380de845dd6dd24d1d
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    use monotonic clock for temperature logging
+
+commit 13349fd6ed8eff5c865a393da11a2b487d3a65be
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    bump version
+
+commit d1dc49efd25202a3323340f06d910bab15cf3a47
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor edit
+
+commit 32734aa31ac20e9eb0482e2badfdcbbb204ac23f
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    make thermal manager cope with bme disconnects
+
+commit a4cf23a2ee143149588c7e73d0b6b43d78f886c5
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    remove obsolete thermal configuration
+
+commit b4a38cd0582746c47e2d2edc7701deb9af435c07
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    poll battery temperature asynchronously (to remove priority inversion)
+
+commit 923214fa8f66f146c10d8ec5808d650beca0c280
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor edit
+
+commit 0a82629358035c89d29b73168df63ae0d3339339
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    check PP bits to select thermal limits
+
+commit 4b5edcf6085256c7ce89fae2844cbc39ff705466
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    kick twl wd before omap wd
+
+commit 6e1845d8afc1a7562a6bcdb770fedc3280a7b590
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    add running seconds to thermal log
+
+commit c4a0e7f4128b5dc56e46955000e53fe5f98faa50
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    add support for logging temperature and thermal status to a file
+
+commit 8820f3f7a763277d246c854c8fc3a47608a71978
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    NB#102544: favor rebooting over actdead
+
+commit 4f6bb50108c5c9e08146c18342c3ab95f1afbaa4
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix changelog & bump version
+
+commit 5476d6b0ff052145ab0280fc545b704b09e29084
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    lock pages to RAM and use SCHED_RR at highest priority
+
+commit 96b8c863ab8d1f35da73bcb7bc9b2b7d8c9db9b5
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 820adbccd11b4f12984b7e83e0536df4295d3cc8
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    minor edit
+
+commit d0b27c973b06971f2ae39942437fcab2728a50bd
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    use a high priority high resolution timer for kicking hw wd's
+
+commit f5b1b44869387a695d6f48f6aca9dd45b8ef1113
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    init twl wd; improve logging
+
+commit e2bdd35d9d8a64c715f8a8644e67488605f8a0c4
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix changelog
+
+commit bbb66119c2e565dc486db8023d381580b0ea23c4
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    work around some versions of glibc hiding ucred
+
+commit 3fa0252f19637643a3c8fea7c6f250592901af9d
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix NB#109854 by associating ucred with endpoint rather than connection
+
+commit 6ea925aca18a73ade32b31a890ed6d1a12ffe4b5
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    add upstart event.d file for connecting to D-Bus
+
+commit 5b6fff4e77e08a35a9c75063d4267e816396a8b0
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit c006e212a081963f9bae56b13c9f330e809a3bcc
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix a memory leak in dsmetool to keep coverity happy
+
+commit 16f61d72dc4ef64015101fc40a1ddd309c5a379d
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix a memoryleak in thermaltool to keep coverity happy
+
+commit 0de992ddca504a9b2541414e8be61765636b84e0
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix a silly bug
+
+commit fd84763dd251a8dadc04274213f5695de2408691
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    keep coverity happy
+
+commit 00b65d7a381adb239fc51ac724efade032eac61d
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    keep coverity happy
+
+commit 276d00ddc8637d6863d45269d5abe63c1582e861
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix a silly OLD bug
+
+commit ad19addd8b17871b41cd10005565becc72c38f92
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix a silly bug
+
+commit 81cfa76c0da976bf2ec0740d326fa6ed7ae4ef9c
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    set omap wd timeout to 14 s
+
+commit a2bd518a6197faf574f3276a67e4d0afc32da0b5
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    kick omap and twl watchdogs separately
+
+commit 79a0c5f0645f3b40b4beace18ba778b2b6f173f0
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    /bin/sh -> /bin/ash
+
+commit edd4d10ddc5f143e21169fbdb17c113e90735fed
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    /bin/bash -> /bin/sh
+
+commit a8cc595b978d9d5999a7697b1639e6dcf868ff25
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix an obvious bug in checking the return value of open()
+
+commit e6dc5f2ac1ea4b6fd35e50c33e576cf16ad3042b
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix an obvious bug in checking the return value of open()
+
+commit 1af6a2fce8736f658a8bc650a78da0d858e72ad2
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    more whitespace changes
+
+commit 807ce5b9abcc371c9728dedc0061f8b1c7da9112
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix indent
+
+commit dbe7b414d240845e2e75090496167bc419bd437d
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 31d664a1577a25af45ae054cac798e60e85d3492
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    install dsmetool-session
+
+commit ed4529b1806aa8d1e4864077ec7e69ae20d704c0
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    add dbus-send to reboot the device
+
+commit d80cb6bf796f2a90eff35b65bf2a898bd4b0b1ab
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    add dsmetool-session from Janne Karhunen
+
+commit 13f8711aa98b72dad11c7644b9f0743d1cb724af
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    postpone listening socket until plugin modules have been loaded
+
+commit e377aa6e5e6d3ce28ac3c26e65042ae7956e27f4
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    improve waitfordsme logging
+
+commit cfea56c03ca8fcdf571a7e5871650b45016d7101
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    bump version
+
+commit 93d9acf8975c6bbaced3fa3b546bb528cc2e0f45
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    update changelog
+
+commit 71174ec8a0ccca63ca8e7ffc164101bfea18e4f9
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    work around continous integration
+
+commit 76a7656209de277079090a9058478cd24af4bc1f
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit fcabe42a7bef8edf71ef60ce6c636db40ceba194
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    update todo
+
+commit 485fc1ec13a6ab28bdf2ebbee3095f7abdf9575b
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    update module tests
+
+commit 371ea7d1869cc5ed556c7047a7ca1d97c42d40ec
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    go to ACTDEAD via REBOOT
+
+commit 17872f26167dfc8375a3d29b14e003f6357ace77
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    improve waitfordsme logging
+
+commit 67391c7671f14df0633dbc3ae849f5fe28a62409
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    remove an obsolete enum
+
+commit 9696046952fd7dcbf4911c9f2cefca45f79053e7
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    update todo
+
+commit 1868067e65e3075baa29f63c05f4ea8f8c8674fd
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit e4e2bbeb329cec1cf28758d89238ed70348fa817
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    update starting order between rcS, dsme and bme
+
+commit ed8f81d28e6ec9dc2e68a44881fac61bcac5ebb9
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    make telinit related logs more visible
+
+commit 49979c383e4878138b5a25f678967230acba47f8
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    update todo
+
+commit e9b60c8b0f12f229355137a8488a8a89c7b70e8f
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    fix upstart event script to run under set -e
+
+commit 6f9f5286508fc81ab1c78de641f6a580e53ea810
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    remove a forgotten line
+
+commit 01b2628c9234de20c3f35bf2c083ce7f1ce1e992
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump
+
+commit 4cbf89bf3e5a620b2696f4ac4ba0740a4e80b8f4
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    disable thermal mgmt of memory
+
+commit 4de65ef05be4d513808d954d90ea7e912c5398f5
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    copy important log messages to console; make some messages more important
+
+commit e11d20337ccdc91d5c2e829420aa5d783ba16239
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    add dsme.upstart; prepare for changing thermal limits during cert test
+
+commit 5c7c20554149033f3ba2c328c91af704ad4c038d
+Author: Semi Malinen <semi.malinen@nokia.com>
+
+    version bump

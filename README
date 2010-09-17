@@ -1,0 +1,9 @@
+Build and installation instructions:
+If source is taken from the git repo:
+$ ./autogen.sh
+$ mkdir build
+$ cd build
+$ ../configure <configure-options>
+$ make
+$ sudo make install
+
