@@ -69,10 +69,12 @@
  */
 const char *modules[] = {
     "libheartbeat.so",
-#ifdef DSME_SYSVINIT
-    "librunlevel.so",
-#else
+#ifdef DSME_WANT_LIBUPSTART
     "libupstart.so",
+#else
+#ifdef DSME_WANT_LIBRUNLEVEL
+    "librunlevel.so",
+#endif
 #endif
     "libstate.so",
     "librebootloopdetector.so",
