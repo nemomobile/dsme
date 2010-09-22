@@ -131,23 +131,25 @@ static bool save_state_for_getbootstate(dsme_runlevel_t runlevel)
     const char* state;
     int         fd;
 
-    /* write out saved state for getbootstate */
-    switch (runlevel) {
-        case DSME_RUNLEVEL_TEST:
-            state = "TEST";
-            break;
-        case DSME_RUNLEVEL_USER:
-            state = "USER";
-            break;
-        case DSME_RUNLEVEL_LOCAL:
-            state = "LOCAL";
-            break;
-        case DSME_RUNLEVEL_ACTDEAD:
-            state = "ACT_DEAD";
-            break;
-        default:
-            state = 0;
-            break;
+    /* Write out saved state for getbootstate.
+     * Prefer USER over ACT_DEAD over others. The order matters in case many
+     * DSME states are mapped to the same runlevel. This really shouldn't be
+     * the case when upstart is used, but still, be prepared for it.
+     */
+    if (runlevel == DSME_RUNLEVEL_USER) {
+        state = "USER";
+    }
+    else if (runlevel == DSME_RUNLEVEL_ACTDEAD) {
+        state = "ACT_DEAD";
+    }
+    else if (runlevel == DSME_RUNLEVEL_TEST) {
+        state = "TEST";
+    }
+    else if (runlevel == DSME_RUNLEVEL_LOCAL) {
+        state = "LOCAL";
+    }
+    else {
+        state = 0;
     }
 
     if (state) {
