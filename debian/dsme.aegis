@@ -1,20 +1,5 @@
 <aegis>
   <provide>
     <credential name="DeviceStateControl"/>
-    <dbus name="com.nokia.dsme" bus="system">
-      <node name="/com/nokia/dsme/request">
-        <interface name="com.nokia.dsme.request">
-          <method name="req_powerup">
-            <annotation name="com.maemo.Aegis" value="DeviceStateControl"/>
-          </method>
-          <method name="req_reboot">
-            <annotation name="com.maemo.Aegis" value="DeviceStateControl"/>
-          </method>
-          <method name="req_shutdown">
-            <annotation name="com.maemo.Aegis" value="DeviceStateControl"/>
-          </method>
-        </interface>
-      </node>
-    </dbus>
   </provide>
 </aegis>

@@ -1,3 +1,11 @@
+dsme (0.61.25) unstable; urgency=low
+
+  [ Antti Virtanen ]
+  * Allow Dbus iface to be used by root (Fixes: NB#195198).
+  * Aegis is not used anymore to generate DSME Dbus config. Instead everything is now moved under dsme.conf to have better control and to avoid conflicting settings.
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Thu, 28 Sep 2010 17:20:20 +0000
+
 dsme (0.61.24) unstable; urgency=low
 
   [ Markus Lehtonen ]
