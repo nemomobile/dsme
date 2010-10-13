@@ -82,7 +82,7 @@ AM_CONDITIONAL([WANT_MEMORY_THERMAL_MGMT], [test x$enable_memory_thermal_mgmt !=
 #
 # Compiler and linker flags
 #
-AC_DEFINE([PRG_VERSION],[$VERSION],[Version for DSME])
+AC_DEFINE_UNQUOTED([PRG_VERSION],[$VERSION],[Version for DSME])
 # FIXME: DSME_LOG_ENABLE should be proper&working configure option
 #AC_DEFINE([DSME_LOG_ENABLE], [1])
 
