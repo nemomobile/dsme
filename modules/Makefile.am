@@ -68,7 +68,7 @@ libprocesswd_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
 
 libdbusproxy_la_SOURCES = dbusproxy.c dsme_dbus.c
 libdbusproxy_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS) $(DBUSGLIB_CFLAGS)
-libdbusproxy_la_LIBADD = $(DBUSGLIB_LIBS)
+libdbusproxy_la_LIBADD = $(DBUSGLIB_LIBS) -ldsme_dbus_if
 
 libalarmtracker_la_SOURCES = alarmtracker.c
 libalarmtracker_la_CPPFLAGS = $(AM_CPPFLAGS) -D_GNU_SOURCE
