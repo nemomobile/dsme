@@ -3,7 +3,7 @@ AC_INIT(dsme, 0.6.24)
 
 AM_INIT_AUTOMAKE
 
-AC_PREREQ([2.65])
+AC_PREREQ([2.61])
 AC_CONFIG_SRCDIR([dsme-wdd-wd.c])
 #AC_CONFIG_HEADERS([config.h])
 
