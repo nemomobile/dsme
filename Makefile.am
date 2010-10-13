@@ -30,7 +30,7 @@ dsme_SOURCES = dsme-wdd.c \
                dsme-wdd-wd.h \
                oom.c \
                dsme-rd-mode.c
-               
+
 
 dsme_CFLAGS = -g -std=c99 -Wall -Wwrite-strings -Wmissing-prototypes -Werror \
               $(C_OPTFLAGS)
