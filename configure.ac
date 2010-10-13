@@ -89,7 +89,7 @@ AC_DEFINE_UNQUOTED([PRG_VERSION],[$VERSION],[Version for DSME])
 AC_SUBST(C_GENFLAGS, ["-pthread -g -std=c99 -Wall -Wwrite-strings -Wmissing-prototypes -Werror"])
 AC_SUBST(C_OPTFLAGS, ["-O2 -s"])
 AC_SUBST(C_DBGFLAGS, ["-g -DDEBUG -DDSME_LOG_ENABLE"])
-AC_SUBST(CPP_GENFLAGS, '-I$(abs_top_srcdir) -I$(abs_top_srcdir)/include')
+AC_SUBST(CPP_GENFLAGS, '-I$(top_srcdir) -I$(top_srcdir)/include')
 
 
 # Checks for programs.
@@ -113,8 +113,8 @@ PKG_CHECK_MODULES(DBUSGLIB, dbus-glib-1)
 
 # Check libs (that are not yet checked)
 # Whitespaces in 'action-if-found' fields in order to not (auto)update LIBS variable
-AC_CHECK_LIB([rt], [clock_nanosleep], [ ], AC_MSG_FAILURE([librt required!]))
-AC_CHECK_LIB([dsme], [dsmesock_init], [ ], AC_MSG_FAILURE([libdsme required!]), [$GLIB_LIBS])
+AC_CHECK_LIB([rt], [clock_nanosleep], [AC_MSG_NOTICE([got librt])], AC_MSG_FAILURE([librt required!]))
+AC_CHECK_LIB([dsme], [dsmesock_init], [AC_MSG_NOTICE([got libdsme])], AC_MSG_FAILURE([libdsme required!]), [$GLIB_LIBS])
 
 # Check headers
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h stdint.h stdlib.h \
