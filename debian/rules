@@ -43,7 +43,8 @@ build-stamp: configure-stamp
 ifneq (,$(findstring testcases,$(DEB_BUILD_OPTIONS)))
 	$(MAKE) tests
 else
-	$(MAKE)
+	dh_auto_configure -- --disable-static
+	dh_auto_build
 endif
 
 	touch build-stamp
@@ -54,7 +55,7 @@ clean:
 	rm -f build-stamp configure-stamp
 
 	# Add here commands to clean up after the build process.
-	$(MAKE) distclean
+	if [ -e Makefile ]; then $(MAKE) distclean; fi
 
 	dh_clean
 
@@ -75,11 +76,6 @@ install:
 ifneq (,$(findstring testcases,$(DEB_BUILD_OPTIONS)))
 	$(MAKE) tests_install DESTDIR=$(CURDIR)/debian/tmp
 endif
-
-	# install libiphb & hbtest
-	$(MAKE) install-libiphb ROOT=../debian/libiphb0
-	$(MAKE) install-libiphb-dev ROOT=../debian/libiphb-dev
-	$(MAKE) install-hbtest ROOT=../debian/hbtest
 
 	dh_install -s
 

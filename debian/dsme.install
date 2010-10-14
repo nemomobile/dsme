@@ -1,6 +1,6 @@
-debian/tmp/sbin/dsme
-debian/tmp/sbin/dsme-server
-debian/tmp/usr/lib/dsme/*
+debian/tmp/usr/sbin/dsme sbin
+debian/tmp/usr/sbin/dsme-server sbin
+debian/tmp/usr/lib/dsme/*.so*
 debian/tmp/usr/sbin/waitfordsme
 debian/tmp/usr/sbin/dsmetool
 debian/tmp/usr/sbin/batttest
