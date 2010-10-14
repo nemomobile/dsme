@@ -57,6 +57,10 @@ clean:
 
 	# Add here commands to clean up after the build process.
 	if [ -e Makefile ]; then $(MAKE) distclean; fi
+	rm -rf Makefile.in aclocal.m4 compile config.guess config.sub \
+		configure depcomp install-sh libiphb/Makefile.in ltmain.sh \
+		missing modules/Makefile.in test/Makefile test/Makefile.in \
+		util/Makefile.in m4
 
 	dh_clean
 
