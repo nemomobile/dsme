@@ -17,6 +17,8 @@ sbin_PROGRAMS = batttest    \
                 bootstate   \
                 waitfordsme
 
+sbin_SCRIPTS = dsmetemperature
+
 noinst_PROGRAMS = dsmereboot
 
 
