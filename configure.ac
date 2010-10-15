@@ -149,6 +149,7 @@ AC_CONFIG_FILES([Makefile
                  dsme/Makefile
                  modules/Makefile
                  libiphb/Makefile
+                 libiphb/libiphb.pc
                  util/Makefile
                  test/Makefile])
 

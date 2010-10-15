@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: libiphb
+Description: Interface to IP heartbeat service
+Version: @VERSION@
+Libs: -L${libdir} -liphb
+Cflags: -I${includedir}

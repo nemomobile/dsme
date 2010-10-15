@@ -25,3 +25,6 @@ libiphb_la_SOURCES = libiphb.c
 libiphb_la_LDFLAGS = $(AM_LDFLAGS) -shared
 
 iphbdinclude_HEADERS = libiphb.h
+
+pkgconfigdir = ${libdir}/pkgconfig
+pkgconfig_DATA = libiphb.pc
