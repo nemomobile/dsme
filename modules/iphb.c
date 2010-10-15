@@ -36,7 +36,7 @@
 #include "dsme/modulebase.h"
 #include "dsme/logging.h"
 #include "dsme/timers.h"
-#include "dsme-wdd-wd.h"
+#include "dsme/dsme-wdd-wd.h"
 
 #include <stdlib.h>
 #include <fcntl.h>
