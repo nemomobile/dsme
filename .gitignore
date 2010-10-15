@@ -23,6 +23,9 @@ missing
 stamp-h1
 autom4te.cache
 
+dsme/dsme
+dsme/dsme-server
+
 debian/*.log
 debian/libiphb0
 build-stamp
