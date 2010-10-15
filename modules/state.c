@@ -32,7 +32,7 @@
 #include "dsme/logging.h"
 #include <dsme/state.h>
 
-#include "dsme-rd-mode.h"
+#include "dsme/dsme-rd-mode.h"
 
 #include <stdio.h>
 #include <stdlib.h>

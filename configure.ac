@@ -4,7 +4,7 @@ AC_INIT(dsme, 0.6.25)
 AM_INIT_AUTOMAKE
 
 AC_PREREQ([2.61])
-AC_CONFIG_SRCDIR([dsme-wdd-wd.c])
+AC_CONFIG_SRCDIR([dsme/dsme-wdd-wd.c])
 #AC_CONFIG_HEADERS([config.h])
 
 #
@@ -146,6 +146,7 @@ AC_CHECK_FUNCS([atexit clock_gettime dup2 gettimeofday inet_ntoa memmove        
 
 # Create files
 AC_CONFIG_FILES([Makefile
+                 dsme/Makefile
                  modules/Makefile
                  libiphb/Makefile
                  util/Makefile
