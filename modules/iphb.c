@@ -510,7 +510,7 @@ static bool handle_client_req(struct epoll_event* event, time_t now)
         event->events & EPOLLRDHUP ||
         event->events & EPOLLHUP)
     {
-        dsme_log(LOG_ERR,
+        dsme_log(LOG_DEBUG,
                  "client with PID %lu disappeared",
                  (unsigned long)client->pid);
         goto drop_client_and_fail;
