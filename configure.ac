@@ -148,8 +148,8 @@ AC_CHECK_FUNCS([atexit clock_gettime dup2 gettimeofday inet_ntoa memmove        
 AC_CONFIG_FILES([Makefile
                  dsme/Makefile
                  modules/Makefile
-                 libiphb/Makefile
-                 libiphb/libiphb.pc
+                 iphbd/Makefile
+                 iphbd/libiphb.pc
                  util/Makefile
                  test/Makefile])
 

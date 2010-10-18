@@ -1,1 +1,1 @@
-SUBDIRS = dsme modules libiphb util
+SUBDIRS = dsme modules iphbd util

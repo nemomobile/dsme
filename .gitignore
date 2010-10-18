@@ -45,7 +45,7 @@ debian/libiphb0-dbg.substvars
 debian/libiphb0-dbg/
 debian/libiphb0.substvars
 debian/tmp/
-libiphb/hbtest
+iphbd/hbtest
 m4/
 util/batttest
 util/bootstate
