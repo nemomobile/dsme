@@ -149,6 +149,7 @@ AC_CONFIG_FILES([Makefile
                  dsme/Makefile
                  modules/Makefile
                  iphbd/Makefile
+                 iphbd/libiphb-uninstalled.pc
                  iphbd/libiphb.pc
                  util/Makefile
                  test/Makefile])

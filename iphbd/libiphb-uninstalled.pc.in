@@ -1,0 +1,8 @@
+abs_top_srcdir=@abs_top_srcdir@
+abs_top_builddir=@abs_top_builddir@
+
+Name: libiphb (uninstalled copy)
+Description: Interface to IP heartbeat service
+Version: @VERSION@
+Libs: ${abs_top_builddir}/libiphb/libiphb.la
+Cflags: -I${abs_top_srcdir}
