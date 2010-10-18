@@ -1,6 +1,7 @@
 *.o
 *.lo
 *.la
+.*.swp
 .deps
 .libs
 .dirstamp
@@ -14,6 +15,7 @@ config.log
 config.status
 config.sub
 configure
+cscope.out
 depcomp
 compile
 install-sh
@@ -21,6 +23,7 @@ libtool
 ltmain.sh
 missing
 stamp-h1
+tags
 autom4te.cache
 
 dsme/dsme
