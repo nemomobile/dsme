@@ -29,8 +29,9 @@
 #define _ISOC99_SOURCE
 #define _GNU_SOURCE
 
-#include "libiphb.h"
-#include "iphb_internal.h"
+#include <iphbd/libiphb.h>
+#include <iphbd/iphb_internal.h>
+
 #include "heartbeat.h"
 #include "dsme/modules.h"
 #include "dsme/modulebase.h"

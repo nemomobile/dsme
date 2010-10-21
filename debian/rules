@@ -58,7 +58,7 @@ clean:
 	# Add here commands to clean up after the build process.
 	if [ -e Makefile ]; then $(MAKE) distclean; fi
 	rm -rf Makefile.in aclocal.m4 compile config.guess config.sub \
-		configure depcomp install-sh libiphb/Makefile.in ltmain.sh \
+		configure depcomp install-sh ltmain.sh \
 		missing modules/Makefile.in test/Makefile test/Makefile.in \
 		util/Makefile.in m4
 
@@ -95,9 +95,7 @@ binary-arch: build install
 	dh_installexamples
 	dh_installman
 	dh_link
-	dh_strip --dbg-package=dsme   \
-	         --dbg-package=hbtest \
-	         --dbg-package=libiphb0
+	dh_strip --dbg-package=dsme
 	dh_compress
 	dh_fixperms
 	dh_makeshlibs --exclude=/usr/lib/dsme/

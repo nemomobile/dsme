@@ -1,3 +1,9 @@
+dsme (0.61.26) unstable; urgency=low
+
+  * Move libiphb to its own source package (Fixes: NB#188832).
+
+ -- Matias Muhonen <ext-matias.muhonen@nokia.com>  Thu, 21 Oct 2010 07:12:50 +0300
+
 dsme (0.61.25) unstable; urgency=low
 
   * Allow Dbus iface to be used by root (Fixes: NB#195198).

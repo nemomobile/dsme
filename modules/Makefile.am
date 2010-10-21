@@ -22,9 +22,14 @@ noinst_HEADERS = dsme_dbus.h \
                  runlevel.h \
                  heartbeat.h \
                  dbusproxy.h \
-                 iphb_internal.h \
                  thermalmanager.h \
                  state-internal.h
+
+#
+## Additional dirs
+#
+pkgsysconfdir = @sysconfdir@
+
 
 if WANT_BMEIPC
 pkglib_LTLIBRARIES += libthermalobject_surface.la
@@ -83,7 +88,7 @@ libusbtracker_la_SOURCES = usbtracker.c
 
 libiphb_la_SOURCES = iphb.c
 libiphb_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
-libiphb_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/iphbd
+libiphb_la_CPPFLAGS = $(AM_CPPFLAGS)
 libiphb_la_LIBADD = -lbmeipc $(GLIB_LIBS)
 
 librebootloopdetector_la_SOURCES = rebootloopdetector.c

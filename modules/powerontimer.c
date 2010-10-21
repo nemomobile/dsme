@@ -32,6 +32,8 @@
 # define DSME_LOG_ENABLE // FIXME: do not force logging on
 #endif
 
+#include <iphbd/iphb_internal.h>
+
 #include "powerontimer.h"
 
 #include "dbusproxy.h"
@@ -40,7 +42,6 @@
 #include "dsme/modules.h"
 #include "dsme/modulebase.h"
 #include "dsme/logging.h"
-#include "iphb_internal.h"
 #include "heartbeat.h"
 
 #include <dsme/state.h>

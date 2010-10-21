@@ -38,7 +38,7 @@
 
 #define _XOPEN_SOURCE
 
-#include "iphb_internal.h"
+#include <iphbd/iphb_internal.h>
 
 #include "dsme/modules.h"
 #include "dsme/logging.h"

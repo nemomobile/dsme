@@ -1,5 +1,5 @@
 # Package name and version
-AC_INIT(dsme, 0.6.25)
+AC_INIT(dsme, 0.6.26)
 
 AM_INIT_AUTOMAKE
 
@@ -148,9 +148,6 @@ AC_CHECK_FUNCS([atexit clock_gettime dup2 gettimeofday inet_ntoa memmove        
 AC_CONFIG_FILES([Makefile
                  dsme/Makefile
                  modules/Makefile
-                 iphbd/Makefile
-                 iphbd/libiphb-uninstalled.pc
-                 iphbd/libiphb.pc
                  util/Makefile
                  test/Makefile])
 

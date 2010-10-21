@@ -33,13 +33,14 @@
  */
 #include "thermalmanager.h"
 
+#include <iphbd/iphb_internal.h>
+
 #include "dbusproxy.h"
 #include "dsme_dbus.h"
 
 #include "dsme/modules.h"
 #include "dsme/modulebase.h"
 #include "dsme/logging.h"
-#include "iphb_internal.h"
 #include "heartbeat.h"
 
 #include <dsme/state.h>
