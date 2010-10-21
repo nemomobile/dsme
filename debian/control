@@ -6,7 +6,7 @@ Uploaders: Ismo Laitinen <ismo.laitinen@nokia.com>, David Weinehall <david.weine
 Build-Depends: debhelper (>= 4.1.0),
  aegis-builder (>= 1.4),
  libdsme0.2.0-dev (>= 0.61.4),
- libiphb-dev (>= 0.61.25),
+ libiphb-dev (>= 0.61.26),
  libbmeipc-dev,
  libcal-dev (>= 0.2.0),
  pkg-config,
