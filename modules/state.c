@@ -7,6 +7,7 @@
 
    @author Ismo Laitinen <ismo.laitinen@nokia.com>
    @author Semi Malinen <semi.malinen@nokia.com>
+   @author Matias Muhonen <ext-matias.muhonen@nokia.com>
 
    This file is part of Dsme.
 
@@ -23,7 +24,16 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*
+ * How to send runlevel change indicator:
+ * dbus-send --system --type=signal /com/nokia/startup/signal com.nokia.startup.signal.runlevel_switch_done int32:0
+ * where the int32 parameter is either 2 (user) or 5 (actdead).
+ */
+
 #define _POSIX_SOURCE
+
+#include "dbusproxy.h"
+#include "dsme_dbus.h"
 
 #include "state-internal.h"
 #include "runlevel.h"
@@ -55,6 +65,20 @@
  */
 #define SHUTDOWN_TIMER_TIMEOUT 2
 
+/**
+ * Timer value for acting dead timer. This is how long we wait before doing a
+ * state change from user to acting dead.
+ */
+#define ACTDEAD_TIMER_MIN_TIMEOUT 2
+#define ACTDEAD_TIMER_MAX_TIMEOUT 15
+
+/**
+ * Timer value for user timer. This is how long we wait before doing a
+ * state change from acting dead to user.
+ */
+#define USER_TIMER_MIN_TIMEOUT 2
+#define USER_TIMER_MAX_TIMEOUT 15
+
 /* In non-R&D mode we shutdown after this many seconds in MALF */
 #define MALF_SHUTDOWN_TIMER 120
 
@@ -82,6 +106,8 @@ static bool     actdead_requested      = false;
 static bool     reboot_requested       = false;
 static bool     test                   = false;
 static bool     malf                   = false;
+static bool     actdead_switch_done    = false;
+static bool     user_switch_done       = false;
 
 /* the overall dsme state which was selected based on the above bits */
 static dsme_state_t current_state = DSME_STATE_NOT_SET;
@@ -93,7 +119,7 @@ static dsme_timer_t charger_disconnect_timer = 0;
 /* timers for giving other programs a bit of time before shutting down */
 static dsme_timer_t delayed_shutdown_timer   = 0;
 static dsme_timer_t delayed_actdead_timer    = 0;
-
+static dsme_timer_t delayed_user_timer       = 0;
 
 static void change_state_if_necessary(void);
 static void try_to_change_state(dsme_state_t new_state);
@@ -105,6 +131,8 @@ static void start_delayed_shutdown_timer(unsigned seconds);
 static int  delayed_shutdown_fn(void* unused);
 static void start_delayed_actdead_timer(unsigned seconds);
 static int  delayed_actdead_fn(void* unused);
+static void start_delayed_user_timer(unsigned seconds);
+static int delayed_user_fn(void* unused);
 static void stop_delayed_runlevel_timers(void);
 static void change_runlevel(dsme_state_t state);
 static void kick_wds(void);
@@ -118,6 +146,7 @@ static void stop_charger_disconnect_timer(void);
 
 static bool rd_mode_enabled(void);
 
+static void runlevel_switch_ind(const DsmeDbusMessage* ind);
 
 static const struct {
     int         value;
@@ -262,13 +291,27 @@ static void try_to_change_state(dsme_state_t new_state)
           /* we have just booted up; simply change the state */
           change_state(new_state);
       } else if (current_state == DSME_STATE_ACTDEAD) {
-          /* immediate runlevel change from ACTDEAD to USER */
+          user_switch_done = false;
           change_state(new_state);
-          change_runlevel(new_state);
+
+          if (actdead_switch_done) {
+              /* actdead init done; runlevel change from actdead to user state */
+              start_delayed_user_timer(USER_TIMER_MIN_TIMEOUT);
+          } else {
+              /* actdead init not done; wait longer to change from actdead to user state */
+              start_delayed_user_timer(USER_TIMER_MAX_TIMEOUT);
+          }
       } else if (current_state == DSME_STATE_USER) {
-          /* make a delayed runlevel change from user to actdead state */
+          actdead_switch_done = false;
           change_state(new_state);
-          start_delayed_actdead_timer(SHUTDOWN_TIMER_TIMEOUT);
+
+          if (user_switch_done) {
+              /* user init done; runlevel change from user to actdead state */
+              start_delayed_actdead_timer(ACTDEAD_TIMER_MIN_TIMEOUT);
+          } else {
+              /* user init not done; wait longer to change from user to actdead state */
+              start_delayed_actdead_timer(ACTDEAD_TIMER_MAX_TIMEOUT);
+          }
       }
       break;
 
@@ -392,7 +435,7 @@ static int delayed_shutdown_fn(void* unused)
 
 static void start_delayed_actdead_timer(unsigned seconds)
 {
-  if (!delayed_shutdown_timer && !delayed_actdead_timer) {
+  if (!delayed_shutdown_timer && !delayed_actdead_timer && !delayed_user_timer) {
       if (!(delayed_actdead_timer = dsme_create_timer(seconds,
                                                       delayed_actdead_fn,
                                                       NULL)))
@@ -409,6 +452,29 @@ static int delayed_actdead_fn(void* unused)
   change_runlevel(DSME_STATE_ACTDEAD);
 
   delayed_actdead_timer = 0;
+
+  return 0; /* stop the interval */
+}
+
+static void start_delayed_user_timer(unsigned seconds)
+{
+  if (!delayed_shutdown_timer && !delayed_actdead_timer && !delayed_user_timer) {
+      if (!(delayed_user_timer = dsme_create_timer(seconds,
+                                                   delayed_user_fn,
+                                                   NULL)))
+      {
+          dsme_log(LOG_CRIT, "Could not create a user timer; exit!");
+          exit(EXIT_FAILURE);
+      }
+      dsme_log(LOG_NOTICE, "User in %i seconds", seconds);
+  }
+}
+
+static int delayed_user_fn(void* unused)
+{
+  change_runlevel(DSME_STATE_USER);
+
+  delayed_user_timer = 0;
 
   return 0; /* stop the interval */
 }
@@ -442,6 +508,11 @@ static void stop_delayed_runlevel_timers(void)
         dsme_destroy_timer(delayed_actdead_timer);
         delayed_actdead_timer = 0;
         dsme_log(LOG_NOTICE, "Delayed actdead timer stopped");
+    }
+    if (delayed_user_timer) {
+        dsme_destroy_timer(delayed_user_timer);
+        delayed_user_timer = 0;
+        dsme_log(LOG_NOTICE, "Delayed user timer stopped");
     }
 }
 
@@ -805,6 +876,71 @@ static bool rd_mode_enabled(void)
   return enabled;
 }
 
+/*
+ * catches the D-Bus signal com.nokia.startup.signal.runlevel_switch_done,
+ * which is emitted whenever the runlevel init scripts have been completed.
+ */
+static void runlevel_switch_ind(const DsmeDbusMessage* ind)
+{
+    /* The runlevel for which init was completed */
+    int runlevel_ind = dsme_dbus_message_get_int(ind);
+
+    switch (runlevel_ind) {
+        case DSME_RUNLEVEL_ACTDEAD: {
+            /*  USER -> ACTDEAD runlevel change done */
+            actdead_switch_done = true;
+            dsme_log(LOG_NOTICE, "USER -> ACTDEAD runlevel change done");
+
+            /* Do we have a pending ACTDEAD -> USER timer? */
+            if (delayed_user_timer) {
+                /* Destroy timer and immediately switch to USER because init is done */
+                dsme_destroy_timer(delayed_user_timer);
+                delayed_user_fn(0);
+            }
+            break;
+        }
+        case DSME_RUNLEVEL_USER: {
+            /* ACTDEAD -> USER runlevel change done */
+            user_switch_done = true;
+            dsme_log(LOG_NOTICE, "ACTDEAD -> USER runlevel change done");
+
+            /* Do we have a pending USER -> ACTDEAD timer? */
+            if (delayed_actdead_timer) {
+                /* Destroy timer and immediately switch to ACTDEAD because init is done */
+                dsme_destroy_timer(delayed_actdead_timer);
+                delayed_actdead_fn(0);
+            }
+            break;
+        }
+        default: {
+            /*
+             * Currently, we only get a runlevel switch signal for USER and ACTDEAD (NB#199301)
+             */
+            dsme_log(LOG_NOTICE, "Unhandled runlevel switch indicator signal. runlevel: %i", runlevel_ind);
+            break;
+        }
+    }
+}
+
+static bool bound = false;
+
+static const dsme_dbus_signal_binding_t signals[] = {
+    { runlevel_switch_ind, "com.nokia.startup.signal", "runlevel_switch_done" },
+    { 0, 0 }
+};
+
+DSME_HANDLER(DSM_MSGTYPE_DBUS_CONNECT, client, msg)
+{
+  dsme_log(LOG_DEBUG, "DBUS_CONNECT");
+  dsme_dbus_bind_signals(&bound, signals);
+}
+
+DSME_HANDLER(DSM_MSGTYPE_DBUS_DISCONNECT, client, msg)
+{
+  dsme_log(LOG_DEBUG, "DBUS_DISCONNECT");
+  dsme_dbus_unbind_signals(&bound, signals);
+}
+
 module_fn_info_t message_handlers[] = {
       DSME_HANDLER_BINDING(DSM_MSGTYPE_STATE_QUERY),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_TELINIT),
@@ -817,9 +953,10 @@ module_fn_info_t message_handlers[] = {
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_THERMAL_STATE),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_EMERGENCY_CALL_STATE),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_BATTERY_STATE),
+      DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_CONNECT),
+      DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_DISCONNECT),
       {0}
 };
-
 
 static void set_initial_state_bits(const char* bootstate)
 {
@@ -858,6 +995,10 @@ static void set_initial_state_bits(const char* bootstate)
 
 void module_init(module_t* handle)
 {
+  /* Do not connect to D-Bus; it is probably not started yet.
+   * Instead, wait for DSM_MSGTYPE_DBUS_CONNECT.
+   */
+
   dsme_log(LOG_DEBUG, "libstate.so started");
 
   const char* bootstate = getenv("BOOTSTATE");
@@ -878,5 +1019,7 @@ void module_init(module_t* handle)
 
 void module_fini(void)
 {
+  dsme_dbus_unbind_signals(&bound, signals);
+
   dsme_log(LOG_DEBUG, "libstate.so unloaded");
 }

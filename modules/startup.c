@@ -76,11 +76,11 @@ const char *modules[] = {
     "librunlevel.so",
 #endif
 #endif
-    "libstate.so",
+    "libdbusproxy.so",
+    "libstate.so", /* state depends on dbus */
     "librebootloopdetector.so",
     "libiphb.so",
     "libprocesswd.so",
-    "libdbusproxy.so",
     "libalarmtracker.so",
     "libthermalmanager.so",
 #ifdef DSME_MEMORY_THERMAL_MGMT
