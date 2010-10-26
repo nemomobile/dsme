@@ -27,10 +27,6 @@
 # define _GNU_SOURCE
 #endif
 
-#ifndef DSME_LOG_ENABLE
-# define DSME_LOG_ENABLE // FIXME: do not force logging on
-#endif
-
 #include "powerontimer_backend.h"
 
 #include <dsme/logging.h>
@@ -98,7 +94,7 @@ typedef pot_cal_data_v1 pot_cal_data;
  * prettytime  --  #seconds -> "#d #h #m #s"
  * ------------------------------------------------------------------------- */
 
-#ifdef DSME_LOG_ENABLE
+#if 0
 static const char *prettytime(int32_t t)
 {
   static char buf[8][32];
@@ -257,9 +253,9 @@ static int pot_import_cal_data(pot_cal_data *pot,
   // no errors
   err = 0;
 
-  // FIXME: silence this later, but I want to see this in logs for now ..
-  dsme_log(LOG_INFO, LOGPFIX"data block (v%"PRId32") %s",
-           v0->version, "imported");
+  /* dsme_log(LOG_INFO, LOGPFIX"data block (v%"PRId32") %s",
+   *        v0->version, "imported");
+   */
 
 cleanup:
 
@@ -323,9 +319,7 @@ static int pot_write_cal(const pot_cal_data *pot)
     goto cleanup;
   }
 
-  // FIXME: silence this later, but I want to see this logged until
-  // the shutdown problems have been sorted out ...
-  dsme_log(LOG_INFO, LOGPFIX"cal write OK");
+  // dsme_log(LOG_INFO, LOGPFIX"cal write OK");
 
   err = 0;
 
@@ -387,10 +381,10 @@ void pot_update_cal(bool user_mode, bool force_save)
 {
   static bool pending_save  = false;
 
-  // FIXME: remove/tone down debug logging at some stage
-  dsme_log(LOG_DEBUG, LOGPFIX"%s(user:%d->%d, force:%d, pending:%d)",
-           "update",
-           pot_in_user_mode, user_mode, force_save, pending_save);
+  /* dsme_log(LOG_DEBUG, LOGPFIX"%s(user:%d->%d, force:%d, pending:%d)",
+   *        "update",
+   *        pot_in_user_mode, user_mode, force_save, pending_save);
+   */
 
   int32_t uptime_now  = 0;
   int32_t poweron_dif = 0;
@@ -400,12 +394,13 @@ void pot_update_cal(bool user_mode, bool force_save)
   {
     pot_cal_read_done = true;
     pot_read_cal(&cal);
-    // FIXME: remove/tone down debug logging at some stage
-    dsme_log(LOG_INFO, LOGPFIX"read cal: on = %s, up = %s, rb = %"PRId32", wr = %"PRId32"",
-             prettytime(cal.poweron),
-             prettytime(cal.uptime),
-             cal.reboots,
-             cal.updates);
+
+    /* dsme_log(LOG_INFO, LOGPFIX"read cal: on = %s, up = %s, rb = %"PRId32", wr = %"PRId32"",
+     *        prettytime(cal.poweron),
+     *        prettytime(cal.uptime),
+     *        cal.reboots,
+     *        cal.updates);
+     */
   }
 
   uptime_now  = uptime_get();
@@ -434,10 +429,9 @@ void pot_update_cal(bool user_mode, bool force_save)
   // update frequency depends on power on time stored at cal
   poweron_lim = pot_update_lim(cal.poweron);
 
-  // FIXME: remove/tone down debug logging at some stage
-  dsme_log(LOG_DEBUG, LOGPFIX"tot = %s", prettytime(cal.poweron + poweron_dif));
-  dsme_log(LOG_DEBUG, LOGPFIX"lim = %s", prettytime(poweron_lim));
-  dsme_log(LOG_DEBUG, LOGPFIX"dif = %s", prettytime(poweron_dif));
+  // dsme_log(LOG_DEBUG, LOGPFIX"tot = %s", prettytime(cal.poweron + poweron_dif));
+  // dsme_log(LOG_DEBUG, LOGPFIX"lim = %s", prettytime(poweron_lim));
+  // dsme_log(LOG_DEBUG, LOGPFIX"dif = %s", prettytime(poweron_dif));
 
   // When to save ... the logic is ugly, but boils down to:
   // 1. when forced
@@ -455,17 +449,16 @@ void pot_update_cal(bool user_mode, bool force_save)
       pot_write_cal(&cal);
       pending_save = false;
 
-      // FIXME: remove/tone down debug logging at some stage
-      dsme_log(LOG_INFO, LOGPFIX"write cal: on = %s, up = %s, rb = %"PRId32", wr = %"PRId32"",
-               prettytime(cal.poweron),
-               prettytime(cal.uptime),
-               cal.reboots,
-               cal.updates);
+      /* dsme_log(LOG_INFO, LOGPFIX"write cal: on = %s, up = %s, rb = %"PRId32", wr = %"PRId32"",
+       *        prettytime(cal.poweron),
+       *        prettytime(cal.uptime),
+       *        cal.reboots,
+       *        cal.updates);
+       */
     }
     else
     {
-      // FIXME: remove/tone down debug logging at some stage
-      dsme_log(LOG_DEBUG, LOGPFIX"write cal: (skipped)");
+      // dsme_log(LOG_DEBUG, LOGPFIX"write cal: (skipped)");
       pending_save = true;
     }
   }

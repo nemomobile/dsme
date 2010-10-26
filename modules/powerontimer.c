@@ -28,10 +28,6 @@
  * $ dbus-send --system --print-reply --dest=com.nokia.powerontimer /com/nokia/powerontimer com.nokia.powerontimer.get_poweron_time
  */
 
-#ifndef DSME_LOG_ENABLE
-# define DSME_LOG_ENABLE // FIXME: do not force logging on
-#endif
-
 #include <iphbd/iphb_internal.h>
 
 #include "powerontimer.h"
@@ -65,7 +61,7 @@ static bool      dbus_bound   = false;
 static void get_poweron_time(const DsmeDbusMessage* request,
                               DsmeDbusMessage**      reply)
 {
-  dsme_log(LOG_DEBUG, LOGPFIX"%s() called", __FUNCTION__);
+  // dsme_log(LOG_DEBUG, LOGPFIX"%s() called", __FUNCTION__);
   *reply = dsme_dbus_reply_new(request);
   dsme_dbus_message_append_int(*reply, (int)pot_get_poweron_secs());
 }
@@ -106,19 +102,19 @@ static void poweron_update_cb(void)
 
 DSME_HANDLER(DSM_MSGTYPE_WAKEUP, client, msg)
 {
-  dsme_log(LOG_DEBUG, LOGPFIX"%s event received", "WAKEUP");
+  // dsme_log(LOG_DEBUG, LOGPFIX"%s event received", "WAKEUP");
   poweron_update_cb();
 }
 
 DSME_HANDLER(DSM_MSGTYPE_DBUS_CONNECT, client, msg)
 {
-  dsme_log(LOG_INFO, LOGPFIX"%s event received", "DBUS_CONNECT");
+  // dsme_log(LOG_INFO, LOGPFIX"%s event received", "DBUS_CONNECT");
   dsme_dbus_bind_methods(&dbus_bound, methods, service, interface);
 }
 
 DSME_HANDLER(DSM_MSGTYPE_DBUS_DISCONNECT, client, msg)
 {
-  dsme_log(LOG_INFO, LOGPFIX"%s event received", "DBUS_DISCONNECT");
+  // dsme_log(LOG_INFO, LOGPFIX"%s event received", "DBUS_DISCONNECT");
   dsme_dbus_unbind_methods(&dbus_bound, methods, service, interface);
 }
 
@@ -127,7 +123,7 @@ DSME_HANDLER(DSM_MSGTYPE_STATE_CHANGE_IND, server, msg)
   bool user_mode  = false;
   bool force_save = false;
 
-  dsme_log(LOG_INFO, LOGPFIX"%s event received", "STATE_CHANGE");
+  // dsme_log(LOG_INFO, LOGPFIX"%s event received", "STATE_CHANGE");
 
   switch( msg->state )
   {
@@ -164,19 +160,19 @@ module_fn_info_t message_handlers[] =
 
 void module_init(module_t* handle)
 {
-  dsme_log(LOG_DEBUG, LOGPFIX"initializing");
+  // dsme_log(LOG_DEBUG, LOGPFIX"initializing");
   poweron_update_cb();
 
-  dsme_log(LOG_DEBUG, "libpowerontimer.so loaded");
+  // dsme_log(LOG_DEBUG, "libpowerontimer.so loaded");
 // QUARANTINE   this_module = handle;
 }
 
 void module_fini(void)
 {
-  dsme_log(LOG_DEBUG, LOGPFIX"finalizing");
+  // dsme_log(LOG_DEBUG, LOGPFIX"finalizing");
   pot_update_cal(in_user_mode, true);
 
   dsme_dbus_unbind_methods(&dbus_bound, methods, service, interface);
 
-  dsme_log(LOG_DEBUG, "libpowerontimer.so unloaded");
+  // dsme_log(LOG_DEBUG, "libpowerontimer.so unloaded");
 }
