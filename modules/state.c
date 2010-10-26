@@ -901,7 +901,7 @@ static void runlevel_switch_ind(const DsmeDbusMessage* ind)
         case DSME_RUNLEVEL_ACTDEAD: {
             /*  USER -> ACTDEAD runlevel change done */
             actdead_switch_done = true;
-            dsme_log(LOG_NOTICE, "USER -> ACTDEAD runlevel change done");
+            dsme_log(LOG_DEBUG, "USER -> ACTDEAD runlevel change done");
 
             /* Do we have a pending ACTDEAD -> USER timer? */
             if (delayed_user_timer) {
@@ -914,7 +914,7 @@ static void runlevel_switch_ind(const DsmeDbusMessage* ind)
         case DSME_RUNLEVEL_USER: {
             /* ACTDEAD -> USER runlevel change done */
             user_switch_done = true;
-            dsme_log(LOG_NOTICE, "ACTDEAD -> USER runlevel change done");
+            dsme_log(LOG_DEBUG, "ACTDEAD -> USER runlevel change done");
 
             /* Do we have a pending USER -> ACTDEAD timer? */
             if (delayed_actdead_timer) {
