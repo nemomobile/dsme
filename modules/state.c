@@ -129,9 +129,9 @@ static void deny_state_change_request(dsme_state_t denied_state,
 
 static void start_delayed_shutdown_timer(unsigned seconds);
 static int  delayed_shutdown_fn(void* unused);
-static void start_delayed_actdead_timer(unsigned seconds);
+static bool start_delayed_actdead_timer(unsigned seconds);
 static int  delayed_actdead_fn(void* unused);
-static void start_delayed_user_timer(unsigned seconds);
+static bool start_delayed_user_timer(unsigned seconds);
 static int delayed_user_fn(void* unused);
 static void stop_delayed_runlevel_timers(void);
 static void change_runlevel(dsme_state_t state);
@@ -292,25 +292,31 @@ static void try_to_change_state(dsme_state_t new_state)
           change_state(new_state);
       } else if (current_state == DSME_STATE_ACTDEAD) {
           user_switch_done = false;
-          change_state(new_state);
 
           if (actdead_switch_done) {
               /* actdead init done; runlevel change from actdead to user state */
-              start_delayed_user_timer(USER_TIMER_MIN_TIMEOUT);
+              if (start_delayed_user_timer(USER_TIMER_MIN_TIMEOUT)) {
+                  change_state(new_state);
+              }
           } else {
               /* actdead init not done; wait longer to change from actdead to user state */
-              start_delayed_user_timer(USER_TIMER_MAX_TIMEOUT);
+              if (start_delayed_user_timer(USER_TIMER_MAX_TIMEOUT)) {
+                  change_state(new_state);
+              }
           }
       } else if (current_state == DSME_STATE_USER) {
           actdead_switch_done = false;
-          change_state(new_state);
 
           if (user_switch_done) {
               /* user init done; runlevel change from user to actdead state */
-              start_delayed_actdead_timer(ACTDEAD_TIMER_MIN_TIMEOUT);
+              if (start_delayed_actdead_timer(ACTDEAD_TIMER_MIN_TIMEOUT)) {
+                  change_state(new_state);
+              }
           } else {
               /* user init not done; wait longer to change from user to actdead state */
-              start_delayed_actdead_timer(ACTDEAD_TIMER_MAX_TIMEOUT);
+              if (start_delayed_actdead_timer(ACTDEAD_TIMER_MAX_TIMEOUT)) {
+                  change_state(new_state);
+              }
           }
       }
       break;
@@ -433,8 +439,9 @@ static int delayed_shutdown_fn(void* unused)
   return 0; /* stop the interval */
 }
 
-static void start_delayed_actdead_timer(unsigned seconds)
+static bool start_delayed_actdead_timer(unsigned seconds)
 {
+  bool success = false;
   if (!delayed_shutdown_timer && !delayed_actdead_timer && !delayed_user_timer) {
       if (!(delayed_actdead_timer = dsme_create_timer(seconds,
                                                       delayed_actdead_fn,
@@ -443,8 +450,10 @@ static void start_delayed_actdead_timer(unsigned seconds)
           dsme_log(LOG_CRIT, "Could not create an actdead timer; exit!");
           exit(EXIT_FAILURE);
       }
+      success = true;
       dsme_log(LOG_NOTICE, "Actdead in %i seconds", seconds);
   }
+  return success;
 }
 
 static int delayed_actdead_fn(void* unused)
@@ -456,8 +465,9 @@ static int delayed_actdead_fn(void* unused)
   return 0; /* stop the interval */
 }
 
-static void start_delayed_user_timer(unsigned seconds)
+static bool start_delayed_user_timer(unsigned seconds)
 {
+  bool success = false;
   if (!delayed_shutdown_timer && !delayed_actdead_timer && !delayed_user_timer) {
       if (!(delayed_user_timer = dsme_create_timer(seconds,
                                                    delayed_user_fn,
@@ -466,8 +476,10 @@ static void start_delayed_user_timer(unsigned seconds)
           dsme_log(LOG_CRIT, "Could not create a user timer; exit!");
           exit(EXIT_FAILURE);
       }
+      success = true;
       dsme_log(LOG_NOTICE, "User in %i seconds", seconds);
   }
+  return success;
 }
 
 static int delayed_user_fn(void* unused)
