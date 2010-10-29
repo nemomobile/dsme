@@ -47,7 +47,7 @@ else
 # The rationale for /sbin and /lib/dsme: DSME needs to be available on bootup before networking starts.
 # Also see http://tldp.org/LDP/Linux-Filesystem-Hierarchy/html/sbin.html and
 # http://tldp.org/LDP/Linux-Filesystem-Hierarchy/html/lib.html
-	dh_auto_configure -- --disable-static --sbindir=/sbin --libdir=/lib
+	dh_auto_configure -- --disable-static --exec-prefix=""
 	dh_auto_build
 endif
 
