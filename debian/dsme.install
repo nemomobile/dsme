@@ -1,10 +1,10 @@
-debian/tmp/usr/sbin/dsme sbin
-debian/tmp/usr/sbin/dsme-server sbin
-debian/tmp/usr/lib/dsme/*.so*
-debian/tmp/usr/sbin/waitfordsme
-debian/tmp/usr/sbin/dsmetool
-debian/tmp/usr/sbin/batttest
-debian/tmp/usr/sbin/bootstate
-debian/tmp/usr/sbin/dsmetemperature
+debian/tmp/sbin/batttest
+debian/tmp/sbin/bootstate
+debian/tmp/sbin/dsme
+debian/tmp/sbin/dsme-server
+debian/tmp/sbin/dsmetemperature
+debian/tmp/sbin/dsmetool
+debian/tmp/sbin/waitfordsme
+debian/tmp/lib/dsme/*.so*
 debian/tmp/etc/dsme/lifeguard.uids
 debian/tmp/etc/dbus-1/system.d/dsme.conf

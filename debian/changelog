@@ -1,3 +1,10 @@
+dsme (0.61.28) unstable; urgency=low
+
+  [ Matias Muhonen  ]
+  * Make autotool to install DSME binaries and modules consistently to /sbin and /lib/dsme
+
+ -- Matias Muhonen <ext-matias.muhonen@nokia.com>  Fri, 29 Oct 2010 11:09:10 +0300
+
 dsme (0.61.27) unstable; urgency=low
 
   [ Matias Muhonen  ]

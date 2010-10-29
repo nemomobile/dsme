@@ -46,13 +46,13 @@ start() {
         echo -n "Starting DSME in state '$BOOTSTATE': "
 	pid=`pidofproc $prog`
 	if [ $? -ne 0 ]; then
-		exec /sbin/$prog -p /usr/lib/dsme/libstartup.so &> /dev/null &
+		exec /sbin/$prog -p /lib/dsme/libstartup.so &> /dev/null &
 		RETVAL=$?
 		[ $RETVAL -eq 0 ] && touch /var/lock/subsys/$service
 	else
 		RETVAL=0
 	fi
-        #exec /sbin/dsme -l stderr -v 7 -p /usr/lib/dsme/libstartup.so
+        #exec /sbin/dsme -l stderr -v 7 -p /lib/dsme/libstartup.so
 	success
 	echo
 	return $RETVAL
