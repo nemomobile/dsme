@@ -83,7 +83,17 @@ AM_CONDITIONAL([WANT_MEMORY_THERMAL_MGMT], [test x$enable_memory_thermal_mgmt !=
 # Compiler and linker flags
 #
 AC_DEFINE_UNQUOTED([PRG_VERSION],[$VERSION],[Version for DSME])
-AC_DEFINE_UNQUOTED([DSME_SBIN_PATH],["$sbindir"],[Installation dir for DSME executables])
+
+# Work around autotool: in some autotool versions $exec_prefix is
+# not parsed in the $sbindir variable. Thus, we get an invalid path.
+if test "$sbindir" = '${exec_prefix}/sbin'; then
+  # Fix the path
+  AC_DEFINE_UNQUOTED([DSME_SBIN_PATH],["$exec_prefix/sbin"],[Installation dir for DSME executables])
+else
+  # Use the sbindir provided by autotool
+  AC_DEFINE_UNQUOTED([DSME_SBIN_PATH],["$sbindir"],[Installation dir for DSME executables])
+fi
+
 # FIXME: DSME_LOG_ENABLE should be proper&working configure option
 #AC_DEFINE([DSME_LOG_ENABLE], [1])
 
