@@ -1,9 +1,15 @@
+dsme (0.61.29) unstable; urgency=low
+  * changes for MALF
+
+ -- Matias Muhonen <ext-matias.muhonen@nokia.com>  Mon, 01 Nov 2010 09:46:37 +0200
+
 dsme (0.61.28) unstable; urgency=low
 
   [ Matias Muhonen  ]
-  * changes for MALF
 
- -- Matias Muhonen <ext-matias.muhonen@nokia.com>  Wed, 27 Oct 2010 12:23:11 +0300
+  * Make autotool to install DSME binaries and modules consistently to /sbin and /lib/dsme
+
+ -- Matias Muhonen <ext-matias.muhonen@nokia.com>  Fri, 29 Oct 2010 11:09:10 +0300
 
 dsme (0.61.27) unstable; urgency=low
 

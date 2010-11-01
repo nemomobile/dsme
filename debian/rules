@@ -44,7 +44,10 @@ build-stamp: configure-stamp
 ifneq (,$(findstring testcases,$(DEB_BUILD_OPTIONS)))
 	$(MAKE) tests
 else
-	dh_auto_configure -- --disable-static
+# The rationale for /sbin and /lib/dsme: DSME needs to be available on bootup before networking starts.
+# Also see http://tldp.org/LDP/Linux-Filesystem-Hierarchy/html/sbin.html and
+# http://tldp.org/LDP/Linux-Filesystem-Hierarchy/html/lib.html
+	dh_auto_configure -- --disable-static --exec-prefix=""
 	dh_auto_build
 endif
 
@@ -98,7 +101,7 @@ binary-arch: build install
 	dh_strip --dbg-package=dsme
 	dh_compress
 	dh_fixperms
-	dh_makeshlibs --exclude=/usr/lib/dsme/
+	dh_makeshlibs --exclude=/lib/dsme/
 	dh_installdeb
 	dh_shlibdeps
 	dh_gencontrol

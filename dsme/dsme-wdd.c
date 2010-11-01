@@ -48,7 +48,7 @@
 #define STRINGIFY(x)  STRINGIFY2(x)
 #define STRINGIFY2(x) #x
 
-#define DSME_SERVER_PATH "/sbin/dsme-server"
+#define DSME_SERVER_PATH DSME_SBIN_PATH"/dsme-server"
 #define DSME_PID_FILE    "/tmp/dsme.pid" // TODO: is this needed?
 
 #define DSME_NICE         (-20)      /* least niceness */

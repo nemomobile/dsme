@@ -14,8 +14,8 @@ script
         source /etc/resource_limits.conf
 
         echo "About to exec dsme in state '$BOOTSTATE'."
-        exec /sbin/dsme -p /usr/lib/dsme/libstartup.so
-        #exec /sbin/dsme -l stderr -v 7 -p /usr/lib/dsme/libstartup.so
+        exec /sbin/dsme -p /lib/dsme/libstartup.so
+        #exec /sbin/dsme -l stderr -v 7 -p /lib/dsme/libstartup.so
 end script
 
 post-start script
