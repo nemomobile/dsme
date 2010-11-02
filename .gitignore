@@ -49,6 +49,8 @@ debian/libiphb0-dbg/
 debian/libiphb0.substvars
 debian/tmp/
 
+dsme.init
+
 iphbd/hbtest
 iphbd/libiphb.pc
 iphbd/libiphb-uninstalled.pc
