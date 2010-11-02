@@ -16,7 +16,8 @@ pkglib_LTLIBRARIES = startup.la              \
                      emergencycalltracker.la \
                      usbtracker.la           \
                      iphb.la                 \
-                     rebootloopdetector.la
+                     rebootloopdetector.la   \
+                     malf.la
 
 noinst_HEADERS = dsme_dbus.h \
                  runlevel.h \
@@ -92,6 +93,8 @@ iphb_la_CPPFLAGS = $(AM_CPPFLAGS)
 iphb_la_LIBADD = -lbmeipc $(GLIB_LIBS)
 
 rebootloopdetector_la_SOURCES = rebootloopdetector.c
+
+libmalf_la_SOURCES = malf.c
 
 if WANT_BMEIPC
 thermalobject_surface_la_SOURCES = thermalobject_surface.c \
