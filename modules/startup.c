@@ -79,6 +79,7 @@ const char *modules[] = {
     "libdbusproxy.so",
     "libstate.so", /* state depends on dbus */
     "librebootloopdetector.so",
+    "libmalf.so",
     "libiphb.so",
     "libprocesswd.so",
     "libalarmtracker.so",

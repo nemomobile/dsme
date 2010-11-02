@@ -37,6 +37,7 @@
 
 #include "state-internal.h"
 #include "runlevel.h"
+#include "malf.h"
 #include "dsme/timers.h"
 #include "dsme/modules.h"
 #include "dsme/logging.h"
@@ -79,8 +80,8 @@
 #define USER_TIMER_MIN_TIMEOUT 2
 #define USER_TIMER_MAX_TIMEOUT 15
 
-/* In non-R&D mode we shutdown after this many seconds in MALF */
-#define MALF_SHUTDOWN_TIMER 120
+/* In non-R&D mode we enter malf after this many seconds in MALF */
+#define ENTER_MALF_TIMER 2
 
 /* Seconds from overheating or empty battery to the start of shutdown timer */
 #define DSME_THERMAL_SHUTDOWN_TIMER       8
@@ -115,6 +116,7 @@ static dsme_state_t current_state = DSME_STATE_NOT_SET;
 /* timers for delayed setting of state bits */
 static dsme_timer_t overheat_timer           = 0;
 static dsme_timer_t charger_disconnect_timer = 0;
+static dsme_timer_t malf_timer               = 0;
 
 /* timers for giving other programs a bit of time before shutting down */
 static dsme_timer_t delayed_shutdown_timer   = 0;
@@ -136,6 +138,9 @@ static int delayed_user_fn(void* unused);
 static void stop_delayed_runlevel_timers(void);
 static void change_runlevel(dsme_state_t state);
 static void kick_wds(void);
+
+static void start_malf_timer(void);
+static int delayed_malf_fn(void* unused);
 
 static void start_overheat_timer(void);
 static int  delayed_overheat_fn(void* unused);
@@ -331,11 +336,11 @@ static void try_to_change_state(dsme_state_t new_state)
     case DSME_STATE_MALF: /* Runlevel 8 */
       change_state(DSME_STATE_MALF);
 
-      /* If R&D mode is not enabled, shutdown after the timer */
+      /* If R&D mode is not enabled, enter malf after the timer */
       if (!rd_mode_enabled()) {
-          start_delayed_shutdown_timer(MALF_SHUTDOWN_TIMER);
+          start_malf_timer();
       } else {
-          dsme_log(LOG_NOTICE, "R&D mode enabled, not shutting down");
+          dsme_log(LOG_NOTICE, "R&D mode enabled, not entering MALF");
       }
       break;
 
@@ -554,7 +559,30 @@ static int delayed_overheat_fn(void* unused)
   return 0; /* stop the interval */
 }
 
+static void start_malf_timer(void)
+{
+  if (!malf_timer) {
+      if (!(malf_timer = dsme_create_timer(ENTER_MALF_TIMER,
+                                           delayed_malf_fn,
+                                           NULL)))
+      {
+          dsme_log(LOG_CRIT, "Could not create a timer; malf immediately!");
+          delayed_malf_fn(0);
+      } else {
+          dsme_log(LOG_CRIT,
+                   "MALF in %d seconds",
+                   ENTER_MALF_TIMER);
+      }
+  }
+}
 
+static int delayed_malf_fn(void* unused)
+{
+  DSM_MSGTYPE_ENTER_MALF msg = DSME_MSG_INIT(DSM_MSGTYPE_ENTER_MALF);
+  broadcast_internally(&msg);
+
+  return 0; /* stop the interval */
+}
 
 static void start_charger_disconnect_timer(void)
 {
@@ -679,8 +707,7 @@ static void handle_telinit_TEST(endpoint_t* conn)
 
 static void handle_telinit_MALF(endpoint_t* conn)
 {
-    malf = true;
-    change_state_if_necessary();
+    dsme_log(LOG_WARNING, "telinit MALF unimplemented");
 }
 
 static void handle_telinit_BOOT(endpoint_t* conn)
@@ -771,7 +798,8 @@ DSME_HANDLER(DSM_MSGTYPE_MALF_REQ, conn, msg)
            (sender ? sender : "(unknown)"));
   free(sender);
 
-  handle_telinit_MALF(conn);
+  malf = true;
+  change_state_if_necessary();
 }
 
 

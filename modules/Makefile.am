@@ -16,7 +16,8 @@ pkglib_LTLIBRARIES = libstartup.la              \
                      libemergencycalltracker.la \
                      libusbtracker.la           \
                      libiphb.la                 \
-                     librebootloopdetector.la
+                     librebootloopdetector.la   \
+                     libmalf.la
 
 noinst_HEADERS = dsme_dbus.h \
                  runlevel.h \
@@ -92,6 +93,8 @@ libiphb_la_CPPFLAGS = $(AM_CPPFLAGS)
 libiphb_la_LIBADD = -lbmeipc $(GLIB_LIBS)
 
 librebootloopdetector_la_SOURCES = rebootloopdetector.c
+
+libmalf_la_SOURCES = malf.c
 
 if WANT_BMEIPC
 libthermalobject_surface_la_SOURCES = thermalobject_surface.c \
