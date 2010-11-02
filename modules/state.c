@@ -679,7 +679,8 @@ static void handle_telinit_TEST(endpoint_t* conn)
 
 static void handle_telinit_MALF(endpoint_t* conn)
 {
-    dsme_log(LOG_WARNING, "telinit MALF unimplemented");
+    malf = true;
+    change_state_if_necessary();
 }
 
 static void handle_telinit_BOOT(endpoint_t* conn)
@@ -762,6 +763,18 @@ DSME_HANDLER(DSM_MSGTYPE_REBOOT_REQ, conn, msg)
 }
 
 
+DSME_HANDLER(DSM_MSGTYPE_MALF_REQ, conn, msg)
+{
+  char* sender = endpoint_name(conn);
+  dsme_log(LOG_NOTICE,
+           "malf request received from %s",
+           (sender ? sender : "(unknown)"));
+  free(sender);
+
+  handle_telinit_MALF(conn);
+}
+
+
 /**
  * Power up requested.
  * This means ACTDEAD -> USER transition.
@@ -816,17 +829,6 @@ DSME_HANDLER(DSM_MSGTYPE_SET_EMERGENCY_CALL_STATE, conn, msg)
       /* stop all timers that could lead to shutdown */
       stop_delayed_runlevel_timers();
   }
-
-  change_state_if_necessary();
-}
-
-DSME_HANDLER(DSM_MSGTYPE_SET_MALF_STATE, conn, msg)
-{
-  dsme_log(LOG_NOTICE,
-           "malf %s state received",
-           msg->malf_set ? "on" : "off");
-
-  malf = msg->malf_set;
 
   change_state_if_necessary();
 }
@@ -968,6 +970,7 @@ module_fn_info_t message_handlers[] = {
       DSME_HANDLER_BINDING(DSM_MSGTYPE_STATE_QUERY),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_TELINIT),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SHUTDOWN_REQ),
+      DSME_HANDLER_BINDING(DSM_MSGTYPE_MALF_REQ),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_POWERUP_REQ),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_REBOOT_REQ),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_ALARM_STATE),
@@ -976,7 +979,6 @@ module_fn_info_t message_handlers[] = {
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_THERMAL_STATE),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_EMERGENCY_CALL_STATE),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_BATTERY_STATE),
-      DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_MALF_STATE),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_CONNECT),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_DISCONNECT),
       {0}
