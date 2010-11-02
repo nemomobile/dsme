@@ -820,6 +820,17 @@ DSME_HANDLER(DSM_MSGTYPE_SET_EMERGENCY_CALL_STATE, conn, msg)
   change_state_if_necessary();
 }
 
+DSME_HANDLER(DSM_MSGTYPE_SET_MALF_STATE, conn, msg)
+{
+  dsme_log(LOG_NOTICE,
+           "malf %s state received",
+           msg->malf_set ? "on" : "off");
+
+  malf = msg->malf_set;
+
+  change_state_if_necessary();
+}
+
 static int delayed_battery_empty_fn(void* unused)
 {
     battery_empty = true;
@@ -965,6 +976,7 @@ module_fn_info_t message_handlers[] = {
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_THERMAL_STATE),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_EMERGENCY_CALL_STATE),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_BATTERY_STATE),
+      DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_MALF_STATE),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_CONNECT),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_DISCONNECT),
       {0}
