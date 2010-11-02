@@ -145,10 +145,10 @@ static bool is_in_reboot_loop()
 
 static void go_to_malf()
 {
-    // TODO: request MALF instead of SHUTDOWN
-    DSM_MSGTYPE_SHUTDOWN_REQ req = DSME_MSG_INIT(DSM_MSGTYPE_SHUTDOWN_REQ);
+    DSM_MSGTYPE_SET_MALF_STATE msg = DSME_MSG_INIT(DSM_MSGTYPE_SET_MALF_STATE);
+    msg.malf_set = true;
 
-    broadcast_internally(&req);
+    broadcast_internally(&msg);
 }
 
 static void check_for_reboot_loop()
