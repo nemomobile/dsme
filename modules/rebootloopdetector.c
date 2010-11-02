@@ -145,10 +145,9 @@ static bool is_in_reboot_loop()
 
 static void go_to_malf()
 {
-    DSM_MSGTYPE_SET_MALF_STATE msg = DSME_MSG_INIT(DSM_MSGTYPE_SET_MALF_STATE);
-    msg.malf_set = true;
+    DSM_MSGTYPE_MALF_REQ req = DSME_MSG_INIT(DSM_MSGTYPE_MALF_REQ);
 
-    broadcast_internally(&msg);
+    broadcast_internally(&req);
 }
 
 static void check_for_reboot_loop()
