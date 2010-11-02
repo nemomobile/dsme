@@ -8,7 +8,6 @@ dsme (0.61.28) unstable; urgency=low
   [ Matias Muhonen  ]
 
   * Make autotool to install DSME binaries and modules consistently to /sbin and /lib/dsme
-  * Fixes: NB#201571: DSME has a conflicting message ID for DSM_MSGTYPE_CHANGE_RUNLEVEL and DSM_MSGTYPE_BATTERY_EMPTY_IND
 
  -- Matias Muhonen <ext-matias.muhonen@nokia.com>  Fri, 29 Oct 2010 11:09:10 +0300
 
