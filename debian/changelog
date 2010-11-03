@@ -1,3 +1,10 @@
+dsme (0.61.29) unstable; urgency=low
+
+  [ Tuomo Tanskanen ]
+  * Fixes: NB# 195556: init is leaking memory when DUT is power cycled with MTC_POWER_ON/OFF messages
+
+ -- Matias Muhonen <ext-matias.muhonen@nokia.com>  Wed, 03 Nov 2010 13:37:10 +0200
+
 dsme (0.61.28) unstable; urgency=low
 
   [ Matias Muhonen  ]
