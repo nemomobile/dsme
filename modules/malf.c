@@ -73,8 +73,7 @@ static bool enter_malf(int malf_id)
 
 DSME_HANDLER(DSM_MSGTYPE_ENTER_MALF, conn, msg)
 {
-    // TODO: we need the correct MALF reason
-    if (!enter_malf(DSME_MALF_REBOOTLOOP)) {
+    if (!enter_malf(msg->malf_reason)) {
         /* Shutdown because entering MALF failed */
         DSM_MSGTYPE_SHUTDOWN_REQ req = DSME_MSG_INIT(DSM_MSGTYPE_SHUTDOWN_REQ);
 

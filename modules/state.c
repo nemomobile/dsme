@@ -579,6 +579,7 @@ static void start_malf_timer(void)
 static int delayed_malf_fn(void* unused)
 {
   DSM_MSGTYPE_ENTER_MALF msg = DSME_MSG_INIT(DSM_MSGTYPE_ENTER_MALF);
+  msg.malf_reason = DSME_MALF_COMP_FAILURE; // TODO: need the correct MALF reason
   broadcast_internally(&msg);
 
   return 0; /* stop the interval */
@@ -789,20 +790,6 @@ DSME_HANDLER(DSM_MSGTYPE_REBOOT_REQ, conn, msg)
   handle_telinit_REBOOT(conn);
 }
 
-
-DSME_HANDLER(DSM_MSGTYPE_MALF_REQ, conn, msg)
-{
-  char* sender = endpoint_name(conn);
-  dsme_log(LOG_NOTICE,
-           "malf request received from %s",
-           (sender ? sender : "(unknown)"));
-  free(sender);
-
-  malf = true;
-  change_state_if_necessary();
-}
-
-
 /**
  * Power up requested.
  * This means ACTDEAD -> USER transition.
@@ -998,7 +985,6 @@ module_fn_info_t message_handlers[] = {
       DSME_HANDLER_BINDING(DSM_MSGTYPE_STATE_QUERY),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_TELINIT),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SHUTDOWN_REQ),
-      DSME_HANDLER_BINDING(DSM_MSGTYPE_MALF_REQ),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_POWERUP_REQ),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_REBOOT_REQ),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_ALARM_STATE),

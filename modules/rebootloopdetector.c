@@ -22,10 +22,11 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <dsme/protocol.h>
+#include "malf.h"
 #include "dsme/modules.h"
 #include "dsme/logging.h"
 
+#include <dsme/protocol.h>
 #include <dsme/state.h>
 
 #include <stdio.h>
@@ -40,7 +41,7 @@
 #define DSME_DEFAULT_MIN_REBOOT_TIME 120 // seconds
 
 /* maximum number of unnormal reboots before going to MALF */
-#define DSME_MAX_REBOOT_COUNT 10 // times
+#define DSME_MAX_REBOOT_COUNT 5 // times
 
 /* file to use for recording startup time & reboot count */
 #define DSME_DEFAULT_STARTUP_INFO_FILE "/var/lib/dsme/startup_info"
@@ -145,9 +146,10 @@ static bool is_in_reboot_loop()
 
 static void go_to_malf()
 {
-    DSM_MSGTYPE_MALF_REQ req = DSME_MSG_INIT(DSM_MSGTYPE_MALF_REQ);
+    DSM_MSGTYPE_ENTER_MALF msg = DSME_MSG_INIT(DSM_MSGTYPE_ENTER_MALF);
+    msg.malf_reason = DSME_MALF_REBOOTLOOP;
 
-    broadcast_internally(&req);
+    broadcast_internally(&msg);
 }
 
 static void check_for_reboot_loop()
