@@ -212,7 +212,7 @@ static bool telinit(dsme_runlevel_t runlevel)
 
     dbus_error_init(&error);
 
-    conn = dbus_connection_open("unix:abstract=/com/ubuntu/upstart", &error);
+    conn = dbus_connection_open_private("unix:abstract=/com/ubuntu/upstart", &error);
     if (!conn) {
         dsme_log(LOG_CRIT, "Cannot connect to upstart");
         goto done;
@@ -320,7 +320,10 @@ static bool telinit(dsme_runlevel_t runlevel)
 
 done:
     if (call) dbus_message_unref(call);
-    if (conn) dbus_connection_unref(conn);
+    if (conn) {
+        dbus_connection_close(conn);
+        dbus_connection_unref(conn);
+    }
     dbus_error_free(&error);
 
     return runlevel_changed;
