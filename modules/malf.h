@@ -35,4 +35,28 @@ enum {
   DSME_MSG_ENUM(DSM_MSGTYPE_ENTER_MALF, 0x00000900),
 };
 
+/* reasons for DSME to enter to malf */
+enum {
+    DSME_MALF_HW_WD           = 0, /* malf: the device has been rebooted due to HW watchdog
+                                            more than three times in a row within one hour */
+
+    DSME_MALF_COMP_FAILURE    = 1, /* malf: upstart has rebooted the device because of software
+                                            failure caused by the same component three times (or more) in a row */
+
+    DSME_MALF_REBOOTLOOP      = 2  /* malf: upstart has rebooted the device because of software failure
+                                            caused by any component five times (or more) */
+};
+
+const struct {
+    const int  malf_id;
+    const char *malf_type;    /* SOFTWARE, HARDWARE or SECURITY */
+    const char *component;
+    const char *reason;
+} DSME_MALF[] = {
+    {DSME_MALF_HW_WD,         "SOFTWARE",    "watchdog",   "caused too many reboots"},
+    {DSME_MALF_COMP_FAILURE,  "SOFTWARE",    "%s",         "caused too many reboots"},
+    {DSME_MALF_REBOOTLOOP,    "HARDWARE",    "unknown",    "too many reboots"},
+    {0,0}
+};
+
 #endif
