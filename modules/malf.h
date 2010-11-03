@@ -48,16 +48,4 @@ enum {
                                             caused by any component five times (or more) */
 };
 
-const struct {
-    const int  malf_id;
-    const char *malf_type;    /* SOFTWARE, HARDWARE or SECURITY */
-    const char *component;
-    const char *reason;
-} DSME_MALF[] = {
-    {DSME_MALF_HW_WD,         "SOFTWARE",    "watchdog",   "caused too many reboots"},
-    {DSME_MALF_COMP_FAILURE,  "SOFTWARE",    "%s",         "caused too many reboots"},
-    {DSME_MALF_REBOOTLOOP,    "HARDWARE",    "unknown",    "too many reboots"},
-    {0,0}
-};
-
 #endif
