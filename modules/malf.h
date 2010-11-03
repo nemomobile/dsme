@@ -29,6 +29,7 @@
 
 typedef struct {
     DSMEMSG_PRIVATE_FIELDS
+    int malf_reason;
 } DSM_MSGTYPE_ENTER_MALF;
 
 enum {
