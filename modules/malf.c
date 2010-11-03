@@ -28,26 +28,59 @@
 
 #include "malf.h"
 #include "dsme/modules.h"
-#include "dsme/logging.h"
+#include "dsme/logging.h"  /* for dsme_log()          */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <unistd.h>
+#include <stdlib.h>        /* for exit()              */
+#include <errno.h>         /* for errno               */
+#include <unistd.h>        /* for fork() and execv()  */
+#include <sys/wait.h>      /* for wait()              */
 
-static void enter_malf(void);
+static bool enter_malf(int malf_id);
 
-static void enter_malf(void)
+static bool enter_malf(int malf_id)
 {
-    // TODO
+    int status = -1;
+    pid_t pid;
+    pid_t rc;
+    char* args[] = {
+        (char*)"enter_malf",
+        (char*)DSME_MALF[malf_id].malf_type,
+        (char*)DSME_MALF[malf_id].component,
+        (char*)DSME_MALF[malf_id].reason,
+        0
+    };
+    if ((pid = fork()) < 0) {
+        dsme_log(LOG_CRIT, "fork failed, exiting");
+        exit(EXIT_FAILURE);
+    } else if (pid == 0) {
+        execv("/usr/sbin/enter_malf", args);
+
+        dsme_log(LOG_CRIT, "entering MALF failed");
+        return false;
+    }
+
+    while ((rc = wait(&status)) != pid)
+        if (rc < 0 && errno == ECHILD)
+            break;
+    if (rc != pid || WEXITSTATUS(status) != 0) {
+        dsme_log(LOG_CRIT, "enter_malf return value != 0, entering MALF failed");
+        return false;
+    }
+
+    dsme_log(LOG_CRIT, "entering MALF state");
+    return true;
 }
 
 DSME_HANDLER(DSM_MSGTYPE_ENTER_MALF, conn, msg)
 {
-    enter_malf();
-}
+    // TODO: we need the correct MALF reason
+    if (!enter_malf(DSME_MALF_REBOOTLOOP)) {
+        /* Shutdown because entering MALF failed */
+        DSM_MSGTYPE_SHUTDOWN_REQ req = DSME_MSG_INIT(DSM_MSGTYPE_SHUTDOWN_REQ);
 
+        broadcast_internally(&req);
+    }
+}
 
 module_fn_info_t message_handlers[] = {
     DSME_HANDLER_BINDING(DSM_MSGTYPE_ENTER_MALF),
