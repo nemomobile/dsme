@@ -1,3 +1,10 @@
+dsme (0.61.30) unstable; urgency=low
+
+  [ Matias Muhonen ]
+  * Fixes: NB#202605: dsme must request cal credentials
+
+ -- Matias Muhonen <ext-matias.muhonen@nokia.com>  Thu, 04 Nov 2010 11:18:40 +0200
+
 dsme (0.61.29) unstable; urgency=low
 
   [ Tuomo Tanskanen ]
