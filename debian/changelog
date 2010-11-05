@@ -1,3 +1,10 @@
+dsme (0.61.31) unstable; urgency=low
+
+  [ Matias Muhonen ]
+  * Fixes: NB#201571: DSME has a conflicting message ID for DSM_MSGTYPE_CHANGE_RUNLEVEL and DSM_MSGTYPE_BATTERY_EMPTY_IND
+
+ -- Matias Muhonen <ext-matias.muhonen@nokia.com>  Fri, 05 Nov 2010 15:36:58 +0200
+
 dsme (0.61.30) unstable; urgency=low
 
   [ Matias Muhonen ]
