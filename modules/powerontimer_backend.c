@@ -164,7 +164,7 @@ cleanup:
   if( file != 0 ) fclose(file);
 
   tv->tv_sec  = (time_t)secs;
-  tv->tv_usec = (suseconds_t)(secs - tv->tv_sec);
+  tv->tv_usec = (suseconds_t)((secs - tv->tv_sec) * 1000000);
 
   if( tv->tv_usec < 0 )
   {
