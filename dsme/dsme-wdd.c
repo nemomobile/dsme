@@ -441,7 +441,10 @@ int main(int argc, char *argv[])
         }
         newargv[argc] = 0;
         execv(DSME_SERVER_PATH, newargv);
-        fprintf(stderr, ME "execv failed: %s\n", strerror(errno));
+        fprintf(stderr,
+                ME "execv failed: %s: %s\n",
+                DSME_SERVER_PATH,
+                strerror(errno));
         return EXIT_FAILURE;
 
     } else {
