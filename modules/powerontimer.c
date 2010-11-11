@@ -163,7 +163,7 @@ void module_init(module_t* handle)
   // dsme_log(LOG_DEBUG, LOGPFIX"initializing");
   poweron_update_cb();
 
-  // dsme_log(LOG_DEBUG, "libpowerontimer.so loaded");
+  // dsme_log(LOG_DEBUG, "powerontimer.so loaded");
 // QUARANTINE   this_module = handle;
 }
 
@@ -174,5 +174,5 @@ void module_fini(void)
 
   dsme_dbus_unbind_methods(&dbus_bound, methods, service, interface);
 
-  // dsme_log(LOG_DEBUG, "libpowerontimer.so unloaded");
+  // dsme_log(LOG_DEBUG, "powerontimer.so unloaded");
 }

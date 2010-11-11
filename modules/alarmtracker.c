@@ -288,7 +288,7 @@ void module_init(module_t* handle)
    * Instead, wait for DSM_MSGTYPE_DBUS_CONNECT.
    */
 
-  dsme_log(LOG_DEBUG, "libalarmtracker.so loaded");
+  dsme_log(LOG_DEBUG, "alarmtracker.so loaded");
 
   restore_alarm_queue_status();
 
@@ -304,5 +304,5 @@ void module_fini(void)
 
   dsme_log_cb_detach(save_alarm_queue_status_cb);
 
-  dsme_log(LOG_DEBUG, "libalarmtracker.so unloaded");
+  dsme_log(LOG_DEBUG, "alarmtracker.so unloaded");
 }

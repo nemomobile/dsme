@@ -98,12 +98,12 @@ void module_init(module_t* handle)
    * Instead, wait for DSM_MSGTYPE_DBUS_CONNECT.
    */
 
-  dsme_log(LOG_DEBUG, "libusbtracker.so loaded");
+  dsme_log(LOG_DEBUG, "usbtracker.so loaded");
 }
 
 void module_fini(void)
 {
   dsme_dbus_unbind_signals(&bound, signals);
 
-  dsme_log(LOG_DEBUG, "libusbtracker.so unloaded");
+  dsme_log(LOG_DEBUG, "usbtracker.so unloaded");
 }

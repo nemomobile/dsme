@@ -477,10 +477,10 @@ module_fn_info_t message_handlers[] = {
 
 void module_init(module_t* module)
 {
-  dsme_log(LOG_DEBUG, "libupstart.so loaded");
+  dsme_log(LOG_DEBUG, "upstart.so loaded");
 }
 
 void module_fini(void)
 {
-  dsme_log(LOG_DEBUG, "libupstart.so unloaded");
+  dsme_log(LOG_DEBUG, "upstart.so unloaded");
 }

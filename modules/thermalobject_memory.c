@@ -63,7 +63,7 @@ static bool get_memory_temperature(int* temperature)
 
 void module_init(module_t* handle)
 {
-  dsme_log(LOG_DEBUG, "libthermalobject_memory.so loaded");
+  dsme_log(LOG_DEBUG, "thermalobject_memory.so loaded");
 
   blacklisted = dsme_omap_is_blacklisted();
   if (!blacklisted) {
@@ -77,5 +77,5 @@ void module_fini(void)
       dsme_unregister_thermal_object(&memory_thermal_object);
   }
 
-  dsme_log(LOG_DEBUG, "libthermalobject_memory.so unloaded");
+  dsme_log(LOG_DEBUG, "thermalobject_memory.so unloaded");
 }

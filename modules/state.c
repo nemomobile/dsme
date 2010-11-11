@@ -1011,7 +1011,7 @@ void module_init(module_t* handle)
    * Instead, wait for DSM_MSGTYPE_DBUS_CONNECT.
    */
 
-  dsme_log(LOG_DEBUG, "libstate.so started");
+  dsme_log(LOG_DEBUG, "state.so started");
 
   const char* bootstate = getenv("BOOTSTATE");
   if (!bootstate) {
@@ -1033,5 +1033,5 @@ void module_fini(void)
 {
   dsme_dbus_unbind_signals(&bound, signals);
 
-  dsme_log(LOG_DEBUG, "libstate.so unloaded");
+  dsme_log(LOG_DEBUG, "state.so unloaded");
 }

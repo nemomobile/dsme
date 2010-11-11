@@ -341,7 +341,7 @@ module_fn_info_t message_handlers[] = {
 
 void module_init(module_t* handle)
 {
-  dsme_log(LOG_DEBUG, "libthermalmanager.so loaded");
+  dsme_log(LOG_DEBUG, "thermalmanager.so loaded");
 
   this_module = handle;
 }
@@ -352,7 +352,7 @@ void module_fini(void)
 
   dsme_dbus_unbind_methods(&bound, methods, service, interface);
 
-  dsme_log(LOG_DEBUG, "libthermalmanager.so unloaded");
+  dsme_log(LOG_DEBUG, "thermalmanager.so unloaded");
 }
 
 #ifdef DSME_THERMAL_TUNING

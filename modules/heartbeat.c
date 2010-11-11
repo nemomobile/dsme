@@ -107,12 +107,12 @@ fail:
 
 void module_init(module_t* handle)
 {
-    dsme_log(LOG_DEBUG, "libheartbeat.so loaded");
+    dsme_log(LOG_DEBUG, "heartbeat.so loaded");
 
     start_heartbeat();
 }
 
 void module_fini(void)
 {
-    dsme_log(LOG_DEBUG, "libheartbeat.so unloaded");
+    dsme_log(LOG_DEBUG, "heartbeat.so unloaded");
 }

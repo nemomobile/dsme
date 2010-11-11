@@ -840,7 +840,7 @@ module_fn_info_t message_handlers[] = {
 
 void module_init(module_t* handle)
 {
-    dsme_log(LOG_DEBUG, "libiphb.so loaded");
+    dsme_log(LOG_DEBUG, "iphb.so loaded");
 
     if (!start_service()) {
         dsme_log(LOG_ERR, "iphb not started");
@@ -859,5 +859,5 @@ void module_fini(void)
         close(kernelfd);
     }
 
-    dsme_log(LOG_DEBUG, "libiphb.so unloaded");
+    dsme_log(LOG_DEBUG, "iphb.so unloaded");
 }

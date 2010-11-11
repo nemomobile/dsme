@@ -331,7 +331,7 @@ module_fn_info_t message_handlers[] = {
 
 void module_init(module_t *handle)
 {
-  dsme_log(LOG_DEBUG, "libprocesswd.so loaded");
+  dsme_log(LOG_DEBUG, "processwd.so loaded");
 
   subscribe_to_wakeup();
 }
@@ -346,5 +346,5 @@ void module_fini(void)
 
   // TODO: cancel wakeup subscription
 
-  dsme_log(LOG_DEBUG, "libprocesswd.so unloaded");
+  dsme_log(LOG_DEBUG, "processwd.so unloaded");
 }

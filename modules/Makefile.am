@@ -2,21 +2,21 @@
 # Generic options
 #
 AM_CFLAGS = $(C_GENFLAGS) $(C_OPTFLAGS) -DDSME_LOG_ENABLE -fPIC
-AM_LDFLAGS = -pthread
+AM_LDFLAGS = -pthread -module -avoid-version -shared
 AM_CPPFLAGS = $(CPP_GENFLAGS)
 ACLOCAL_AMFLAGS = -I m4
 
-pkglib_LTLIBRARIES = libstartup.la              \
-                     libheartbeat.la            \
-                     libstate.la                \
-                     libprocesswd.la            \
-                     libdbusproxy.la            \
-                     libalarmtracker.la         \
-                     libthermalmanager.la       \
-                     libemergencycalltracker.la \
-                     libusbtracker.la           \
-                     libiphb.la                 \
-                     librebootloopdetector.la
+pkglib_LTLIBRARIES = startup.la              \
+                     heartbeat.la            \
+                     state.la                \
+                     processwd.la            \
+                     dbusproxy.la            \
+                     alarmtracker.la         \
+                     thermalmanager.la       \
+                     emergencycalltracker.la \
+                     usbtracker.la           \
+                     iphb.la                 \
+                     rebootloopdetector.la
 
 noinst_HEADERS = dsme_dbus.h \
                  runlevel.h \
@@ -32,87 +32,87 @@ pkgsysconfdir = @sysconfdir@
 
 
 if WANT_BMEIPC
-pkglib_LTLIBRARIES += libthermalobject_surface.la
+pkglib_LTLIBRARIES += thermalobject_surface.la
 endif
 
 if WANT_MEMORY_THERMAL_MGMT
-pkglib_LTLIBRARIES += libthermalobject_memory.la
+pkglib_LTLIBRARIES += thermalobject_memory.la
 endif
 
 if WANT_POWERON_TIMER
-pkglib_LTLIBRARIES += libpowerontimer.la
+pkglib_LTLIBRARIES += powerontimer.la
 endif
 
 if WANT_RUNLEVEL
-pkglib_LTLIBRARIES += librunlevel.la
+pkglib_LTLIBRARIES += runlevel.la
 endif
 
 if WANT_UPSTART
-pkglib_LTLIBRARIES += libupstart.la
+pkglib_LTLIBRARIES += upstart.la
 endif
 
-libstartup_la_SOURCES = startup.c
+startup_la_SOURCES = startup.c
 
-libheartbeat_la_SOURCES = heartbeat.c
-libheartbeat_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
+heartbeat_la_SOURCES = heartbeat.c
+heartbeat_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
 
-libstate_la_SOURCES = state.c
+state_la_SOURCES = state.c
 
 if WANT_RUNLEVEL
-librunlevel_la_SOURCES = runlevel.c
+runlevel_la_SOURCES = runlevel.c
 endif
 
 if WANT_UPSTART
-libupstart_la_SOURCES = upstart.c
-libupstart_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS)
-libupstart_la_LIBADD = $(DBUS_LIBS)
+upstart_la_SOURCES = upstart.c
+upstart_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS)
+upstart_la_LIBADD = $(DBUS_LIBS)
 endif
 
-libprocesswd_la_SOURCES = processwd.c
-libprocesswd_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
+processwd_la_SOURCES = processwd.c
+processwd_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
 
-libdbusproxy_la_SOURCES = dbusproxy.c dsme_dbus.c
-libdbusproxy_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS) $(DBUSGLIB_CFLAGS)
-libdbusproxy_la_LIBADD = $(DBUSGLIB_LIBS) -ldsme_dbus_if
+dbusproxy_la_SOURCES = dbusproxy.c dsme_dbus.c
+dbusproxy_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS) $(DBUSGLIB_CFLAGS)
+dbusproxy_la_LIBADD = $(DBUSGLIB_LIBS) -ldsme_dbus_if
 
-libalarmtracker_la_SOURCES = alarmtracker.c
-libalarmtracker_la_CPPFLAGS = $(AM_CPPFLAGS) -D_GNU_SOURCE
+alarmtracker_la_SOURCES = alarmtracker.c
+alarmtracker_la_CPPFLAGS = $(AM_CPPFLAGS) -D_GNU_SOURCE
 
-libthermalmanager_la_SOURCES = thermalmanager.c
-libthermalmanager_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS) -DDSME_THERMAL_TUNING
-libthermalmanager_la_LIBADD = -lthermalmanager_dbus_if
+thermalmanager_la_SOURCES = thermalmanager.c
+thermalmanager_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS) -DDSME_THERMAL_TUNING
+thermalmanager_la_LIBADD = -lthermalmanager_dbus_if
 
-libemergencycalltracker_la_SOURCES = emergencycalltracker.c
+emergencycalltracker_la_SOURCES = emergencycalltracker.c
 
-libusbtracker_la_SOURCES = usbtracker.c
+usbtracker_la_SOURCES = usbtracker.c
 
-libiphb_la_SOURCES = iphb.c
-libiphb_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
-libiphb_la_CPPFLAGS = $(AM_CPPFLAGS)
-libiphb_la_LIBADD = -lbmeipc $(GLIB_LIBS)
+iphb_la_SOURCES = iphb.c
+iphb_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
+iphb_la_CPPFLAGS = $(AM_CPPFLAGS)
+iphb_la_LIBADD = -lbmeipc $(GLIB_LIBS)
 
-librebootloopdetector_la_SOURCES = rebootloopdetector.c
+rebootloopdetector_la_SOURCES = rebootloopdetector.c
 
 if WANT_BMEIPC
-libthermalobject_surface_la_SOURCES = thermalobject_surface.c \
+thermalobject_surface_la_SOURCES = thermalobject_surface.c \
                                       thermalsensor_battery.c \
                                       thermalsensor_battery.h
-libthermalobject_surface_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
-libthermalobject_surface_la_LIBADD = -lbmeipc $(GLIB_LIBS)
+thermalobject_surface_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
+thermalobject_surface_la_LIBADD = -lbmeipc $(GLIB_LIBS)
 endif
 
 if WANT_MEMORY_THERMAL_MGMT
-libthermalobject_memory_la_SOURCES = thermalobject_memory.c \
+thermalobject_memory_la_SOURCES = thermalobject_memory.c \
                                      thermalsensor_omap.c   \
                                      thermalsensor_omap.h
 endif
 
 
 if WANT_POWERON_TIMER
-libpowerontimer_la_SOURCES = powerontimer.c         \
+powerontimer_la_SOURCES = powerontimer.c         \
                              powerontimer_backend.c \
                              powerontimer.h         \
                              powerontimer_backend.h
-libpowerontimer_la_CFLAGS =  $(AM_CFLAGS) $(GLIB_CFLAGS)
-libpowerontimer_la_LIBADD = -lcal -lrt
+powerontimer_la_CFLAGS =  $(AM_CFLAGS) $(GLIB_CFLAGS)
+powerontimer_la_LIBADD = -lcal -lrt
 endif

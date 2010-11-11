@@ -214,10 +214,10 @@ module_fn_info_t message_handlers[] = {
 
 void module_init(module_t* module)
 {
-  dsme_log(LOG_DEBUG, "librunlevel.so loaded");
+  dsme_log(LOG_DEBUG, "runlevel.so loaded");
 }
 
 void module_fini(void)
 {
-  dsme_log(LOG_DEBUG, "librunlevel.so unloaded");
+  dsme_log(LOG_DEBUG, "runlevel.so unloaded");
 }

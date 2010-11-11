@@ -68,31 +68,31 @@
  * /etc/dsme/modules.conf is not readable.
  */
 const char *modules[] = {
-    "libheartbeat.so",
+    "heartbeat.so",
 #ifdef DSME_WANT_LIBUPSTART
-    "libupstart.so",
+    "upstart.so",
 #else
 #ifdef DSME_WANT_LIBRUNLEVEL
-    "librunlevel.so",
+    "runlevel.so",
 #endif
 #endif
-    "libdbusproxy.so",
-    "libstate.so", /* state depends on dbus */
-    "librebootloopdetector.so",
-    "libiphb.so",
-    "libprocesswd.so",
-    "libalarmtracker.so",
-    "libthermalmanager.so",
+    "dbusproxy.so",
+    "state.so", /* state depends on dbus */
+    "rebootloopdetector.so",
+    "iphb.so",
+    "processwd.so",
+    "alarmtracker.so",
+    "thermalmanager.so",
 #ifdef DSME_MEMORY_THERMAL_MGMT
-    "libthermalobject_memory.so",
+    "thermalobject_memory.so",
 #endif
 #ifdef DSME_BMEIPC
-    "libthermalobject_surface.so",
+    "thermalobject_surface.so",
 #endif
-    "libemergencycalltracker.so",
-    "libusbtracker.so",
+    "emergencycalltracker.so",
+    "usbtracker.so",
 #ifdef DSME_POWERON_TIMER
-    "libpowerontimer.so",
+    "powerontimer.so",
 #endif
     NULL
 };

@@ -128,7 +128,7 @@ module_fn_info_t message_handlers[] = {
 
 void module_init(module_t* handle)
 {
-  dsme_log(LOG_DEBUG, "libthermalobject_surface.so loaded");
+  dsme_log(LOG_DEBUG, "thermalobject_surface.so loaded");
 
   dsme_register_thermal_object(&surface_thermal_object);
 }
@@ -139,5 +139,5 @@ void module_fini(void)
 
   dsme_unregister_thermal_object(&surface_thermal_object);
 
-  dsme_log(LOG_DEBUG, "libthermalobject_surface.so unloaded");
+  dsme_log(LOG_DEBUG, "thermalobject_surface.so unloaded");
 }

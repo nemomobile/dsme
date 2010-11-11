@@ -256,7 +256,7 @@ void module_init(module_t* handle)
    * Instead, wait for DSM_MSGTYPE_DBUS_CONNECT.
    */
 
-  dsme_log(LOG_DEBUG, "libdbusproxy.so loaded");
+  dsme_log(LOG_DEBUG, "dbusproxy.so loaded");
 }
 
 void module_fini(void)
@@ -266,5 +266,5 @@ void module_fini(void)
   g_free(dsme_version);
   dsme_version = 0;
 
-  dsme_log(LOG_DEBUG, "libdbusproxy.so unloaded");
+  dsme_log(LOG_DEBUG, "dbusproxy.so unloaded");
 }
