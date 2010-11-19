@@ -325,8 +325,7 @@ static int pot_write_cal(const pot_cal_data *pot)
 
 cleanup:
 
-  // TODO: can we call cal_finish() if cal_init() failed???
-  cal_finish(cal);
+  if( cal != 0 ) cal_finish(cal);
 
   return err;
 }
