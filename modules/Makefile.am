@@ -94,7 +94,7 @@ iphb_la_LIBADD = -lbmeipc $(GLIB_LIBS)
 
 rebootloopdetector_la_SOURCES = rebootloopdetector.c
 
-libmalf_la_SOURCES = malf.c
+malf_la_SOURCES = malf.c
 
 if WANT_BMEIPC
 thermalobject_surface_la_SOURCES = thermalobject_surface.c \
