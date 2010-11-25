@@ -98,6 +98,9 @@ extern const char* module_name(const module_t* module);
    @param msg	Message to be queued
    @return 0
 */
+void broadcast_internally_with_extra(const void* msg,
+                                     size_t      extra_size,
+                                     const void* extra);
 void broadcast_internally(const void* msg);
 void broadcast_internally_from_socket(const void*                   msg,
                                       struct dsmesock_connection_t* conn);

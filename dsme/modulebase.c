@@ -316,7 +316,9 @@ static void queue_message(const endpoint_t* from,
   newmsg = NULL;
 }
 
-void broadcast_internally(const void* msg)
+void broadcast_internally_with_extra(const void* msg,
+                                     size_t      extra_size,
+                                     const void* extra)
 {
   endpoint_t from = {
     .module = currently_handling_module,
@@ -325,7 +327,12 @@ void broadcast_internally(const void* msg)
   };
 
   /* use 0 as recipient for broadcasting */
-  queue_message(&from, 0, msg, 0, 0);
+  queue_message(&from, 0, msg, extra_size, extra);
+}
+
+void broadcast_internally(const void* msg)
+{
+  broadcast_internally_with_extra(msg, 0, 0);
 }
 
 void broadcast_internally_from_socket(const void*            msg,
