@@ -70,16 +70,16 @@
 const char *modules[] = {
     "heartbeat.so",
 #ifdef DSME_WANT_LIBUPSTART
-    "upstart.so",
+    "upstart.so",            // upstart provides "init"
 #else
 #ifdef DSME_WANT_LIBRUNLEVEL
-    "runlevel.so",
+    "runlevel.so",           // runlevel provides "init"
 #endif
 #endif
     "dbusproxy.so",
-    "state.so", /* state depends on dbus */
-    "rebootloopdetector.so",
-    "malf.so",
+    "malf.so",               // malf depends on "init" (& state via enter_malf)
+    "state.so",              // state depends on malf, dbusproxy & init
+    "rebootloopdetector.so", // rebootloopdetector depends on malf
     "iphb.so",
     "processwd.so",
     "alarmtracker.so",
