@@ -29,12 +29,12 @@
 #include "malf.h"
 #include "runlevel.h"
 #include "dsme/modules.h"
-#include "dsme/logging.h"  /* for dsme_log()          */
+#include "dsme/logging.h"
 
-#include <stdlib.h>        /* for exit()              */
-#include <errno.h>         /* for errno               */
-#include <unistd.h>        /* for fork() and execv()  */
-#include <sys/wait.h>      /* for wait()              */
+#include <stdlib.h>
+#include <errno.h>
+#include <unistd.h>
+#include <sys/wait.h>
 
 
 static const char* const malf_reason_name[] = {
