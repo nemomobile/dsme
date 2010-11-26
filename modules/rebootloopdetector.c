@@ -22,17 +22,20 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+// TODO: this does not quite work to the spec yet (see NB#173704)
+
+#include <dsme/protocol.h>
+
 #include "malf.h"
 #include "dsme/modules.h"
 #include "dsme/logging.h"
 
-#include <dsme/protocol.h>
-#include <dsme/state.h>
-
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <errno.h>
+
 
 /*
  * minimum number of seconds since previous startup/reboot
@@ -146,10 +149,12 @@ static bool is_in_reboot_loop()
 
 static void go_to_malf()
 {
-    DSM_MSGTYPE_ENTER_MALF msg = DSME_MSG_INIT(DSM_MSGTYPE_ENTER_MALF);
-    msg.malf_reason = DSME_MALF_REBOOTLOOP;
+    DSM_MSGTYPE_ENTER_MALF malf = DSME_MSG_INIT(DSM_MSGTYPE_ENTER_MALF);
+    malf.reason          = DSME_MALF_HARDWARE;
+    malf.component       = "unknown";
+    const char details[] = "too many reboots";
 
-    broadcast_internally(&msg);
+    broadcast_internally_with_extra(&malf, sizeof(details), details);
 }
 
 static void check_for_reboot_loop()

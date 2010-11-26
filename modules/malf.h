@@ -25,11 +25,22 @@
 #ifndef DSME_MALF_H
 #define DSME_MALF_H
 
-#include <dsme/state.h>
+#include <dsme/messages.h>
+
+
+typedef enum {
+    DSME_MALF_SOFTWARE,
+    DSME_MALF_HARDWARE,
+
+    DSME_MALF_REASON_COUNT
+} DSME_MALF_REASON;
 
 typedef struct {
     DSMEMSG_PRIVATE_FIELDS
-    int malf_reason;
+    DSME_MALF_REASON reason;
+    const char*      component; // DANGER: passing a pointer;
+                                //         only safe via the internal queue!
+    // details (if any) are passed in extra
 } DSM_MSGTYPE_ENTER_MALF;
 
 enum {

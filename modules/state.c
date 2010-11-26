@@ -578,9 +578,12 @@ static void start_malf_timer(void)
 
 static int delayed_malf_fn(void* unused)
 {
-  DSM_MSGTYPE_ENTER_MALF msg = DSME_MSG_INIT(DSM_MSGTYPE_ENTER_MALF);
-  msg.malf_reason = DSME_MALF_COMP_FAILURE; // TODO: need the correct MALF reason
-  broadcast_internally(&msg);
+  DSM_MSGTYPE_ENTER_MALF malf = DSME_MSG_INIT(DSM_MSGTYPE_ENTER_MALF);
+  malf.reason          = DSME_MALF_SOFTWARE;
+  malf.component       = "dsme";
+  const char details[] = "unknown or unspecified bootstate";
+
+  broadcast_internally_with_extra(&malf, sizeof(details), details);
 
   return 0; /* stop the interval */
 }
@@ -1022,7 +1025,8 @@ static void set_initial_state_bits(const char* bootstate)
       reboot_requested = true;
 
   } else if (strcmp(bootstate, "LOCAL") == 0 ||
-             strcmp(bootstate, "TEST")  == 0)
+             strcmp(bootstate, "TEST")  == 0 ||
+             strcmp(bootstate, "FLASH"))
   {
       /* DSME_STATE_TEST */
       test = true;

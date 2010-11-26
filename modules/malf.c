@@ -27,6 +27,7 @@
 #endif
 
 #include "malf.h"
+#include "runlevel.h"
 #include "dsme/modules.h"
 #include "dsme/logging.h"  /* for dsme_log()          */
 
@@ -35,30 +36,29 @@
 #include <unistd.h>        /* for fork() and execv()  */
 #include <sys/wait.h>      /* for wait()              */
 
-static const struct {
-    const int  malf_id;
-    const char *malf_type;    /* SOFTWARE, HARDWARE or SECURITY */
-    const char *component;
-    const char *reason;
-} DSME_MALF[] = {
-    {DSME_MALF_HW_WD,         "SOFTWARE",    "watchdog",   "caused too many reboots"},
-    {DSME_MALF_COMP_FAILURE,  "SOFTWARE",    "%s",         "caused too many reboots"},
-    {DSME_MALF_REBOOTLOOP,    "HARDWARE",    "unknown",    "too many reboots"},
-    {0,0}
+
+static const char* const malf_reason_name[] = {
+    "SOFTWARE",
+    "HARDWARE"
 };
 
-static bool enter_malf(int malf_id);
 
-static bool enter_malf(int malf_id)
+static bool enter_malf(DSME_MALF_REASON reason,
+                       const char*      component,
+                       const char*      details)
 {
+    if (reason < 0 || reason >= DSME_MALF_REASON_COUNT) {
+        reason = DSME_MALF_SOFTWARE;
+    }
+
     int status = -1;
     pid_t pid;
     pid_t rc;
     char* args[] = {
         (char*)"enter_malf",
-        (char*)DSME_MALF[malf_id].malf_type,
-        (char*)DSME_MALF[malf_id].component,
-        (char*)DSME_MALF[malf_id].reason,
+        (char*)malf_reason_name[reason],
+        (char*)component,
+        (char*)details,
         0
     };
     if ((pid = fork()) < 0) {
@@ -83,13 +83,17 @@ static bool enter_malf(int malf_id)
     return true;
 }
 
-DSME_HANDLER(DSM_MSGTYPE_ENTER_MALF, conn, msg)
+DSME_HANDLER(DSM_MSGTYPE_ENTER_MALF, conn, malf)
 {
-    if (!enter_malf(msg->malf_reason)) {
-        /* Shutdown because entering MALF failed */
-        DSM_MSGTYPE_SHUTDOWN_REQ req = DSME_MSG_INIT(DSM_MSGTYPE_SHUTDOWN_REQ);
+    if (!enter_malf(malf->reason, malf->component, DSMEMSG_EXTRA(malf))) {
+        /*
+         * entering MALF failed; force shutdown by talking directly
+         * to the init module (bypassing the state module)
+         */
+        DSM_MSGTYPE_SHUTDOWN msg = DSME_MSG_INIT(DSM_MSGTYPE_SHUTDOWN);
+        msg.runlevel = DSME_RUNLEVEL_SHUTDOWN;
 
-        broadcast_internally(&req);
+        broadcast_internally(&msg);
     }
 }
 
