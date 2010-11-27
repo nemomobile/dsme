@@ -28,7 +28,6 @@
  * $ dbus-send --system --print-reply --dest=com.nokia.dsme /com/nokia/dsme com.nokia.dsme.request.get_version
  *
  * TODO:
- * - dsme.conf for D-Bus configuration
  * - dsme should cope with D-Bus restarts
  */
 #include "dbusproxy.h"

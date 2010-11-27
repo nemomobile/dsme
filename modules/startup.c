@@ -139,7 +139,6 @@ void module_init(module_t *handle)
 			snprintf(name, sizeof(name), "%s/%s", path, *names);
 			if(load_module(name, 0) == NULL) {
 				dsme_log(LOG_ERR, "error loading module %s", name);
-				/* TODO: Change to MALF?? */
 			}
 		}
 	} else {
@@ -153,7 +152,6 @@ void module_init(module_t *handle)
 			name[strlen(name) - 1] = '\0'; /* Remove newline */
 			if (load_module(name, 0) == NULL) {
 				dsme_log(LOG_ERR, "error loading module %s", name);
-				/* TODO: Change to MALF?? */
 			}
 		} 
 		if (line)
