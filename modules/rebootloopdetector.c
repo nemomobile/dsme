@@ -126,6 +126,8 @@ static bool is_in_reboot_loop()
                 dsme_log(LOG_DEBUG,
                          "%d reboots in a succession; reboot loop detected",
                          reboot_count);
+                // reset count so that a reboot can be attempted after the MALF
+                reboot_count = 0;
             } else {
                 dsme_log(LOG_DEBUG,
                          "%ld s since last reboot, reboot count is now %d",
