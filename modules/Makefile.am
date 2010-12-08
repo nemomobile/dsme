@@ -54,6 +54,13 @@ endif
 
 startup_la_SOURCES = startup.c
 
+# TODO: remove this
+# provide a symbolic link libstartup.so -> startup.so to ease transition
+install-exec-hook:
+	cd $(DESTDIR)$(libdir)/dsme && \
+		$(LN_S) startup.so libstartup.so
+
+
 heartbeat_la_SOURCES = heartbeat.c
 heartbeat_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
 
