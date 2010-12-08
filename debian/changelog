@@ -1,3 +1,11 @@
+dsme (0.61.32) unstable; urgency=low
+
+  * Add MALF plugin. (First step in fixing NB#173704)
+  * Drop "lib" prefix from plugin names.
+  * Map bootstate "FLASH" to test state.
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Wed, 08 Dec 2010 08:12:25 +0000
+
 dsme (0.61.31) unstable; urgency=low
 
   [ Matias Muhonen ]
