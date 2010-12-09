@@ -23,6 +23,9 @@ Package: dsme
 Section: misc
 Architecture: any
 Depends: ${shlibs:Depends}, libdsme0.2.0 (>= 0.61.4)
+Conflicts: getbootstate
+Replaces: getbootstate
+Provides: getbootstate
 Description: Device State Management Entity
  This package contains the Device State Management Entity which provides state
  management features such as service monitoring, process watchdog and
