@@ -1,3 +1,9 @@
+dsme (0.61.33) unstable; urgency=low
+
+  * Add capability to run enter_malf (CAP::sys_boot)
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Thu, 09 Dec 2010 12:56:07 +0000
+
 dsme (0.61.32) unstable; urgency=low
 
   * Add MALF plugin. (First step in fixing NB#173704)
