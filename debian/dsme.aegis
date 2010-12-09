@@ -6,6 +6,7 @@
   <!-- cal access is specifically needed by the powerontimer module -->
   <request>
     <credential name="GRP::cal" />
+    <credential name="CAP::sys_boot" />
     <for path="/sbin/dsme-server" />
   </request>
 </aegis>
