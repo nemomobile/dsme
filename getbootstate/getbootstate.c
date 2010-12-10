@@ -85,7 +85,7 @@ static int get_cmd_line_value(char *get_value, int max_len, char *key) {
 
     cmdline_file=fopen(CMDLINE_PATH, "r");
     if(!cmdline_file) {
-        perror("Could not open " CMDLINE_PATH "\n");
+        log_msg("Could not open " CMDLINE_PATH "\n");
         return -1;
     }
 
@@ -120,99 +120,113 @@ static int get_bootreason(char *bootreason, int max_len) {
 }
 
 static void log_msg(char *format, ...) {
-
+	int saved = errno; /* preserve errno */
 	va_list ap;
 	char buffer[strlen(format)+strlen(GETBOOTSTATE_PREFIX) + 1];
 
+	errno = saved;
 	sprintf(buffer, "%s%s", GETBOOTSTATE_PREFIX, format);
 
 	va_start(ap, format);
 	vfprintf(stderr,buffer,ap);
 	va_end(ap);
+	errno = saved;
 }
 
 static void clear_reboot_count(void) {
 
-	FILE *reboot_count_file;
+	FILE *reboot_count_file = 0;
 
-	reboot_count_file=fopen(REBOOT_COUNT_PATH,"w");
-	if(!reboot_count_file) {
-		log_msg("Could not open " REBOOT_COUNT_PATH " - %s\n",
-						strerror(errno));
-		return;
+	reboot_count_file = fopen(REBOOT_COUNT_PATH,"w");
+	if (!reboot_count_file) {
+		log_msg("Could not open " REBOOT_COUNT_PATH " - %s\n", strerror(errno));
+		goto CLEANUP;
 	}
 	fputs("0\n",reboot_count_file);
 
-	fflush(reboot_count_file);
-	fsync(fileno(reboot_count_file));
+	if (ferror(reboot_count_file) || fflush(reboot_count_file) == EOF) {
+		log_msg("can't write %s: %s\n", REBOOT_COUNT_PATH, strerror(errno));
+		goto CLEANUP;
+	}
 
-	fclose(reboot_count_file);
+	if (fsync(fileno(reboot_count_file)) == -1) {
+		log_msg("can't sync %s: %s\n", REBOOT_COUNT_PATH, strerror(errno));
+	}
 
+CLEANUP:
+	if (reboot_count_file != 0 && fclose(reboot_count_file) == EOF)
+		log_msg("can't close %s: %s\n", REBOOT_COUNT_PATH, strerror(errno));
 }
 
-static int read_reboot_count(time_t *first_reboot) {
+static unsigned int read_reboot_count(time_t *first_reboot) {
 
-	FILE *reboot_count_file;
+	FILE *reboot_count_file = 0;
 	char reboot_count_str[MAX_REBOOT_COUNT_LEN];
-	int reboot_count;
+	unsigned int reboot_count = 0;
         char  *p;
 
         *first_reboot = 0;
 
-	reboot_count_file=fopen(REBOOT_COUNT_PATH,"r");
-	if(!reboot_count_file) {
-		log_msg("Could not open " REBOOT_COUNT_PATH " - %s\n",
-						strerror(errno));
-		return 0;
+	reboot_count_file = fopen(REBOOT_COUNT_PATH, "r");
+	if (!reboot_count_file) {
+		log_msg("Could not open " REBOOT_COUNT_PATH " - %s\n", strerror(errno));
+		goto CLEANUP;
 	}
 
-	if(!fgets(reboot_count_str, MAX_REBOOT_COUNT_LEN, reboot_count_file)) {
-		fclose(reboot_count_file);
-		return 0;
+	if (!fgets(reboot_count_str, MAX_REBOOT_COUNT_LEN, reboot_count_file)) {
+		goto CLEANUP;
 	}
 
-	reboot_count=atoi(reboot_count_str);
+	reboot_count = atoi(reboot_count_str);
         p = strchr(reboot_count_str,  ' ');
         if (p) {
             p++;
             *first_reboot = (time_t)strtoul(p,  0,  10);
         }
 
-
-	fclose(reboot_count_file);
+CLEANUP:
+	if (reboot_count_file != 0 && fclose(reboot_count_file) == EOF)
+		log_msg("can't close %s: %s\n", REBOOT_COUNT_PATH, strerror(errno));
 
 	return reboot_count;
 }
 
-static int increment_reboot_count(void) {
+static unsigned int increment_reboot_count(void) {
 
-	int reboot_count;
-	FILE *reboot_count_file;
+	unsigned int reboot_count = 0;
+	FILE *reboot_count_file = 0;
         time_t first_reboot;
         time_t now = time(0);
 
-	reboot_count=read_reboot_count(&first_reboot);
+	reboot_count = read_reboot_count(&first_reboot);
         if (!first_reboot)
             first_reboot = now;
 
 	reboot_count++;
 
-	reboot_count_file=fopen(REBOOT_COUNT_PATH,"w");
-	if(!reboot_count_file) {
-		log_msg("Could not open " REBOOT_COUNT_PATH " - %s\n",
-						strerror(errno));
-		return reboot_count;
+	reboot_count_file = fopen(REBOOT_COUNT_PATH, "w");
+	if (!reboot_count_file) {
+		log_msg("Could not open " REBOOT_COUNT_PATH " - %s\n", strerror(errno));
+		goto CLEANUP;
 	}
 
         if (now < first_reboot)
             first_reboot  = now - 1;   // Some sanity!
 
-	fprintf(reboot_count_file,"%d %lu %lu\n", reboot_count, (unsigned long)first_reboot,  (unsigned long)now);
+	fprintf(reboot_count_file, "%d %lu %lu\n", reboot_count, (unsigned long)first_reboot,  (unsigned long)now);
 
-	fflush(reboot_count_file);
-	fsync(fileno(reboot_count_file));
+	if (ferror(reboot_count_file) || fflush(reboot_count_file) == EOF) {
+		log_msg("can't write %s: %s\n", REBOOT_COUNT_PATH, strerror(errno));
+		goto CLEANUP;
+	}
 
-	fclose(reboot_count_file);
+	if (fsync(fileno(reboot_count_file)) == -1) {
+		log_msg("can't sync %s: %s\n", REBOOT_COUNT_PATH, strerror(errno));
+	}
+
+CLEANUP:
+	if (reboot_count_file != 0 && fclose(reboot_count_file) == EOF)
+		log_msg("can't close %s: %s\n", REBOOT_COUNT_PATH, strerror(errno));
 
 	return reboot_count;
 }
@@ -228,6 +242,7 @@ static int save_state(char *state) {
         return -1;
     }
 
+    errno = 0;
     if(fwrite(state, 1, strlen(state), saved_state_file) <= 0) {
         log_msg("Could not write state" " - %s\n", strerror(errno));
         fclose(saved_state_file);
@@ -256,15 +271,17 @@ static int save_state(char *state) {
 
 
 static void return_bootstate(char *bootstate) {
-
+	/* If bootstate is LOCAL, TEST, MALF or FLASH don't save the bootstate. */
 	if(forcemode &&
-           (strncmp(bootstate, "LOCAL",strlen("LOCAL"))) &&
-	   (strncmp(bootstate, "TEST",strlen("TEST"))) &&
-	   (strncmp(bootstate, "MALF",strlen("MALF"))) &&
-	   (strncmp(bootstate, "FLASH",strlen("FLASH")))) {
+           (strcmp(bootstate, "LOCAL")) &&
+	   (strcmp(bootstate, "TEST")) &&
+	   (strcmp(bootstate, "MALF")) &&
+	   (strcmp(bootstate, "FLASH"))) {
+		/* We have a "normal" bootstate (USER, ACTDEAD) -> save the bootstate */
 		save_state(bootstate);
 	}
 
+	/* Print the bootstate to console and exit */
 	puts(bootstate);
 
 	exit (0);
@@ -344,8 +361,8 @@ int main(int argc, char **argv) {
 
 		saved_state=get_saved_state();
 
-                //new_state = saved_state;
-                new_state = "USER";   // We decided to select "USER" to prevent ACT_DEAD reboot  loop
+		// We decided to select "USER" to prevent ACT_DEAD reboot loop
+                new_state = "USER";
 
 		log_msg("Unexpected reset occured (%s). "
 			"Previous bootstate=%s - selecting %s\n", bootreason, saved_state, new_state);
