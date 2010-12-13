@@ -160,7 +160,6 @@ AC_CONFIG_FILES([Makefile
                  dsme/Makefile
                  modules/Makefile
                  util/Makefile
-                 getbootstate/Makefile
                  test/Makefile
                  dsme.init])
 
