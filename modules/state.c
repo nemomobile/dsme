@@ -1026,7 +1026,7 @@ static void set_initial_state_bits(const char* bootstate)
 
   } else if (strcmp(bootstate, "LOCAL") == 0 ||
              strcmp(bootstate, "TEST")  == 0 ||
-             strcmp(bootstate, "FLASH"))
+             strcmp(bootstate, "FLASH") == 0)
   {
       /* DSME_STATE_TEST */
       test = true;
