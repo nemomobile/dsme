@@ -1,3 +1,9 @@
+dsme (0.61.35) unstable; urgency=low
+
+  * Remove getbootstate
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Tue, 14 Dec 2010 08:28:07 +0000
+
 dsme (0.61.34) unstable; urgency=low
 
   * Fixes: NB#211544
