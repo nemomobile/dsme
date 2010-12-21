@@ -51,6 +51,12 @@ static bool enter_malf(DSME_MALF_REASON reason,
         reason = DSME_MALF_SOFTWARE;
     }
 
+    dsme_log(LOG_INFO,
+             "enter_malf '%s' '%s' '%s'",
+             malf_reason_name[reason],
+             component ? component : "(no component)",
+             details ? details : "(no details)");
+
     int status = -1;
     pid_t pid;
     pid_t rc;

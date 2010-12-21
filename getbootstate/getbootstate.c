@@ -347,19 +347,24 @@ int main(int argc, char** argv)
     }
 
 
+    if (argc  > 1  && !strcmp(argv[1], "-f")) {
+        forcemode = true;
+    }
+
     if(get_bootreason(bootreason, MAX_BOOTREASON_LEN) < 0) {
         log_msg("Bootreason could not be read\n");
-        return_bootstate("MALF");
+        return_bootstate(forcemode ?
+                         "MALF SOFTWARE bootloader no bootreason" :
+                         "MALF");
     }
 
 
     if (!strcmp(bootreason, BOOT_REASON_SEC_VIOLATION)) {
         log_msg("Security violation\n");
-        return_bootstate("MALF");
-    }
-
-    if (argc  > 1  && !strcmp(argv[1], "-f")) {
-        forcemode = true;
+        // TODO: check if "software bootloader" is ok
+        return_bootstate(forcemode ?
+                         "MALF SOFTWARE bootloader security violation" :
+                         "MALF");
     }
 
 
@@ -439,7 +444,10 @@ int main(int argc, char** argv)
     }
 
     log_msg("Unknown bootreason '%s' passed by nolo\n", bootreason);
-    return_bootstate("MALF");
+    return_bootstate(
+        forcemode ?
+        "MALF SOFTWARE bootloader unknown bootreason to getbootstate" :
+        "MALF");
 
     return 0; // never reached
 }

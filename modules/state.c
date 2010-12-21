@@ -31,6 +31,7 @@
  */
 
 #define _POSIX_SOURCE
+#define _GNU_SOURCE
 
 #include "dbusproxy.h"
 #include "dsme_dbus.h"
@@ -106,7 +107,6 @@ static bool     shutdown_requested     = false;
 static bool     actdead_requested      = false;
 static bool     reboot_requested       = false;
 static bool     test                   = false;
-static bool     malf                   = false;
 static bool     actdead_switch_done    = false;
 static bool     user_switch_done       = false;
 
@@ -139,7 +139,9 @@ static void stop_delayed_runlevel_timers(void);
 static void change_runlevel(dsme_state_t state);
 static void kick_wds(void);
 
-static void start_malf_timer(void);
+static void start_malf_timer(const char* reason,
+                             const char* component,
+                             const char* details);
 static int delayed_malf_fn(void* unused);
 
 static void start_overheat_timer(void);
@@ -152,6 +154,7 @@ static void stop_charger_disconnect_timer(void);
 static bool rd_mode_enabled(void);
 
 static void runlevel_switch_ind(const DsmeDbusMessage* ind);
+
 
 static const struct {
     int         value;
@@ -206,7 +209,6 @@ static dsme_runlevel_t state2runlevel(dsme_state_t state)
 
       case DSME_STATE_NOT_SET:  /* FALL THROUGH */
       case DSME_STATE_BOOT:     /* FALL THROUGH */
-      case DSME_STATE_MALF:     /* FALL THROUGH */
       default:                  runlevel = DSME_RUNLEVEL_SHUTDOWN; break;
   }
 
@@ -225,9 +227,7 @@ static dsme_state_t select_state(void)
 
   } else {
 
-      if (malf) {
-          state = DSME_STATE_MALF;
-      } else if (test) {
+      if (test) {
           state = DSME_STATE_TEST;
       } else if (battery_empty) {
           dsme_log(LOG_CRIT, "Battery empty shutdown!");
@@ -330,17 +330,6 @@ static void try_to_change_state(dsme_state_t new_state)
     case DSME_STATE_LOCAL: /* NOTE: test server is running */
       if (current_state == DSME_STATE_NOT_SET) {
           change_state(new_state);
-      }
-      break;
-
-    case DSME_STATE_MALF: /* Runlevel 8 */
-      change_state(DSME_STATE_MALF);
-
-      /* If R&D mode is not enabled, enter malf after the timer */
-      if (!rd_mode_enabled()) {
-          start_malf_timer();
-      } else {
-          dsme_log(LOG_NOTICE, "R&D mode enabled, not entering MALF");
       }
       break;
 
@@ -559,9 +548,21 @@ static int delayed_overheat_fn(void* unused)
   return 0; /* stop the interval */
 }
 
-static void start_malf_timer(void)
+
+// TODO: pass these via the timer data pointer
+static char* malf_reason    = 0;
+static char* malf_component = 0;
+static char* malf_details   = 0;
+
+static void start_malf_timer(const char* reason,
+                             const char* component,
+                             const char* details)
 {
   if (!malf_timer) {
+      malf_reason    = strdup(reason);
+      malf_component = strdup(component);
+      malf_details   = details ? strdup(details) : 0;
+
       if (!(malf_timer = dsme_create_timer(ENTER_MALF_TIMER,
                                            delayed_malf_fn,
                                            NULL)))
@@ -579,14 +580,21 @@ static void start_malf_timer(void)
 static int delayed_malf_fn(void* unused)
 {
   DSM_MSGTYPE_ENTER_MALF malf = DSME_MSG_INIT(DSM_MSGTYPE_ENTER_MALF);
-  malf.reason          = DSME_MALF_SOFTWARE;
-  malf.component       = "dsme";
-  const char details[] = "unknown or unspecified bootstate";
+  malf.reason          = strcmp(malf_reason, "HARDWARE") ? DSME_MALF_SOFTWARE
+                                                         : DSME_MALF_HARDWARE;
+  malf.component       = malf_component;
 
-  broadcast_internally_with_extra(&malf, sizeof(details), details);
+  if (malf_details) {
+      broadcast_internally_with_extra(&malf,
+                                      strlen(malf_details) + 1,
+                                      malf_details);
+  } else {
+      broadcast_internally(&malf);
+  }
 
   return 0; /* stop the interval */
 }
+
 
 static void start_charger_disconnect_timer(void)
 {
@@ -1001,39 +1009,109 @@ module_fn_info_t message_handlers[] = {
       {0}
 };
 
+
+static void parse_malf_info(char*  malf_info,
+                            char** reason,
+                            char** component,
+                            char** details)
+{
+    char* p = malf_info;
+    char* r = 0;
+    char* c = 0;
+    char* d = 0;
+    char* save;
+
+    if (p) {
+        if ((r = strtok_r(p, " ", &save))) {
+            if ((c = strtok_r(0, " ", &save))) {
+                d = strtok_r(0, "", &save);
+            }
+        }
+    }
+
+    if (reason) {
+        *reason = r;
+    }
+    if (component) {
+        *component = c;
+    }
+    if (details) {
+        *details = d;
+    }
+}
+
+/*
+ * If string 'string' begins with prefix 'prefix',
+ * DSME_SKIP_PREFIX returns a pointer to the first character
+ * in the string after the prefix. If the character is a space,
+ * it is skipped.
+ * If the string does not begin with the prefix, 0 is returned.
+ */
+#define DSME_SKIP_PREFIX(string, prefix) \
+    (strncmp(string, prefix, sizeof(prefix) - 1) \
+     ? 0 \
+     : string + sizeof(prefix) - (*(string + sizeof(prefix) - 1) != ' '))
+
 static void set_initial_state_bits(const char* bootstate)
 {
+  const char* p = 0;
+
   if (strcmp(bootstate, "SHUTDOWN") == 0) {
       /*
        * DSME_STATE_SHUTDOWN:
        * charger must be considered disconnected;
        * otherwise we end up in actdead
        */
+      // TODO: does getbootstate ever return "SHUTDOWN"?
       charger_state      = CHARGER_DISCONNECTED;
       shutdown_requested = true;
 
-  } else if (strcmp(bootstate, "USER") == 0) {
-      /* DSME_STATE_USER: NOP */
+  } else if ((p = DSME_SKIP_PREFIX(bootstate, "USER"))) {
+      // DSME_STATE_USER with possible malf information
 
-  } else if (strcmp(bootstate, "ACT_DEAD") == 0) {
-      /* DSME_STATE_ACTDEAD */
+  } else if ((p = DSME_SKIP_PREFIX(bootstate, "ACT_DEAD"))) {
+      // DSME_STATE_ACTDEAD with possible malf information
       shutdown_requested = true;
 
   } else if (strcmp(bootstate, "BOOT") == 0) {
-      /* DSME_STATE_REBOOT */
-      /* TODO: does getbootstate ever return "BOOT"? */
+      // DSME_STATE_REBOOT
+      // TODO: does getbootstate ever return "BOOT"?
       reboot_requested = true;
 
   } else if (strcmp(bootstate, "LOCAL") == 0 ||
              strcmp(bootstate, "TEST")  == 0 ||
              strcmp(bootstate, "FLASH") == 0)
   {
-      /* DSME_STATE_TEST */
+      // DSME_STATE_TEST
       test = true;
-
+  } else if ((p = DSME_SKIP_PREFIX(bootstate, "MALF"))) {
+      // DSME_STATE_USER with malf information
+      if (!*p) {
+          // there was no malf information, so supply our own
+          p = "SOFTWARE bootloader";
+      }
   } else {
-      /* DSME_STATE_MALF */
-      malf = true;
+      // DSME_STATE_USER with malf information
+      p = "SOFTWARE bootloader unknown bootreason to dsme";
+  }
+
+  if (p && *p) {
+      // we got a bootstate followed by malf information
+
+      // If R&D mode is not enabled, enter malf after the timer
+      if (!rd_mode_enabled()) {
+          char* reason    = 0;
+          char* component = 0;
+          char* details   = 0;
+
+          char* malf_info = strdup(p);
+          parse_malf_info(malf_info, &reason, &component, &details);
+          start_malf_timer(reason, component, details);
+          free(malf_info);
+
+      } else {
+          dsme_log(LOG_NOTICE, "R&D mode enabled, not entering MALF '%s'", p);
+      }
   }
 }
 
@@ -1048,7 +1126,7 @@ void module_init(module_t* handle)
   const char* bootstate = getenv("BOOTSTATE");
   if (!bootstate) {
       bootstate = "USER";
-      dsme_log(LOG_CRIT,
+      dsme_log(LOG_NOTICE,
                "BOOTSTATE: No such environment variable, using '%s'",
                bootstate);
   } else {
