@@ -152,9 +152,9 @@ static bool is_in_reboot_loop()
 static void go_to_malf()
 {
     DSM_MSGTYPE_ENTER_MALF malf = DSME_MSG_INIT(DSM_MSGTYPE_ENTER_MALF);
-    malf.reason          = DSME_MALF_HARDWARE;
+    malf.reason          = DSME_MALF_SOFTWARE;
     malf.component       = "unknown";
-    const char details[] = "too many reboots";
+    const char details[] = "too frequent reboots";
 
     broadcast_internally_with_extra(&malf, sizeof(details), details);
 }
