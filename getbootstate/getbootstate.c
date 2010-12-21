@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <stdbool.h>
 
 #define MAX_BOOTREASON_LEN   40
 #define MAX_REBOOT_COUNT_LEN 40
@@ -62,7 +63,7 @@
 #define GETBOOTSTATE_PREFIX "getbootstate: "
 
 
-static  int  forcemode = 0;
+static bool forcemode = false;
 
 static void log_msg(char* format, ...) __attribute__ ((format (printf, 1, 2)));
 
@@ -361,7 +362,7 @@ int main(int argc, char** argv)
     }
 
     if (argc  > 1  && !strcmp(argv[1], "-f")) {
-        forcemode = 1;
+        forcemode = true;
     }
 
 
