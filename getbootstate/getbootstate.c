@@ -312,14 +312,11 @@ static char* get_saved_state(void)
 
 static void return_bootstate(char* bootstate)
 {
-    // If bootstate is LOCAL, TEST, MALF or FLASH don't save the bootstate.
-    if(forcemode                  &&
-       strcmp(bootstate, "LOCAL") &&
-       strcmp(bootstate, "TEST")  &&
-       strcmp(bootstate, "MALF")  &&
-       strcmp(bootstate, "FLASH"))
+    // Only save "normal" bootstates (USER, ACT_DEAD)
+    if(forcemode &&
+       (!strcmp(bootstate, "USER") ||
+        !strcmp(bootstate, "ACT_DEAD")))
     {
-        // We have a "normal" bootstate (USER, ACTDEAD) -> save the bootstate
         save_state(bootstate);
     }
 
