@@ -1047,7 +1047,7 @@ void module_init(module_t* handle)
 
   const char* bootstate = getenv("BOOTSTATE");
   if (!bootstate) {
-      bootstate = "MALF";
+      bootstate = "USER";
       dsme_log(LOG_CRIT,
                "BOOTSTATE: No such environment variable, using '%s'",
                bootstate);
