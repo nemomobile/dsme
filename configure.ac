@@ -58,7 +58,7 @@ AM_CONDITIONAL([WANT_RUNLEVEL], [test x$enable_runlevel != xno])
 # upstart
 #
 AC_ARG_ENABLE([upstart],
-  [AS_HELP_STRING([--disable-upstartl],
+  [AS_HELP_STRING([--disable-upstart],
     [disable upstart plugin (libupstart)])])
 
 AS_IF([test "x$enable_upstart" != xno],
