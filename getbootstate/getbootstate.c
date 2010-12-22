@@ -140,114 +140,6 @@ static void log_msg(char* format, ...)
     errno = saved;
 }
 
-#if DIIBADAABA
-static void clear_reboot_count(void)
-{
-    FILE* reboot_count_file = 0;
-
-    reboot_count_file = fopen(REBOOT_COUNT_PATH,"w");
-    if (!reboot_count_file) {
-        log_msg("Could not open " REBOOT_COUNT_PATH " - %s\n", strerror(errno));
-        goto CLEANUP;
-    }
-    fputs("0\n",reboot_count_file);
-
-    if (ferror(reboot_count_file) || fflush(reboot_count_file) == EOF) {
-        log_msg("can't write %s: %s\n", REBOOT_COUNT_PATH, strerror(errno));
-        goto CLEANUP;
-    }
-
-    if (fsync(fileno(reboot_count_file)) == -1) {
-        log_msg("can't sync %s: %s\n", REBOOT_COUNT_PATH, strerror(errno));
-    }
-
-CLEANUP:
-    if (reboot_count_file != 0 && fclose(reboot_count_file) == EOF) {
-        log_msg("can't close %s: %s\n", REBOOT_COUNT_PATH, strerror(errno));
-    }
-}
-
-static unsigned int read_reboot_count(time_t* first_reboot)
-{
-    FILE*        reboot_count_file = 0;
-    char         reboot_count_str[MAX_REBOOT_COUNT_LEN];
-    unsigned int reboot_count      = 0;
-    char*        p;
-
-    *first_reboot = 0;
-
-    reboot_count_file = fopen(REBOOT_COUNT_PATH, "r");
-    if (!reboot_count_file) {
-        log_msg("Could not open " REBOOT_COUNT_PATH " - %s\n", strerror(errno));
-        goto CLEANUP;
-    }
-
-    if (!fgets(reboot_count_str, MAX_REBOOT_COUNT_LEN, reboot_count_file)) {
-        goto CLEANUP;
-    }
-
-    reboot_count = atoi(reboot_count_str);
-    p = strchr(reboot_count_str,  ' ');
-    if (p) {
-        p++;
-        *first_reboot = (time_t)strtoul(p,  0,  10);
-    }
-
-CLEANUP:
-    if (reboot_count_file != 0 && fclose(reboot_count_file) == EOF) {
-        log_msg("can't close %s: %s\n", REBOOT_COUNT_PATH, strerror(errno));
-    }
-
-    return reboot_count;
-}
-
-static unsigned int increment_reboot_count(void)
-{
-    unsigned int reboot_count      = 0;
-    FILE*        reboot_count_file = 0;
-    time_t       first_reboot;
-    time_t       now               = time(0);
-
-    reboot_count = read_reboot_count(&first_reboot);
-    if (!first_reboot) {
-        first_reboot = now;
-    }
-
-    reboot_count++;
-
-    reboot_count_file = fopen(REBOOT_COUNT_PATH, "w");
-    if (!reboot_count_file) {
-        log_msg("Could not open " REBOOT_COUNT_PATH " - %s\n", strerror(errno));
-        goto CLEANUP;
-    }
-
-    if (now < first_reboot) {
-        first_reboot  = now - 1; // Some sanity!
-    }
-
-    fprintf(reboot_count_file,
-            "%d %lu %lu\n",
-            reboot_count,
-            (unsigned long)first_reboot,
-            (unsigned long)now);
-
-    if (ferror(reboot_count_file) || fflush(reboot_count_file) == EOF) {
-        log_msg("can't write %s: %s\n", REBOOT_COUNT_PATH, strerror(errno));
-        goto CLEANUP;
-    }
-
-    if (fsync(fileno(reboot_count_file)) == -1) {
-        log_msg("can't sync %s: %s\n", REBOOT_COUNT_PATH, strerror(errno));
-    }
-
-CLEANUP:
-    if (reboot_count_file != 0 && fclose(reboot_count_file) == EOF) {
-        log_msg("can't close %s: %s\n", REBOOT_COUNT_PATH, strerror(errno));
-    }
-
-    return reboot_count;
-}
-#endif // DIIBADAABA
 
 static int save_state(const char* state)
 {
@@ -552,14 +444,6 @@ int main(int argc, char** argv)
                 saved_state,
                 new_state);
 
-#if DIIBADAABA
-        // Increment the counter but not on power on reset
-        if (forcemode && (strcmp(bootreason,BOOT_REASON_POWER_ON_RESET) != 0))
-        {
-            increment_reboot_count();
-        }
-#endif
-
         LOOP_COUNTING_TYPE count;
         if (!strcmp(bootreason, BOOT_REASON_POWER_ON_RESET)) {
             count = RESET_COUNTS; // zero loop counters on power on reset
@@ -568,11 +452,6 @@ int main(int argc, char** argv)
         }
         return_bootstate(new_state, 0, count);
     }
-#if DIIBADAABA
-    if (forcemode) {
-        clear_reboot_count();
-    }
-#endif
 
     if(!strcmp(bootreason,BOOT_REASON_SW_RESET))   {
         char* saved_state;
