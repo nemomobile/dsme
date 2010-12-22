@@ -308,10 +308,6 @@ static void check_for_boot_loops(LOOP_COUNTING_TYPE count_type,
                 // Detected a boot loop
                 loop_malf_info = "unknown too frequent reboots";
                 log_msg("%d reboots; loop detected\n", boots);
-
-                // Reset counts so that a reboot can be attempted after the MALF
-                boots     = 0;
-                wd_resets = 0;
             } else {
                 log_msg("Increased boot count to %d\n", boots);
             }
@@ -332,10 +328,6 @@ static void check_for_boot_loops(LOOP_COUNTING_TYPE count_type,
                 // Detected a WD reset loop
                 loop_malf_info = "watchdog too frequent resets";
                 log_msg("%d WD resets; loop detected\n", wd_resets);
-
-                // Reset counts so that a reboot can be attempted after the MALF
-                boots     = 0;
-                wd_resets = 0;
             } else {
                 log_msg("Increased WD reset count to %d\n", wd_resets);
             }
@@ -349,12 +341,19 @@ static void check_for_boot_loops(LOOP_COUNTING_TYPE count_type,
         wd_resets = 0;
     }
 
-    write_loop_counts(boots, wd_resets, now);
+    if (loop_malf_info) {
+        // Malf detected;
+        // reset counts so that a reboot can be attempted after the MALF
+        boots     = 0;
+        wd_resets = 0;
 
-    // Pass malf information to the caller if it doesn't have any yet
-    if (loop_malf_info && malf_info && !*malf_info) {
-        *malf_info = loop_malf_info;
+        // Pass malf information to the caller if it doesn't have any yet
+        if (malf_info && !*malf_info) {
+            *malf_info = loop_malf_info;
+        }
     }
+
+    write_loop_counts(boots, wd_resets, now);
 }
 
 static void return_bootstate(const char*        bootstate,
