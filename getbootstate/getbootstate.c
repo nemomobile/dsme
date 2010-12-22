@@ -310,7 +310,7 @@ static char* get_saved_state(void)
     }
 }
 
-static void return_bootstate(char* bootstate)
+static void return_bootstate(const char* bootstate, const char* malf_info)
 {
     // Only save "normal" bootstates (USER, ACT_DEAD)
     if (forcemode) {
@@ -326,7 +326,11 @@ static void return_bootstate(char* bootstate)
     }
 
     // Print the bootstate to console and exit
-    puts(bootstate);
+    if (forcemode && malf_info) {
+        printf("%s %s\n", bootstate, malf_info);
+    } else {
+        puts(bootstate);
+    }
 
     exit (0);
 }
@@ -336,40 +340,36 @@ int main(int argc, char** argv)
     char bootreason[MAX_BOOTREASON_LEN];
     char bootmode[MAX_BOOTREASON_LEN];
 
-    if(!get_bootmode(bootmode, MAX_BOOTREASON_LEN)) {
-        if(!strcmp(bootmode, BOOT_MODE_UPDATE_MMC)) {
-            log_msg("Update mode requested\n");
-            return_bootstate("FLASH");
-        }
-        if(!strcmp(bootmode, BOOT_MODE_LOCAL)) {
-            log_msg("LOCAL mode requested\n");
-            return_bootstate("LOCAL");
-        }
-        if(!strcmp(bootmode, BOOT_MODE_TEST)) {
-            log_msg("TEST mode requested\n");
-            return_bootstate("TEST");
-        }
-    }
-
-
     if (argc  > 1  && !strcmp(argv[1], "-f")) {
         forcemode = true;
     }
 
+    if(!get_bootmode(bootmode, MAX_BOOTREASON_LEN)) {
+        if(!strcmp(bootmode, BOOT_MODE_UPDATE_MMC)) {
+            log_msg("Update mode requested\n");
+            return_bootstate("FLASH", 0);
+        }
+        if(!strcmp(bootmode, BOOT_MODE_LOCAL)) {
+            log_msg("LOCAL mode requested\n");
+            return_bootstate("LOCAL", 0);
+        }
+        if(!strcmp(bootmode, BOOT_MODE_TEST)) {
+            log_msg("TEST mode requested\n");
+            return_bootstate("TEST", 0);
+        }
+    }
+
+
     if(get_bootreason(bootreason, MAX_BOOTREASON_LEN) < 0) {
         log_msg("Bootreason could not be read\n");
-        return_bootstate(forcemode ?
-                         "MALF SOFTWARE bootloader no bootreason" :
-                         "MALF");
+        return_bootstate("MALF", "SOFTWARE bootloader no bootreason");
     }
 
 
     if (!strcmp(bootreason, BOOT_REASON_SEC_VIOLATION)) {
         log_msg("Security violation\n");
         // TODO: check if "software bootloader" is ok
-        return_bootstate(forcemode ?
-                         "MALF SOFTWARE bootloader security violation" :
-                         "MALF");
+        return_bootstate("MALF", "SOFTWARE bootloader security violation");
     }
 
 
@@ -397,7 +397,7 @@ int main(int argc, char** argv)
             increment_reboot_count();
         }
 
-        return_bootstate(new_state);
+        return_bootstate(new_state, 0);
     }
     if (forcemode) {
         clear_reboot_count();
@@ -421,38 +421,36 @@ int main(int argc, char** argv)
            !strcmp(bootmode, BOOT_MODE_NORMAL))
         {
             log_msg("request was to NORMAL mode\n");
-            return_bootstate("USER");
+            return_bootstate("USER", 0);
         } else {
-            return_bootstate(saved_state);
+            return_bootstate(saved_state, 0);
         }
     }
 
     if(!strcmp(bootreason, BOOT_REASON_POWER_KEY)) {
         log_msg("User pressed power button\n");
-        return_bootstate("USER");
+        return_bootstate("USER", 0);
     }
     if(!strcmp(bootreason, BOOT_REASON_NSU)) {
         log_msg("software update (NSU)\n");
-        return_bootstate("USER");
+        return_bootstate("USER", 0);
     }
 
     if(!strcmp(bootreason, BOOT_REASON_CHARGER) ||
        !strcmp(bootreason, BOOT_REASON_USB))
     {
         log_msg("User attached charger\n");
-        return_bootstate("ACT_DEAD");
+        return_bootstate("ACT_DEAD", 0);
     }
 
     if(!strcmp(bootreason, BOOT_REASON_RTC_ALARM)) {
         log_msg("Alarm wakeup occured\n");
-        return_bootstate("ACT_DEAD");
+        return_bootstate("ACT_DEAD", 0);
     }
 
     log_msg("Unknown bootreason '%s' passed by nolo\n", bootreason);
-    return_bootstate(
-        forcemode ?
-        "MALF SOFTWARE bootloader unknown bootreason to getbootstate" :
-        "MALF");
+    return_bootstate("MALF",
+                     "SOFTWARE bootloader unknown bootreason to getbootstate");
 
     return 0; // never reached
 }
