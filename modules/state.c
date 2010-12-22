@@ -1054,7 +1054,8 @@ static void parse_malf_info(char*  malf_info,
 
 static void set_initial_state_bits(const char* bootstate)
 {
-  const char* p = 0;
+  const char* p         = 0;
+  bool        must_malf = false;
 
   if (strcmp(bootstate, "SHUTDOWN") == 0) {
       /*
@@ -1086,6 +1087,7 @@ static void set_initial_state_bits(const char* bootstate)
       test = true;
   } else if ((p = DSME_SKIP_PREFIX(bootstate, "MALF"))) {
       // DSME_STATE_USER with malf information
+      must_malf = true;
       if (!*p) {
           // there was no malf information, so supply our own
           p = "SOFTWARE bootloader";
@@ -1098,8 +1100,8 @@ static void set_initial_state_bits(const char* bootstate)
   if (p && *p) {
       // we got a bootstate followed by malf information
 
-      // If R&D mode is not enabled, enter malf after the timer
-      if (!rd_mode_enabled()) {
+      // If allowed to malf, enter malf after the timer
+      if (must_malf || !rd_mode_enabled()) {
           char* reason    = 0;
           char* component = 0;
           char* details   = 0;
