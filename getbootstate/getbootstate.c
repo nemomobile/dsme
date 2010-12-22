@@ -31,6 +31,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdbool.h>
+#include <time.h>
 
 #define MAX_BOOTREASON_LEN   40
 #define MAX_REBOOT_COUNT_LEN 40
@@ -63,8 +64,8 @@
 #define BOOT_MODE_TEST       "test"
 #define BOOT_MODE_NORMAL     "normal"
 
-#define CMDLINE_PATH    "/proc/cmdline"
-#define MAX_CMDLINE_LEN 1024
+#define DEFAULT_CMDLINE_PATH "/proc/cmdline"
+#define MAX_CMDLINE_LEN      1024
 
 #define GETBOOTSTATE_PREFIX "getbootstate: "
 
@@ -82,16 +83,20 @@ static void log_msg(char* format, ...) __attribute__ ((format (printf, 1, 2)));
  **/
 static int get_cmd_line_value(char* get_value, int max_len, char* key)
 {
-    FILE* cmdline_file;
-    char  cmdline[MAX_CMDLINE_LEN];
-    int   ret = -1;
-    int   keylen;
-    char* key_and_value;
-    char* value;
+    const char* cmdline_path;
+    FILE*       cmdline_file;
+    char        cmdline[MAX_CMDLINE_LEN];
+    int         ret = -1;
+    int         keylen;
+    char*       key_and_value;
+    char*       value;
 
-    cmdline_file = fopen(CMDLINE_PATH, "r");
+    cmdline_path = getenv("CMDLINE_PATH");
+    cmdline_path = cmdline_path ? cmdline_path : DEFAULT_CMDLINE_PATH;
+
+    cmdline_file = fopen(cmdline_path, "r");
     if(!cmdline_file) {
-        log_msg("Could not open " CMDLINE_PATH "\n");
+        log_msg("Could not open %s\n", cmdline_path);
         return -1;
     }
 
@@ -248,7 +253,7 @@ static void read_loop_counts(unsigned* boots, unsigned* wd_resets, time_t* when)
         log_msg("Could not open " BOOT_LOOP_COUNT_PATH ": %s\n",
                 strerror(errno));
     } else {
-        if (fscanf(f, "%lu %d %d", when, boots, wd_resets) != 3) {
+        if (fscanf(f, "%lu %u %u", (unsigned long*)when, boots, wd_resets) != 3) {
             log_msg("Error reading file " BOOT_LOOP_COUNT_PATH);
         }
         (void)fclose(f);
@@ -276,7 +281,7 @@ static void check_for_boot_loops(LOOP_COUNTING_TYPE count_type,
     time_t        now;
     time_t        last;
     unsigned long seconds;
-    const char*   loop_malf_info;
+    const char*   loop_malf_info = 0;
     unsigned      max_boots;
     unsigned      max_wd_resets;
     unsigned      min_boot_time;
@@ -297,7 +302,7 @@ static void check_for_boot_loops(LOOP_COUNTING_TYPE count_type,
                                 DEFAULT_MIN_WD_RESET_TIME);
 
     // Check for too many frequent and consecutive reboots
-    if (count_type | COUNT_BOOTS) {
+    if (count_type & COUNT_BOOTS) {
         if (seconds < min_boot_time) {
             if (++boots > max_boots) {
                 // Detected a boot loop
@@ -321,7 +326,7 @@ static void check_for_boot_loops(LOOP_COUNTING_TYPE count_type,
     }
 
     // Check for too many frequent and consecutive WD resets
-    if (count_type | COUNT_WD_RESETS) {
+    if (count_type & COUNT_WD_RESETS) {
         if (seconds < min_wd_reset_time) {
             if (++wd_resets > max_wd_resets) {
                 // Detected a WD reset loop
