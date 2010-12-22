@@ -241,7 +241,7 @@ CLEANUP:
     return reboot_count;
 }
 
-static int save_state(char* state)
+static int save_state(const char* state)
 {
     FILE* saved_state_file;
 
@@ -313,11 +313,16 @@ static char* get_saved_state(void)
 static void return_bootstate(char* bootstate)
 {
     // Only save "normal" bootstates (USER, ACT_DEAD)
-    if(forcemode &&
-       (!strcmp(bootstate, "USER") ||
-        !strcmp(bootstate, "ACT_DEAD")))
-    {
-        save_state(bootstate);
+    if (forcemode) {
+        static const char* saveable[] = { "USER", "ACT_DEAD", 0 };
+        int i;
+
+        for (i = 0; saveable[i]; ++i) {
+            if (!strncmp(bootstate, saveable[i], strlen(saveable[i]))) {
+                save_state(saveable[i]);
+                break;
+            }
+        }
     }
 
     // Print the bootstate to console and exit
