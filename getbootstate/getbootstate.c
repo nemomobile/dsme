@@ -36,8 +36,14 @@
 #define MAX_REBOOT_COUNT_LEN 40
 #define MAX_SAVED_STATE_LEN  40
 
-#define REBOOT_COUNT_PATH "/var/lib/dsme/boot_count"
-#define SAVED_STATE_PATH  "/var/lib/dsme/saved_state"
+#define DEFAULT_MAX_BOOTS           5
+#define DEFAULT_MIN_BOOT_TIME     120 // seconds ==  2 minutes
+
+#define DEFAULT_MAX_WD_RESETS       6
+#define DEFAULT_MIN_WD_RESET_TIME 600 // seconds == 10 minutes
+
+#define BOOT_LOOP_COUNT_PATH "/var/lib/dsme/boot_count"
+#define SAVED_STATE_PATH     "/var/lib/dsme/saved_state"
 
 #define BOOT_REASON_UNKNOWN         "unknown"
 #define BOOT_REASON_SWDG_TIMEOUT    "swdg_to"
@@ -134,6 +140,7 @@ static void log_msg(char* format, ...)
     errno = saved;
 }
 
+#if DIIBADAABA
 static void clear_reboot_count(void)
 {
     FILE* reboot_count_file = 0;
@@ -240,6 +247,7 @@ CLEANUP:
 
     return reboot_count;
 }
+#endif // DIIBADAABA
 
 static int save_state(const char* state)
 {
@@ -310,7 +318,151 @@ static char* get_saved_state(void)
     }
 }
 
-static void return_bootstate(const char* bootstate, const char* malf_info)
+
+static void write_loop_counts(unsigned boots, unsigned wd_resets, time_t when)
+{
+    FILE* f;
+
+    if ((f = fopen(BOOT_LOOP_COUNT_PATH, "w")) == 0) {
+        log_msg("Could not open " BOOT_LOOP_COUNT_PATH ": %s\n",
+                strerror(errno));
+    } else {
+        if (fprintf(f, "%lu %u %u", when, boots, wd_resets) < 0) {
+            log_msg("Error writing " BOOT_LOOP_COUNT_PATH "\n");
+        } else if (ferror(f) || fflush(f) == EOF) {
+            log_msg("Error flushing " BOOT_LOOP_COUNT_PATH ": %s\n",
+                    strerror(errno));
+        } else if (fsync(fileno(f)) == -1) {
+            log_msg("Error syncing " BOOT_LOOP_COUNT_PATH ": %s\n",
+                    strerror(errno));
+        }
+
+        if (fclose(f) == EOF) {
+            log_msg("Error closing " BOOT_LOOP_COUNT_PATH ": %s\n",
+                    strerror(errno));
+        }
+    }
+}
+
+static void read_loop_counts(unsigned* boots, unsigned* wd_resets, time_t* when)
+{
+    *boots     = 0;
+    *wd_resets = 0;
+    *when      = 0;
+
+    FILE* f;
+
+    if ((f = fopen(BOOT_LOOP_COUNT_PATH, "r")) == 0) {
+        log_msg("Could not open " BOOT_LOOP_COUNT_PATH ": %s\n",
+                strerror(errno));
+    } else {
+        if (fscanf(f, "%lu %d %d", when, boots, wd_resets) != 3) {
+            log_msg("Error reading file " BOOT_LOOP_COUNT_PATH);
+        }
+        (void)fclose(f);
+    }
+}
+
+static unsigned get_env(const char* name, unsigned default_value)
+{
+    const char* e = getenv(name);
+    return e ? atoi(e) : default_value;
+}
+
+typedef enum {
+    RESET_COUNTS    = 0x0,
+    COUNT_BOOTS     = 0x1,
+    COUNT_WD_RESETS = 0x2,
+    COUNT_ALL    = (COUNT_BOOTS | COUNT_WD_RESETS)
+} LOOP_COUNTING_TYPE;
+
+static void check_for_boot_loops(LOOP_COUNTING_TYPE count_type,
+                                 const char**       malf_info)
+{
+    unsigned      boots;
+    unsigned      wd_resets;
+    time_t        now;
+    time_t        last;
+    unsigned long seconds;
+    const char*   loop_malf_info;
+    unsigned      max_boots;
+    unsigned      max_wd_resets;
+    unsigned      min_boot_time;
+    unsigned      min_wd_reset_time;
+
+    time(&now);
+    read_loop_counts(&boots, &wd_resets, &last);
+    seconds = now - last;
+
+    // Obtain limits
+    max_boots         = get_env("GETBOOTSTATE_MAX_BOOTS",
+                                DEFAULT_MAX_BOOTS);
+    max_wd_resets     = get_env("GETBOOTSTATE_MAX_WD_RESETS",
+                                DEFAULT_MAX_WD_RESETS);
+    min_boot_time     = get_env("GETBOOTSTATE_MIN_BOOT_TIME",
+                                DEFAULT_MIN_BOOT_TIME);
+    min_wd_reset_time = get_env("GETBOOTSTATE_MIN_WD_RESET_TIME",
+                                DEFAULT_MIN_WD_RESET_TIME);
+
+    // Check for too many frequent and consecutive reboots
+    if (count_type | COUNT_BOOTS) {
+        if (seconds < min_boot_time) {
+            if (++boots > max_boots) {
+                // Detected a boot loop
+                loop_malf_info = "unknown too frequent reboots";
+                log_msg("%d reboots; loop detected\n", boots);
+
+                // Reset counts so that a reboot can be attempted after the MALF
+                boots     = 0;
+                wd_resets = 0;
+            } else {
+                log_msg("Increased boot count to %d\n", boots);
+            }
+        } else {
+            log_msg("%d s or more since last reboot; resetting counter\n",
+                    min_boot_time);
+            boots = 0;
+        }
+    } else {
+        log_msg("Resetting boot counter\n");
+        boots = 0;
+    }
+
+    // Check for too many frequent and consecutive WD resets
+    if (count_type | COUNT_WD_RESETS) {
+        if (seconds < min_wd_reset_time) {
+            if (++wd_resets > max_wd_resets) {
+                // Detected a WD reset loop
+                loop_malf_info = "watchdog too frequent resets";
+                log_msg("%d WD resets; loop detected\n", wd_resets);
+
+                // Reset counts so that a reboot can be attempted after the MALF
+                boots     = 0;
+                wd_resets = 0;
+            } else {
+                log_msg("Increased WD reset count to %d\n", wd_resets);
+            }
+        } else {
+            log_msg("%d s or more since last WD reset; resetting counter\n",
+                    min_wd_reset_time);
+            wd_resets = 0;
+        }
+    } else {
+        log_msg("Resetting WD reset counter\n");
+        wd_resets = 0;
+    }
+
+    write_loop_counts(boots, wd_resets, now);
+
+    // Pass malf information to the caller if it doesn't have any yet
+    if (loop_malf_info && malf_info && !*malf_info) {
+        *malf_info = loop_malf_info;
+    }
+}
+
+static void return_bootstate(const char*        bootstate,
+                             const char*        malf_info,
+                             LOOP_COUNTING_TYPE count_type)
 {
     // Only save "normal" bootstates (USER, ACT_DEAD)
     if (forcemode) {
@@ -323,6 +475,11 @@ static void return_bootstate(const char* bootstate, const char* malf_info)
                 break;
             }
         }
+    }
+
+    // Deal with possible startup loops
+    if (forcemode) {
+        check_for_boot_loops(count_type, &malf_info);
     }
 
     // Print the bootstate to console and exit
@@ -347,29 +504,33 @@ int main(int argc, char** argv)
     if(!get_bootmode(bootmode, MAX_BOOTREASON_LEN)) {
         if(!strcmp(bootmode, BOOT_MODE_UPDATE_MMC)) {
             log_msg("Update mode requested\n");
-            return_bootstate("FLASH", 0);
+            return_bootstate("FLASH", 0, COUNT_BOOTS);
         }
         if(!strcmp(bootmode, BOOT_MODE_LOCAL)) {
             log_msg("LOCAL mode requested\n");
-            return_bootstate("LOCAL", 0);
+            return_bootstate("LOCAL", 0, COUNT_BOOTS);
         }
         if(!strcmp(bootmode, BOOT_MODE_TEST)) {
             log_msg("TEST mode requested\n");
-            return_bootstate("TEST", 0);
+            return_bootstate("TEST", 0, COUNT_BOOTS);
         }
     }
 
 
     if(get_bootreason(bootreason, MAX_BOOTREASON_LEN) < 0) {
         log_msg("Bootreason could not be read\n");
-        return_bootstate("MALF", "SOFTWARE bootloader no bootreason");
+        return_bootstate("MALF",
+                         "SOFTWARE bootloader no bootreason",
+                         COUNT_BOOTS);
     }
 
 
     if (!strcmp(bootreason, BOOT_REASON_SEC_VIOLATION)) {
         log_msg("Security violation\n");
         // TODO: check if "software bootloader" is ok
-        return_bootstate("MALF", "SOFTWARE bootloader security violation");
+        return_bootstate("MALF",
+                         "SOFTWARE bootloader security violation",
+                         COUNT_BOOTS);
     }
 
 
@@ -391,17 +552,27 @@ int main(int argc, char** argv)
                 saved_state,
                 new_state);
 
+#if DIIBADAABA
         // Increment the counter but not on power on reset
         if (forcemode && (strcmp(bootreason,BOOT_REASON_POWER_ON_RESET) != 0))
         {
             increment_reboot_count();
         }
+#endif
 
-        return_bootstate(new_state, 0);
+        LOOP_COUNTING_TYPE count;
+        if (!strcmp(bootreason, BOOT_REASON_POWER_ON_RESET)) {
+            count = RESET_COUNTS; // zero loop counters on power on reset
+        } else {
+            count = COUNT_ALL;
+        }
+        return_bootstate(new_state, 0, count);
     }
+#if DIIBADAABA
     if (forcemode) {
         clear_reboot_count();
     }
+#endif
 
     if(!strcmp(bootreason,BOOT_REASON_SW_RESET))   {
         char* saved_state;
@@ -421,36 +592,37 @@ int main(int argc, char** argv)
            !strcmp(bootmode, BOOT_MODE_NORMAL))
         {
             log_msg("request was to NORMAL mode\n");
-            return_bootstate("USER", 0);
+            return_bootstate("USER", 0, COUNT_BOOTS);
         } else {
-            return_bootstate(saved_state, 0);
+            return_bootstate(saved_state, 0, COUNT_BOOTS);
         }
     }
 
     if(!strcmp(bootreason, BOOT_REASON_POWER_KEY)) {
         log_msg("User pressed power button\n");
-        return_bootstate("USER", 0);
+        return_bootstate("USER", 0, RESET_COUNTS); // reset loop counters
     }
     if(!strcmp(bootreason, BOOT_REASON_NSU)) {
         log_msg("software update (NSU)\n");
-        return_bootstate("USER", 0);
+        return_bootstate("USER", 0, COUNT_BOOTS);
     }
 
     if(!strcmp(bootreason, BOOT_REASON_CHARGER) ||
        !strcmp(bootreason, BOOT_REASON_USB))
     {
         log_msg("User attached charger\n");
-        return_bootstate("ACT_DEAD", 0);
+        return_bootstate("ACT_DEAD", 0, COUNT_BOOTS);
     }
 
     if(!strcmp(bootreason, BOOT_REASON_RTC_ALARM)) {
         log_msg("Alarm wakeup occured\n");
-        return_bootstate("ACT_DEAD", 0);
+        return_bootstate("ACT_DEAD", 0, COUNT_BOOTS);
     }
 
     log_msg("Unknown bootreason '%s' passed by nolo\n", bootreason);
     return_bootstate("MALF",
-                     "SOFTWARE bootloader unknown bootreason to getbootstate");
+                     "SOFTWARE bootloader unknown bootreason to getbootstate",
+                     COUNT_BOOTS);
 
     return 0; // never reached
 }
