@@ -79,7 +79,6 @@ const char *modules[] = {
     "dbusproxy.so",
     "malf.so",               // malf depends on "init" (& state via enter_malf)
     "state.so",              // state depends on malf, dbusproxy & init
-    "rebootloopdetector.so", // rebootloopdetector depends on malf
     "iphb.so",
     "processwd.so",
     "alarmtracker.so",
