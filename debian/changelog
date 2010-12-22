@@ -1,3 +1,19 @@
+dsme (0.61.36) unstable; urgency=low
+
+  * Put back getbootstate
+  * Do not load rebootloopdetector module
+  * Detect boot loops in getbootstate (Fixes: NB#173704)
+  * Raise max boot loops 5 -> 10
+  * Do not malf due to boot loops in R&D mode
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Wed, 22 Dec 2010 14:21:15 +0000
+
+dsme (0.61.35) unstable; urgency=low
+
+  * Remove getbootstate
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Tue, 14 Dec 2010 08:28:07 +0000
+
 dsme (0.61.34) unstable; urgency=low
 
   * Fixes: NB#211544
