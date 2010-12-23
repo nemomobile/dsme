@@ -116,7 +116,7 @@ module_fn_info_t message_handlers[] = {
 
 void module_init(module_t *handle)
 {
-    dsme_log(LOG_NOTICE, "DSME %s starting up", STRINGIFY(PRG_VERSION));
+    dsme_log(LOG_DEBUG, "DSME %s starting up", STRINGIFY(PRG_VERSION));
 
     char * modulename;
     char * path;

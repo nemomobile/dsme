@@ -119,7 +119,7 @@ static void check_for_wd_flags(bool wd_enabled[])
 
     p = dsme_rd_mode_get_flags();
     if (p) {
-        fprintf(stderr, ME "R&D mode enabled\n");
+        //fprintf(stderr, ME "R&D mode enabled\n");
 
         len = strlen(p);
         if (len > 1) {
@@ -165,10 +165,12 @@ bool dsme_wd_init(void)
                 ++opened_wd_count;
 
                 if (wd[i].period != 0) {
+#if 0
                     fprintf(stderr,
                              ME "Setting WD period to %d s for %s\n",
                              wd[i].period,
                              wd[i].file);
+#endif
                     /* set the wd period */
                     /* ioctl() will overwrite tmp with the time left */
                     int tmp = wd[i].period;

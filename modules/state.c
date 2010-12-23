@@ -1138,7 +1138,7 @@ void module_init(module_t* handle)
   set_initial_state_bits(bootstate);
   change_state_if_necessary();
 
-  dsme_log(LOG_NOTICE, "Startup state: %s", state_name(current_state));
+  dsme_log(LOG_DEBUG, "Startup state: %s", state_name(current_state));
 }
 
 void module_fini(void)
