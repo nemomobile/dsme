@@ -34,11 +34,11 @@ start() {
         fi
 
         # Get R&D flags
-        CALTOOL=/usr/bin/cal-tool
+        SYSINFOCLIENT=/usr/bin/sysinfoclient
         RDMODE_CONF_FILE=/etc/dsme/rdmode
-        if [ -x $CALTOOL ]; then
-            $CALTOOL --get-rd-mode | grep -q enabled \
-            && export DSME_RD_FLAGS=`$CALTOOL --get-rd-flags`
+        if [ -x $SYSINFOCLIENT ]; then
+            $SYSINFOCLIENT -p /device/rd-mode | grep -q enabled \
+            && export DSME_RD_FLAGS=`$SYSINFOCLIENT -p /device/rd-flags`
         elif [ -f $RDMODE_CONF_FILE ]; then
             export DSME_RD_FLAGS=`cat $RDMODE_CONF_FILE`
         fi
@@ -46,13 +46,13 @@ start() {
         echo -n "Starting DSME in state '$BOOTSTATE': "
 	pid=`pidofproc $prog`
 	if [ $? -ne 0 ]; then
-		exec @sbindir@/$prog -p /lib/dsme/libstartup.so &> /dev/null &
+		exec @sbindir@/$prog -p /lib/dsme/startup.so &> /dev/null &
 		RETVAL=$?
 		[ $RETVAL -eq 0 ] && touch /var/lock/subsys/$service
 	else
 		RETVAL=0
 	fi
-        #exec @sbindir@/dsme -l stderr -v 7 -p /lib/dsme/libstartup.so
+        #exec @sbindir@/dsme -l stderr -v 7 -p /lib/dsme/startup.so
 	success
 	echo
 	return $RETVAL
