@@ -1,3 +1,10 @@
+dsme (0.61.37) unstable; urgency=low
+
+  * Add missing malf reason to two malf cases (Fixes: NB#173704)
+  * Reduce console output during startup (Fixes: NB#206217)
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Wed, 05 Jan 2011 16:17:29 +0000
+
 dsme (0.61.36) unstable; urgency=low
 
   * Put back getbootstate
