@@ -306,7 +306,7 @@ static void check_for_boot_loops(LOOP_COUNTING_TYPE count_type,
         if (seconds < min_boot_time) {
             if (++boots > max_boots) {
                 // Detected a boot loop
-                loop_malf_info = "unknown too frequent reboots";
+                loop_malf_info = "SOFTWARE unknown too frequent reboots";
                 log_msg("%d reboots; loop detected\n", boots);
             } else {
                 log_msg("Increased boot count to %d\n", boots);
@@ -326,7 +326,7 @@ static void check_for_boot_loops(LOOP_COUNTING_TYPE count_type,
         if (seconds < min_wd_reset_time) {
             if (++wd_resets > max_wd_resets) {
                 // Detected a WD reset loop
-                loop_malf_info = "watchdog too frequent resets";
+                loop_malf_info = "SOFTWARE watchdog too frequent resets";
                 log_msg("%d WD resets; loop detected\n", wd_resets);
             } else {
                 log_msg("Increased WD reset count to %d\n", wd_resets);
