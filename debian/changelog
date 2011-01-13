@@ -1,3 +1,9 @@
+dsme (0.61.38) unstable; urgency=low
+
+  * Add a module for flagging overheating (partial fix to NB#215848)
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Thu, 13 Jan 2011 15:03:26 +0000
+
 dsme (0.61.37) unstable; urgency=low
 
   * Add missing malf reason to two malf cases (Fixes: NB#173704)
