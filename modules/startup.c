@@ -82,6 +82,7 @@ const char *modules[] = {
     "iphb.so",
     "processwd.so",
     "alarmtracker.so",
+    "thermalflagger.so",
     "thermalmanager.so",
 #ifdef DSME_MEMORY_THERMAL_MGMT
     "thermalobject_memory.so",

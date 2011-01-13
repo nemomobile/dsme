@@ -17,6 +17,7 @@ pkglib_LTLIBRARIES = startup.la              \
                      usbtracker.la           \
                      iphb.la                 \
                      rebootloopdetector.la   \
+                     thermalflagger.la       \
                      malf.la
 
 noinst_HEADERS = dsme_dbus.h \
@@ -100,6 +101,8 @@ iphb_la_CPPFLAGS = $(AM_CPPFLAGS)
 iphb_la_LIBADD = -lbmeipc $(GLIB_LIBS)
 
 rebootloopdetector_la_SOURCES = rebootloopdetector.c
+
+thermalflagger_la_SOURCES = thermalflagger.c
 
 malf_la_SOURCES = malf.c
 
