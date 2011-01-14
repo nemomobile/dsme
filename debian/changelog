@@ -1,3 +1,9 @@
+dsme (0.61.39) unstable; urgency=low
+
+  * Same as 0.61.38, but retagged (Fixes: NB#219062)
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Fri, 14 Jan 2011 08:19:43 +0000
+
 dsme (0.61.38) unstable; urgency=low
 
   * Add a module for flagging overheating (partial fix to NB#215848)
