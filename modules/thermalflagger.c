@@ -70,7 +70,7 @@ DSME_HANDLER(DSM_MSGTYPE_SET_THERMAL_STATE, client, thermal_state)
     if (thermal_state->overheated) {
         write_thermal_flag();
     } else {
-        remove_thermal_flag();
+        /* don't remove DSME_THERMAL_FLAG_FILE */
     }
 }
 
