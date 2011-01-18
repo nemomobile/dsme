@@ -1,3 +1,9 @@
+dsme (0.61.40) unstable; urgency=low
+
+  * only remove overheat flag file on startup (Fixes: NB#219605)
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Tue, 18 Jan 2011 17:35:18 +0000
+
 dsme (0.61.39) unstable; urgency=low
 
   * Same as 0.61.38, but retagged (Fixes: NB#219062)
