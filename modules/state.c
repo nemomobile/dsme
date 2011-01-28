@@ -398,7 +398,7 @@ static void deny_state_change_request(dsme_state_t denied_state,
 
   ind.state = denied_state;
   broadcast_with_extra(&ind, strlen(reason) + 1, reason);
-  dsme_log(LOG_WARNING,
+  dsme_log(LOG_CRIT,
            "%s denied due to: %s",
            (denied_state == DSME_STATE_SHUTDOWN ? "shutdown" : "reboot"),
            reason);
