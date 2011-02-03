@@ -39,7 +39,8 @@
 
 static const char* const malf_reason_name[] = {
     "SOFTWARE",
-    "HARDWARE"
+    "HARDWARE",
+    "SECURITY"
 };
 
 

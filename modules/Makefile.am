@@ -18,7 +18,8 @@ pkglib_LTLIBRARIES = startup.la              \
                      iphb.la                 \
                      rebootloopdetector.la   \
                      thermalflagger.la       \
-                     malf.la
+                     malf.la                 \
+                     validatorlistener.la
 
 noinst_HEADERS = dsme_dbus.h \
                  runlevel.h \
@@ -105,6 +106,8 @@ rebootloopdetector_la_SOURCES = rebootloopdetector.c
 thermalflagger_la_SOURCES = thermalflagger.c
 
 malf_la_SOURCES = malf.c
+
+validatorlistener_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
 
 if WANT_BMEIPC
 thermalobject_surface_la_SOURCES = thermalobject_surface.c \

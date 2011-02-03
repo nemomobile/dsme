@@ -95,6 +95,7 @@ const char *modules[] = {
 #ifdef DSME_POWERON_TIMER
     "powerontimer.so",
 #endif
+    "validatorlistener.so", // TODO: hardcode this in dsme core
     NULL
 };
 
