@@ -59,7 +59,7 @@ static void remove_thermal_flag(void)
 {
     if (unlink(DSME_THERMAL_FLAG_FILE) == -1 && errno != ENOENT) {
         dsme_log(LOG_WARNING,
-                 "Error removign %s: %s",
+                 "Error removing %s: %s",
                  DSME_THERMAL_FLAG_FILE,
                  strerror(errno));
     }

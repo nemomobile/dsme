@@ -80,13 +80,13 @@ static bool bound = false;
 
 DSME_HANDLER(DSM_MSGTYPE_DBUS_CONNECT, client, msg)
 {
-  dsme_log(LOG_DEBUG, "DBUS_CONNECT");
+  dsme_log(LOG_DEBUG, "emergencycalltracker: DBUS_CONNECT");
   dsme_dbus_bind_signals(&bound, signals);
 }
 
 DSME_HANDLER(DSM_MSGTYPE_DBUS_DISCONNECT, client, msg)
 {
-  dsme_log(LOG_DEBUG, "DBUS_DISCONNECT");
+  dsme_log(LOG_DEBUG, "emergencycalltracker: DBUS_DISCONNECT");
   dsme_dbus_unbind_signals(&bound, signals);
 }
 
