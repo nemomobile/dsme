@@ -59,7 +59,7 @@
 static void stop_listening_to_validator(void);
 
 
-static int         validator_fd = -1;
+static int         validator_fd = -1; // TODO: make local in start_listening
 static GIOChannel* channel      =  0;
 
 
