@@ -60,7 +60,7 @@ static void stop_listening_to_validator(void);
 
 
 static int         validator_fd = -1;
-static GIOChannel* channel      = 0;
+static GIOChannel* channel      =  0;
 
 
 static void go_to_malf(const char* component, const char* details)
@@ -175,7 +175,7 @@ static gboolean handle_validator_message(GIOChannel*  source,
 
         if (r == 0 || r == -1) {
             dsme_log(LOG_ERR, "Error receiving Validator message");
-            // TODO: should we stop listening?
+            keep_listening = false;
         } else {
             dsme_log(LOG_CRIT,
                      "Got Validator message [%s]",
@@ -193,8 +193,8 @@ static gboolean handle_validator_message(GIOChannel*  source,
             // it is OK because we are entering MALF anyway
         }
     }
-    if (condition & (G_IO_ERR | G_IO_HUP)) {
-        dsme_log(LOG_ERR, "ERR or HUP on Validator socket");
+    if (condition & (G_IO_ERR | G_IO_HUP | G_IO_NVAL)) {
+        dsme_log(LOG_ERR, "ERR, HUP or NVAL on Validator socket");
         keep_listening = false;
     }
 
@@ -230,13 +230,17 @@ static bool start_listening_to_validator(void)
     if (!(channel = g_io_channel_unix_new(validator_fd))) {
         goto close_and_fail;
     }
+    g_io_channel_set_encoding(channel, 0, 0);
+    g_io_channel_set_buffered(channel, FALSE);
+    g_io_channel_set_close_on_unref(channel, TRUE);
+
     watch = g_io_add_watch(channel,
-                           (G_IO_IN | G_IO_ERR | G_IO_HUP),
+                           (G_IO_IN | G_IO_ERR | G_IO_HUP | G_IO_NVAL),
                            handle_validator_message,
                            0);
     g_io_channel_unref(channel);
     if (!watch) {
-        goto close_and_fail;
+        goto fail;
     }
 
     return true;
@@ -252,15 +256,9 @@ fail:
 
 static void stop_listening_to_validator(void)
 {
-    if (validator_fd != -1) {
-        dsme_log(LOG_DEBUG, "closing Validator socket");
-
-        g_io_channel_set_close_on_unref(channel, FALSE);
-        g_io_channel_unref(channel);
+    if (channel) {
+        g_io_channel_shutdown(channel, FALSE, 0);
         channel = 0;
-
-        close(validator_fd);
-        validator_fd = -1;
     }
 }
 
@@ -309,5 +307,7 @@ void module_init(module_t* handle)
 
 void module_fini(void)
 {
+    stop_listening_to_validator();
+
     dsme_log(LOG_DEBUG, "validatorlistener.so unloaded");
 }
