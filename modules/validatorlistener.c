@@ -147,34 +147,40 @@ static gboolean handle_validator_message(GIOChannel*  source,
     bool keep_listening = true;
 
     if (condition & G_IO_IN) {
-        static struct msghdr msg;
-        struct nlmsghdr*     nlh = 0;
 
-        static bool msg_initialized = false;
-        if (!msg_initialized) {
-            static struct sockaddr_nl addr;
+        struct sockaddr_nl addr;
+        memset(&addr, 0, sizeof(addr));
 
-            memset(&addr, 0, sizeof(addr));
+        static struct nlmsghdr* nlh = 0;
+        if (!nlh) {
             nlh = (struct nlmsghdr*)malloc(NLMSG_SPACE(VALIDATOR_MAX_PAYLOAD));
             // TODO: check for NULL & free when done
-            memset(nlh, 0, NLMSG_SPACE(VALIDATOR_MAX_PAYLOAD));
-
-            static struct iovec iov;
-            iov.iov_base = (void*)nlh;
-            iov.iov_len  = NLMSG_SPACE(VALIDATOR_MAX_PAYLOAD);
-
-            msg.msg_name    = (void*)&addr;
-            msg.msg_namelen = sizeof(addr);
-            msg.msg_iov     = &iov;
-            msg.msg_iovlen  = 1;
-
-            msg_initialized = true;
         }
+        memset(nlh, 0, NLMSG_SPACE(VALIDATOR_MAX_PAYLOAD));
 
-        if (recvmsg(validator_fd, &msg, 0) == -1) {
+        struct iovec iov;
+        memset(&iov, 0, sizeof(iov));
+        iov.iov_base = (void*)nlh;
+        iov.iov_len  = NLMSG_SPACE(VALIDATOR_MAX_PAYLOAD);
+
+        struct msghdr msg;
+        memset(&msg, 0, sizeof(msg));
+        msg.msg_name    = (void*)&addr;
+        msg.msg_namelen = sizeof(addr);
+        msg.msg_iov     = &iov;
+        msg.msg_iovlen  = 1;
+
+
+        int r = TEMP_FAILURE_RETRY(recvmsg(validator_fd, &msg, 0));
+
+        if (r == 0 || r == -1) {
             dsme_log(LOG_ERR, "Error receiving Validator message");
             // TODO: should we stop listening?
         } else {
+            dsme_log(LOG_CRIT,
+                     "Got Validator message [%s]",
+                     (char*)NLMSG_DATA(nlh));
+
             char* component;
             char* details;
             parse_validator_message(NLMSG_DATA(nlh), &component, &details);
