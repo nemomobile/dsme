@@ -96,6 +96,7 @@ const char *modules[] = {
     "powerontimer.so",
 #endif
     "validatorlistener.so", // TODO: hardcode this in dsme core
+    "diskmonitor.so",
     NULL
 };
 
