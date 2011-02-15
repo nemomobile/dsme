@@ -20,7 +20,8 @@ pkglib_LTLIBRARIES = startup.la              \
                      thermalflagger.la       \
                      malf.la                 \
                      validatorlistener.la    \
-                     diskmonitor.la
+                     diskmonitor.la          \
+                     tempreaper.la
 
 noinst_HEADERS = dsme_dbus.h \
                  runlevel.h \
@@ -135,3 +136,6 @@ powerontimer_la_LIBADD = -lcal -lrt
 endif
 
 diskmonitor_la_SOURCES = diskmonitor.c
+
+tempreaper_la_SOURCES = tempreaper.c
+tempreaper_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)

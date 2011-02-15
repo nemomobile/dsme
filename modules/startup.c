@@ -97,6 +97,7 @@ const char *modules[] = {
 #endif
     "validatorlistener.so", // TODO: hardcode this in dsme core
     "diskmonitor.so",
+    "tempreaper.so",
     NULL
 };
 
