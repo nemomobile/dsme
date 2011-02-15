@@ -56,6 +56,10 @@ if WANT_UPSTART
 pkglib_LTLIBRARIES += upstart.la
 endif
 
+if WANT_PWRKEY_MONITOR
+pkglib_LTLIBRARIES += pwrkeymonitor.la
+endif
+
 startup_la_SOURCES = startup.c
 
 # TODO: remove this
@@ -144,3 +148,9 @@ tempreaper_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
 dbusautoconnector_la_SOURCES = dbusautoconnector.c
 dbusautoconnector_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
 dbusautoconnector_la_LIBADD = $(GLIB_LIBS)
+
+if WANT_PWRKEY_MONITOR
+pwrkeymonitor_la_SOURCES = pwrkeymonitor.c
+pwrkeymonitor_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
+pwrkeymonitor_la_LIBADD = $(GLIB_LIBS)
+endif

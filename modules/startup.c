@@ -99,6 +99,9 @@ const char *modules[] = {
     "diskmonitor.so",
     "tempreaper.so",
     "dbusautoconnector.so",
+#ifdef DSME_PWRKEY_MONITOR
+    "pwrkeymonitor.so",
+#endif
     NULL
 };
 

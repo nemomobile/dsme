@@ -78,6 +78,19 @@ AS_IF([test "x$enable_memory_thermal_mgmt" != xno],
   [AC_DEFINE([DSME_MEMORY_THERMAL_MGMT], [1])])
 AM_CONDITIONAL([WANT_MEMORY_THERMAL_MGMT], [test x$enable_memory_thermal_mgmt != xno])
 
+#
+# pwrkeymonitor
+#
+AC_ARG_ENABLE([pwrkeymonitor],
+  [AS_HELP_STRING([--enable-pwrkeymonitor],
+    [enable pwrkeymonitor plugin (pwrkeymonitor)])],
+  [],
+  [enable_pwrkeymonitor=no])
+
+AS_IF([test "x$enable_pwrkeymonitor" != xno],
+  [AC_DEFINE([DSME_PWRKEY_MONITOR], [1], [Enable pwrkeymonitor plugin])])
+AM_CONDITIONAL([WANT_PWRKEY_MONITOR], [test x$enable_pwrkeymonitor != xno])
+
 
 #
 # Compiler and linker flags
