@@ -99,10 +99,9 @@ static void check_mount_use_limit(const char* mntpoint, disk_use_limit_t* use_li
                  blocks_percent_used, mntpoint, use_limit->max_usage_percent);
 
         DSM_MSGTYPE_DISK_SPACE msg = DSME_MSG_INIT(DSM_MSGTYPE_DISK_SPACE);
-        msg.mount_path = mntpoint;
         msg.blocks_percent_used = blocks_percent_used;
 
-        broadcast_internally(&msg);
+        broadcast_internally_with_extra(&msg, strlen(mntpoint) + 1, mntpoint);
     }
 }
 

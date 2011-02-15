@@ -29,14 +29,11 @@
 typedef struct {
   DSMEMSG_PRIVATE_FIELDS
   /*
-   * pointer to the path of the mount point;
-   * DANGER: only safe via the internal queue!
-   */
-  const char*        mount_path;
-  /*
    * percent of disk capacity used (0-100)
    */
   unsigned short     blocks_percent_used;
+
+  // mount_path is passed in extra.
 } DSM_MSGTYPE_DISK_SPACE;
 
 enum {

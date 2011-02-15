@@ -167,8 +167,9 @@ static void temp_reaper_finished(GPid pid, gint status, gpointer unused)
 
 static bool disk_space_running_out(const DSM_MSGTYPE_DISK_SPACE* msg)
 {
+    const char *mount_path = DSMEMSG_EXTRA(msg);
     return (msg->blocks_percent_used >= max_used_block_percentage) &&
-           (strcmp(msg->mount_path, "/tmp") == 0 || strcmp(msg->mount_path, "/") == 0);
+           (strcmp(mount_path, "/tmp") == 0 || strcmp(mount_path, "/") == 0);
 }
 
 DSME_HANDLER(DSM_MSGTYPE_DISK_SPACE, conn, msg)
