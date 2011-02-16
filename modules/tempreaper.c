@@ -178,6 +178,8 @@ static bool disk_space_running_out(const DSM_MSGTYPE_DISK_SPACE* msg)
 DSME_HANDLER(DSM_MSGTYPE_DISK_SPACE, conn, msg)
 {
     if (reaper_pid != -1) {
+        /* If there's an existing reaper process (which has not yet finished),
+           do not launch a new one. */
         return;
     }
 
