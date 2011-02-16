@@ -70,6 +70,9 @@ static const char* PATH_LSOF = "/usr/bin/lsof";
 /* If this many blocks are in use, trigger cleaning */
 static const unsigned short MAX_USED_BLOCK_PERCENTAGE = 95;
 
+/* This is for scheduling the forked processes */
+static const int MIN_PRIORITY = 5;
+
 static time_t curt;
 static time_t checkpoint;
 static pid_t reaper_pid = -1;
@@ -144,7 +147,7 @@ static pid_t reaper_process_new(void)
     if (pid == 0) {
         /* Child; set a reasonably low priority, DSME runs as the highest priority process (-1)
            so we don't want to use the inherited priority */
-        if (setpriority(PRIO_PROCESS, 0, 8) != 0) {
+        if (setpriority(PRIO_PROCESS, 0, MIN_PRIORITY) != 0) {
             dsme_log(LOG_CRIT, "setpriority() failed: %s. Exit.", strerror(errno));
             _exit(EXIT_FAILURE);
         }
