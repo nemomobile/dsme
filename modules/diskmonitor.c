@@ -46,7 +46,7 @@ static bool init_done_ind = false;
 
 typedef struct {
     const char*     mntpoint;
-    unsigned short  max_usage_percent;
+    int             max_usage_percent;
 } disk_use_limit_t;
 
 static disk_use_limit_t disk_space_use_limits[] = {
@@ -87,16 +87,14 @@ out:
 static void check_mount_use_limit(const char* mntpoint, disk_use_limit_t* use_limit)
 {
     struct statfs s;
-    long blocks_used;
-    unsigned short blocks_percent_used;
+    int blocks_percent_used;
 
     if (statfs(mntpoint, &s) != 0 || s.f_blocks <= 0) {
         dsme_log(LOG_WARNING, "failed to statfs the mount point (%s).", mntpoint);
         return;
     }
 
-    blocks_used = s.f_blocks - s.f_bfree;
-    blocks_percent_used = (unsigned short) (blocks_used * 100.f / (blocks_used + s.f_bavail) + 0.5f);
+    blocks_percent_used = (int)((s.f_blocks - s.f_bfree) * 100.f / s.f_blocks + 0.5f);
 
     if (blocks_percent_used >= use_limit->max_usage_percent) {
         dsme_log(LOG_WARNING, "disk space usage (%i percent used) for (%s) exceeded the limit (%i)",

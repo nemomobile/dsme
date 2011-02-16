@@ -31,7 +31,7 @@ typedef struct {
   /*
    * percent of disk capacity used (0-100)
    */
-  unsigned short     blocks_percent_used;
+  int     blocks_percent_used;
 
   // mount_path is passed in extra.
 } DSM_MSGTYPE_DISK_SPACE;

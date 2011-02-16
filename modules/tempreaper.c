@@ -68,7 +68,7 @@ static const size_t MAX_FTW_FDS = 100;
 static const char* PATH_LSOF = "/usr/bin/lsof";
 
 /* If this many blocks are in use, trigger cleaning */
-static const unsigned short MAX_USED_BLOCK_PERCENTAGE = 95;
+static const int MAX_USED_BLOCK_PERCENTAGE = 95;
 
 /* This is for scheduling the forked processes */
 static const int MIN_PRIORITY = 5;
