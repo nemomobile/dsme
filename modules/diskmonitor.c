@@ -30,6 +30,7 @@
 #include <iphbd/iphb_internal.h>
 
 #include "diskmonitor.h"
+#include "validatorlistener.h"
 #include "dsme/modules.h"
 #include "dsme/logging.h"
 #include "heartbeat.h"
@@ -37,8 +38,11 @@
 #include <string.h>
 #include <mntent.h>
 #include <sys/statfs.h>
+#include <stdbool.h>
 
 #define ArraySize(a) ((int)(sizeof(a)/sizeof(*a)))
+
+static bool init_done_ind = false;
 
 typedef struct {
     const char*     mntpoint;
@@ -124,9 +128,23 @@ static void check_disk_space_usage(void)
     endmntent(f);
 }
 
+static bool init_done(void)
+{
+    return init_done_ind;
+}
+
+DSME_HANDLER(DSM_MSGTYPE_INIT_DONE, client, msg)
+{
+    dsme_log(LOG_DEBUG, "diskmonitor: received init_done");
+
+    init_done_ind = true;
+}
+
 DSME_HANDLER(DSM_MSGTYPE_WAKEUP, client, msg)
 {
-    check_disk_space_usage();
+    if (init_done()) {
+        check_disk_space_usage();
+    }
 
     schedule_next_wakeup();
 }
@@ -134,6 +152,7 @@ DSME_HANDLER(DSM_MSGTYPE_WAKEUP, client, msg)
 module_fn_info_t message_handlers[] =
 {
   DSME_HANDLER_BINDING(DSM_MSGTYPE_WAKEUP),
+  DSME_HANDLER_BINDING(DSM_MSGTYPE_INIT_DONE),
   { 0 }
 };
 

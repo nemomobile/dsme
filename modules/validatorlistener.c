@@ -30,6 +30,7 @@
 
 #include <dsme/protocol.h>
 
+#include "validatorlistener.h"
 #include "dsme_dbus.h"
 #include "dbusproxy.h"
 
@@ -267,6 +268,9 @@ static void init_done_ind(const DsmeDbusMessage* ind)
 {
     dsme_log(LOG_DEBUG, "base_boot_done; not listening to Validator");
     stop_listening_to_validator();
+
+    DSM_MSGTYPE_INIT_DONE msg = DSME_MSG_INIT(DSM_MSGTYPE_INIT_DONE);
+    broadcast_internally(&msg);
 }
 
 static bool bound = false;
