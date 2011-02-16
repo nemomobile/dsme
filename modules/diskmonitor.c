@@ -40,7 +40,7 @@
 #include <sys/statfs.h>
 #include <stdbool.h>
 
-#define ArraySize(a) ((int)(sizeof(a)/sizeof(*a)))
+#define ArraySize(a) (sizeof(a)/sizeof(*a))
 
 static bool init_done_ind = false;
 
@@ -73,7 +73,7 @@ static void schedule_next_wakeup(void)
 static disk_use_limit_t* find_use_limit_for_mount(const char* mntpoint)
 {
     disk_use_limit_t* use_limit = 0;
-    int i;
+    size_t i;
     for (i=0; i < ArraySize(disk_space_use_limits); i++) {
         if (0 == strcmp(disk_space_use_limits[i].mntpoint, mntpoint)) {
             use_limit = &disk_space_use_limits[i];
