@@ -56,19 +56,19 @@ static const char* const tempdirs[] = {
  * The gain would be insignificant, and small/zero-length files are often
  * used as flags, markers etc sort of stuff
  */
-static const size_t leave_small_files_alone_limit = (16 * 1024);
+static const size_t LEAVE_SMALL_FILES_ALONE_LIMIT = (16 * 1024);
 
 /* Time after last modification/access (seconds). */
-static const int timeout = (60 * 30);
+static const int TIMEOUT = (60 * 30);
 
 /* Max number of allowed open file descriptors in ftw(). */
-static const size_t max_ftw_fds = 100;
+static const size_t MAX_FTW_FDS = 100;
 
 /* Use a hardcoded path to speedup execl.  */
-static const char* path_lsof = "/usr/bin/lsof";
+static const char* PATH_LSOF = "/usr/bin/lsof";
 
 /* If this many blocks are in use, trigger cleaning */
-static const unsigned short max_used_block_percentage = 95;
+static const unsigned short MAX_USED_BLOCK_PERCENTAGE = 95;
 
 static time_t curt;
 static time_t checkpoint;
@@ -84,7 +84,7 @@ static bool is_open(const char* file)
     case -1:
         return false;
     case 0:
-        execl(path_lsof, "lsof", file, NULL);
+        execl(PATH_LSOF, "lsof", file, NULL);
         _exit(1);
     default:
         waitpid(pid, &status, 0);
@@ -104,7 +104,7 @@ static int reaper(const char *file, const struct stat *sb, int flag)
      * and bigger than "leave small ones alone" limit
      */
     if (flag == FTW_F) {
-        if (sb->st_size > leave_small_files_alone_limit) {
+        if (sb->st_size > LEAVE_SMALL_FILES_ALONE_LIMIT) {
             /*
              * instead of finding age of file, we check is mtime/atime
              * older than checkpoint which we already have set to time in the past
@@ -129,11 +129,11 @@ static void delete_orphaned_files(void)
     int i;
 
     time(&curt);
-    checkpoint = curt - timeout;
+    checkpoint = curt - TIMEOUT;
 
     /* Cleanup tempdirs */
     for (i = 0; tempdirs[i]; i++) {
-        ftw(tempdirs[i], reaper, max_ftw_fds);
+        ftw(tempdirs[i], reaper, MAX_FTW_FDS);
     }
 }
 
@@ -168,7 +168,7 @@ static void temp_reaper_finished(GPid pid, gint status, gpointer unused)
 static bool disk_space_running_out(const DSM_MSGTYPE_DISK_SPACE* msg)
 {
     const char *mount_path = DSMEMSG_EXTRA(msg);
-    return (msg->blocks_percent_used >= max_used_block_percentage) &&
+    return (msg->blocks_percent_used >= MAX_USED_BLOCK_PERCENTAGE) &&
            (strcmp(mount_path, "/tmp") == 0 || strcmp(mount_path, "/") == 0);
 }
 
