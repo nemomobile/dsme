@@ -40,7 +40,7 @@
 #include <sys/statfs.h>
 #include <stdbool.h>
 
-#define ArraySize(a) (sizeof(a)/sizeof(*a))
+#define ArraySize(a) (sizeof(a)/sizeof*(a))
 
 static bool init_done_ind = false;
 
