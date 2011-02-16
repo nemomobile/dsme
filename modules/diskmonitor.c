@@ -51,6 +51,7 @@ typedef struct {
 
 static disk_use_limit_t disk_space_use_limits[] = {
    /* [mount path, max usage percent] */
+   {  "/",                        95 },
    {  "/tmp",                     95 },
    {  "/home/user/MyDocs",        95 }
 };

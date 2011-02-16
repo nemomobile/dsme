@@ -173,8 +173,11 @@ static void temp_reaper_finished(GPid pid, gint status, gpointer unused)
 static bool disk_space_running_out(const DSM_MSGTYPE_DISK_SPACE* msg)
 {
     const char *mount_path = DSMEMSG_EXTRA(msg);
+
+    /* TODO: we should actually check the mount entries to figure out on which mount(s)
+       temp_dirs are mounted on. We now assume that all temp_dirs are mounted on the root partition. */
     return (msg->blocks_percent_used >= MAX_USED_BLOCK_PERCENTAGE) &&
-           (strcmp(mount_path, "/tmp") == 0 || strcmp(mount_path, "/") == 0);
+           (strcmp(mount_path, "/") == 0);
 }
 
 DSME_HANDLER(DSM_MSGTYPE_DISK_SPACE, conn, msg)
