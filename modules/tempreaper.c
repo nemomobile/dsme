@@ -182,7 +182,7 @@ DSME_HANDLER(DSM_MSGTYPE_DISK_SPACE, conn, msg)
     if (reaper_pid != -1) {
         /* If there's an existing reaper process (which has not yet finished),
            do not launch a new one. */
-        dsme_log(LOG_DEBUG, "tempreaper: an existing temp reaper process found (PID %i). Return.",
+        dsme_log(LOG_DEBUG, "tempreaper: an existing temp reaper process is running (PID %i). Return.",
                  reaper_pid);
         return;
     }
