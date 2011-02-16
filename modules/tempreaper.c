@@ -166,6 +166,8 @@ static pid_t reaper_process_new(void)
 static void temp_reaper_finished(GPid pid, gint status, gpointer unused)
 {
     reaper_pid = -1;
+
+    dsme_log(LOG_DEBUG, "tempreaper: temp reaper process finished (PID %i).", pid);
 }
 
 static bool disk_space_running_out(const DSM_MSGTYPE_DISK_SPACE* msg)
@@ -180,6 +182,8 @@ DSME_HANDLER(DSM_MSGTYPE_DISK_SPACE, conn, msg)
     if (reaper_pid != -1) {
         /* If there's an existing reaper process (which has not yet finished),
            do not launch a new one. */
+        dsme_log(LOG_DEBUG, "tempreaper: an existing temp reaper process found (PID %i). Return.",
+                 reaper_pid);
         return;
     }
 
