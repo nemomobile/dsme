@@ -51,6 +51,8 @@ debian/tmp/
 
 dsme.init
 
+getbootstate/getbootstate
+
 iphbd/hbtest
 iphbd/libiphb.pc
 iphbd/libiphb-uninstalled.pc
