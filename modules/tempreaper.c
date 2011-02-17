@@ -5,7 +5,6 @@
    <p>
    Copyright (C) 2011 Nokia Corporation.
 
-   @author Guillem Jover <guillem.jover@nokia.com>
    @author Matias Muhonen <ext-matias.muhonen@nokia.com>
 
    This file is part of Dsme.
@@ -33,126 +32,71 @@
 
 #include <errno.h>
 #include <glib.h>
+#include <pwd.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
-#include <time.h>
-#include <ftw.h>
-#include <sys/statvfs.h>
-#include <sys/types.h>
 #include <sys/wait.h>
 
-/* The tempdirs we will cleanup.
- */
-static const char* const tempdirs[] = {
-    "/var/tmp",
-    "/var/log",
-    NULL
-};
+#define GETPWNAM_BUFLEN 1024
+#define MIN_PRIORITY 5
+#define RPDIR_PATH DSME_SBIN_PATH"/rpdir"
 
-/* Smaller than that (bytes) files are not considered for deletion.
- * The gain would be insignificant, and small/zero-length files are often
- * used as flags, markers etc sort of stuff
- */
-static const size_t LEAVE_SMALL_FILES_ALONE_LIMIT = (16 * 1024);
-
-/* Time after last modification/access (seconds). */
-static const int TIMEOUT = (60 * 30);
-
-/* Max number of allowed open file descriptors in ftw(). */
-static const size_t MAX_FTW_FDS = 100;
-
-/* Use a hardcoded path to speedup execl.  */
-static const char* PATH_LSOF = "/usr/bin/lsof";
-
-/* If this many blocks are in use, trigger cleaning */
-static const int MAX_USED_BLOCK_PERCENTAGE = 95;
-
-/* This is for scheduling the forked processes */
-static const int MIN_PRIORITY = 5;
-
-static time_t curt;
-static time_t checkpoint;
 static pid_t reaper_pid = -1;
 
-static bool is_open(const char* file)
+static bool drop_privileges(void)
 {
-    int status;
-    pid_t pid;
+    bool success = false;
+    struct passwd  pwd;
+    struct passwd* result;
+    char buf[GETPWNAM_BUFLEN];
 
-    pid = fork();
-    switch (pid) {
-    case -1:
-        return false;
-    case 0:
-        execl(PATH_LSOF, "lsof", file, NULL);
-        _exit(1);
-    default:
-        waitpid(pid, &status, 0);
+    memset(&buf, 0, sizeof buf);
 
-        /* Is this file not open at the moment? */
-        if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
-            return true;
-        } else {
-            return false;
-        }
+    (void)getpwnam_r("user", &pwd, buf, GETPWNAM_BUFLEN, &result);
+    if (!result) {
+        (void)getpwnam_r("nobody", &pwd, buf, GETPWNAM_BUFLEN, &result);
     }
-}
-
-static int reaper(const char *file, const struct stat *sb, int flag)
-{
-    /* All regular files which were not changed the last TIMEOUT seconds
-     * and bigger than "leave small ones alone" limit
-     */
-    if (flag == FTW_F) {
-        if (sb->st_size > LEAVE_SMALL_FILES_ALONE_LIMIT) {
-            /*
-             * instead of finding age of file, we check is mtime/atime
-             * older than checkpoint which we already have set to time in the past
-             */
-            if ((sb->st_mtime < checkpoint) && (sb->st_atime < checkpoint)) {
-                if (is_open(file)) {
-                    dsme_log(LOG_DEBUG, "file '%s' size %ld mod_age=%lus acc_age=%lus but still open, not deleting",
-                            file, sb->st_size, curt-sb->st_mtime, curt-sb->st_atime);
-                } else {
-                    dsme_log(LOG_DEBUG, "file '%s' size %ld mod_age=%lus acc_age=%lus, deleting",
-                          file, sb->st_size, curt-sb->st_mtime, curt-sb->st_atime);
-                    unlink(file);
-                }
-            }
-        }
+    if (!result) {
+        goto out;
     }
-    return 0;
-}
 
-static void delete_orphaned_files(void)
-{
-    int i;
-
-    time(&curt);
-    checkpoint = curt - TIMEOUT;
-
-    /* Cleanup tempdirs */
-    for (i = 0; tempdirs[i]; i++) {
-        ftw(tempdirs[i], reaper, MAX_FTW_FDS);
+    if (setuid(pwd.pw_uid) != 0) {
+        goto out;
     }
+    if (setgid(pwd.pw_gid) != 0) {
+        goto out;
+    }
+
+    success = true;
+
+out:
+    return success;
 }
 
 static pid_t reaper_process_new(void)
 {
+    /* The tempdirs we will cleanup are given as an argument.
+     */
+    char* const argv[] = {(char*)"rpdir",
+                          (char*)"/var/tmp",
+                          (char*)"/var/log",
+                          (char*)0};
     pid_t pid = fork();
 
     if (pid == 0) {
-        /* Child; set a reasonably low priority, DSME runs as the highest priority process (-1)
+        /* Child; set a reasonably low priority, DSME runs with the priority -1
            so we don't want to use the inherited priority */
         if (setpriority(PRIO_PROCESS, 0, MIN_PRIORITY) != 0) {
-            dsme_log(LOG_CRIT, "setpriority() failed: %s. Exit.", strerror(errno));
             _exit(EXIT_FAILURE);
         }
 
-        delete_orphaned_files();
+        if (!drop_privileges()) {
+            _exit(EXIT_FAILURE);
+        }
+
+        execv(RPDIR_PATH, argv);
         _exit(EXIT_SUCCESS);
     } else if (pid == -1) {
         /* error */
@@ -167,25 +111,28 @@ static void temp_reaper_finished(GPid pid, gint status, gpointer unused)
 {
     reaper_pid = -1;
 
-    dsme_log(LOG_DEBUG, "tempreaper: temp reaper process finished (PID %i).", pid);
+    if (EXIT_FAILURE == status) {
+        dsme_log(LOG_WARNING, "tempreaper: reaper process failed (PID %i).", pid);
+        return;
+    }
+
+    dsme_log(LOG_DEBUG, "tempreaper: reaper process finished (PID %i).", pid);
 }
 
 static bool disk_space_running_out(const DSM_MSGTYPE_DISK_SPACE* msg)
 {
     const char *mount_path = DSMEMSG_EXTRA(msg);
 
-    /* TODO: we should actually check the mount entries to figure out on which mount(s)
-       temp_dirs are mounted on. We now assume that all temp_dirs are mounted on the root partition. */
-    return (msg->blocks_percent_used >= MAX_USED_BLOCK_PERCENTAGE) &&
-           (strcmp(mount_path, "/") == 0);
+    /* TODO: we should actually check the mount entries to figure out
+       on which mount(s) temp_dirs are mounted on. We now assume that all
+       temp_dirs are mounted on the root partition. */
+    return (strcmp(mount_path, "/") == 0);
 }
 
 DSME_HANDLER(DSM_MSGTYPE_DISK_SPACE, conn, msg)
 {
     if (reaper_pid != -1) {
-        /* If there's an existing reaper process (which has not yet finished),
-           do not launch a new one. */
-        dsme_log(LOG_DEBUG, "tempreaper: an existing temp reaper process is running (PID %i). Return.",
+        dsme_log(LOG_DEBUG, "tempreaper: reaper process already running (PID %i). Return.",
                  reaper_pid);
         return;
     }
