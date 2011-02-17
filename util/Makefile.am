@@ -15,7 +15,8 @@ sbin_PROGRAMS = batttest    \
                 dsmetool    \
                 dsmetest    \
                 bootstate   \
-                waitfordsme
+                waitfordsme \
+                rpdir
 
 sbin_SCRIPTS = dsmetemperature
 
@@ -33,3 +34,5 @@ bootstate_SOURCES = bootstate.c
 waitfordsme_SOURCES = waitfordsme.c
 
 dsmereboot_SOURCES = dsmereboot.c
+
+rpdir_SOURCES = rpdir.c
