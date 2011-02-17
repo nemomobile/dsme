@@ -61,5 +61,6 @@ util/bootstate
 util/dsmereboot
 util/dsmetest
 util/dsmetool
+util/rpdir
 util/waitfordsme
 
