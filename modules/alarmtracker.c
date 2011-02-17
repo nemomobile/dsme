@@ -40,6 +40,7 @@
 
 #include <dsme/state.h>
 #include <dsme/protocol.h>
+#include <dsme/alarm_limit.h>
 
 #include <stdio.h>
 #include <limits.h>
@@ -47,8 +48,6 @@
 #include <errno.h>
 #include <string.h>
 
-
-#define SNOOZE_TIMEOUT 120 /* 2 minutes */
 
 #define ALARM_STATE_FILE     "/var/lib/dsme/alarm_queue_status"
 #define ALARM_STATE_FILE_TMP "/var/lib/dsme/alarm_queue_status.tmp"
@@ -158,13 +157,14 @@ static int set_internal_alarm_state(void* dummy)
   if (alarm_queue_head != 0) {
       /* there is a queued or active alarm */
       if (alarm_queue_head == 1 || /* 1 means there is an active alarm */
-          seconds(now, alarm_queue_head) <= SNOOZE_TIMEOUT)
+          seconds(now, alarm_queue_head) <= dsme_snooze_timeout_in_seconds())
       {
           /* alarm is either active or soon-to-be-active */
           alarm_set = true;
       } else {
           /* set a timer for transition from not set to soon-to-be-active */
-          int transition = seconds(now, alarm_queue_head) - SNOOZE_TIMEOUT;
+          int transition = seconds(now, alarm_queue_head)
+                         - dsme_snooze_timeout_in_seconds();
           alarm_state_transition_timer =
               dsme_create_timer(transition, set_internal_alarm_state, 0);
           dsme_log(LOG_DEBUG, "next snooze in %d s", transition);

@@ -5,7 +5,7 @@ Maintainer: Semi Malinen <semi.malinen@nokia.com>
 Uploaders: Ismo Laitinen <ismo.laitinen@nokia.com>, David Weinehall <david.weinehall@nokia.com>, Philippe De Swert <philippe.de-swert@nokia.com>
 Build-Depends: debhelper (>= 4.1.0),
  aegis-builder (>= 1.4),
- libdsme0.2.0-dev (>= 0.61.5),
+ libdsme0.2.0-dev (>= 0.61.6),
  libiphb-dev (>= 0.61.26),
  libbmeipc-dev,
  libcal-dev (>= 0.2.0),
@@ -22,7 +22,7 @@ Standards-Version: 3.7.2
 Package: dsme
 Section: misc
 Architecture: any
-Depends: ${shlibs:Depends}, libdsme0.2.0 (>= 0.61.4)
+Depends: ${shlibs:Depends}, libdsme0.2.0 (>= 0.61.6)
 Conflicts: getbootstate
 Replaces: getbootstate
 Provides: getbootstate
