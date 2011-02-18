@@ -23,6 +23,11 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef __cplusplus
+#define _GNU_SOURCE
+#endif
+
+#include <argz.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -31,11 +36,15 @@
 #include <unistd.h>
 #include <time.h>
 #include <ftw.h>
+#include <limits.h>
 #include <sys/statvfs.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 
 //#define DEBUG 1
+
+#define ME "rpdir: "
+#define MALLOC_ERR "could not allocate memory"
 
 /* Smaller than that (bytes) files are not considered for deletion.
  * The gain would be insignificant, and small/zero-length files are often
@@ -49,34 +58,127 @@ static const int TIMEOUT = (60 * 30);
 /* Max number of allowed open file descriptors in ftw(). */
 static const size_t MAX_FTW_FDS = 100;
 
-/* Use a hardcoded path to speedup execl.  */
-static const char* PATH_LSOF = "/usr/bin/lsof";
+struct entry {
+    struct entry*   next;
+    char*           fname;
+};
 
 static time_t curt;
 static time_t checkpoint;
+static char** open_files;
+static size_t num_files;
+
+static int string_cmp(const void *a, const void *b)
+{
+    const char **ia = (const char **)a;
+    const char **ib = (const char **)b;
+    return strcmp(*ia, *ib);
+}
+
+static char* make_command_new(char* dirs[])
+{
+    char* buf = 0;
+    char* cmdline;
+    size_t len;
+
+    if (argz_create(dirs, &cmdline, &len) == 0) {
+        argz_stringify(cmdline, len, ' ');
+
+        if (asprintf(&buf, "%s %s", "/usr/bin/lsof -Fn", cmdline) < 0) {
+            goto out;
+        }
+        free(cmdline);
+    }
+
+out:
+    return buf;
+}
+
+static char** open_files_list_new(char* dirs[])
+{
+    char**                 files = 0;
+    struct entry*          first = 0;
+    struct entry*          last  = 0;
+    size_t                 entries = 0;
+    char                   line[PATH_MAX + 16];
+    char*                  command = make_command_new(dirs);
+    FILE*                  f = popen(command, "r");
+
+    if (!f) {
+        goto out;
+    }
+
+    // line as follows:
+    // p560
+    // n/tmp/Xorg.0.log
+    while (fgets(line, sizeof(line), f)) {
+        struct entry* this;
+
+        /* Ignore process info */
+        if (*line == 'p') {
+            continue;
+        }
+
+        /* Something else than a file: skip */
+        if (*line != 'n') {
+            continue;
+        }
+
+        line[strcspn(line, "\r\n")] = 0;
+
+        this = calloc(1, sizeof *this);
+        this->fname = strdup(&line[1]);
+        if (!this->fname) {
+            free(this);
+            perror(ME MALLOC_ERR);
+            break;
+        }
+
+        entries++;
+        if (entries == 1) {
+            first = this;
+        } else {
+            last->next = this;
+        }
+        last = this;
+    }
+
+    files = calloc(entries + 1, sizeof(char*));
+    size_t i = 0;
+    struct entry* file;
+    struct entry* prev;
+
+    for (file = first, prev = 0; file ; file = file->next) {
+        if (prev) {
+            prev->fname = 0;
+            free(prev), prev = 0;
+        }
+        files[i++] = file->fname;
+        prev = file;
+    }
+    if (prev) {
+        free(prev);
+    }
+    files[i] = 0;
+    num_files = i;
+
+    if (i > 1) {
+        qsort(files, i-1, sizeof(char*), string_cmp);
+    }
+
+out:
+    if (f) {
+        pclose(f);
+    }
+    if (command) {
+        free(command);
+    }
+    return files;
+}
 
 static bool is_open(const char* file)
 {
-    int status;
-    pid_t pid;
-
-    pid = fork();
-    switch (pid) {
-    case -1:
-        return false;
-    case 0:
-        execl(PATH_LSOF, "lsof", file, NULL);
-        _exit(1);
-    default:
-        waitpid(pid, &status, 0);
-
-        /* Is this file not open at the moment? */
-        if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
-            return true;
-        } else {
-            return false;
-        }
-    }
+    return bsearch(&file, open_files, num_files, sizeof(char*), string_cmp);
 }
 
 static int reaper(const char *file, const struct stat *sb, int flag)
@@ -142,10 +244,14 @@ static int reap(char* dirs[])
 
 int main(int argc, char* argv[])
 {
-    if (argc == 1) {
-        fprintf(stderr, "Usage: rpdir <directories>\n");
+    if (argc < 2) {
+        fprintf(stderr, "Usage: " ME " <directory 1>, <directory 2>, ...\n");
         return EXIT_FAILURE;
     }
 
+    open_files = open_files_list_new(&argv[1]);
+
     return reap(&argv[1]);
+
+    // NOTE: we leak open_files but we are going to exit.
 }
