@@ -28,7 +28,6 @@
 #endif
 
 #include <argz.h>
-#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -77,8 +76,8 @@ static int string_cmp(const void *a, const void *b)
 
 static char* make_command_new(char* dirs[])
 {
-    char* buf = 0;
-    char* cmdline;
+    char* buf      = 0;
+    char* cmdline  = 0;
     size_t len;
 
     if (argz_create(dirs, &cmdline, &len) == 0) {
@@ -87,31 +86,36 @@ static char* make_command_new(char* dirs[])
         if (asprintf(&buf, "%s %s", "/usr/bin/lsof -Fn", cmdline) < 0) {
             goto out;
         }
-        free(cmdline);
     }
 
 out:
+    if (cmdline) {
+        free(cmdline);
+    }
     return buf;
 }
 
 static char** open_files_list_new(char* dirs[])
 {
     char**                 files = 0;
-    struct entry*          first = 0;
-    struct entry*          last  = 0;
+    struct entry*          head  = 0;
+    struct entry*          tail  = 0;
     size_t                 entries = 0;
     char                   line[PATH_MAX + 16];
     char*                  command = make_command_new(dirs);
-    FILE*                  f = popen(command, "r");
+    FILE*                  f = 0;
 
-    if (!f) {
+    if (!command) {
+        goto out;
+    }
+    if (!(f = popen(command, "r"))) {
         goto out;
     }
 
     // line as follows:
     // p560
     // n/tmp/Xorg.0.log
-    while (fgets(line, sizeof(line), f)) {
+    while (fgets(line, sizeof line, f)) {
         struct entry* e;
 
         /* Something else than a file: skip */
@@ -134,37 +138,33 @@ static char** open_files_list_new(char* dirs[])
             break;
         }
 
-        entries++;
-        if (entries == 1) {
-            first = e;
+        if (tail) {
+            tail->next = e, tail = e;
         } else {
-            last->next = e;
+            tail = head = e;
         }
-        last = e;
+        entries++;
     }
 
-    files = calloc(entries + 1, sizeof(char*));
+    files = calloc(entries + 1, sizeof *files);
     size_t i = 0;
     struct entry* file;
-    struct entry* prev;
 
     if (!files) {
         perror(ME MALLOC_ERR);
         exit(EXIT_FAILURE);
     }
 
-    file = first; i = 0;
-    while (file) {
+    while ((file = head)) {
+        head = file->next;
         files[i++] = file->fname;
-        prev = file;
-        file = file->next;
-        free(prev);
+        free(file);
     }
     files[i] = 0;
     num_files = i;
 
     if (i > 1) {
-        qsort(files, i-1, sizeof(char*), string_cmp);
+        qsort(files, num_files, sizeof *files, string_cmp);
     }
 
 out:
@@ -179,7 +179,7 @@ out:
 
 static bool is_open(const char* file)
 {
-    return bsearch(&file, open_files, num_files, sizeof(char*), string_cmp);
+    return bsearch(&file, open_files, num_files, sizeof *open_files, string_cmp);
 }
 
 static int reaper(const char *file, const struct stat *sb, int flag)
@@ -191,7 +191,7 @@ static int reaper(const char *file, const struct stat *sb, int flag)
         goto out;
     }
 
-    if (!(sb->st_size > LEAVE_SMALL_FILES_ALONE_LIMIT)) {
+    if (sb->st_size <= LEAVE_SMALL_FILES_ALONE_LIMIT) {
         #ifdef DEBUG
             fprintf(stderr, "file '%s' size %ld too small, skipping\n", file, sb->st_size);
         #endif
@@ -214,7 +214,7 @@ static int reaper(const char *file, const struct stat *sb, int flag)
 
         if (unlink(file) != 0) {
             #ifdef DEBUG
-                fprintf(stderr, "failed to unlink file '%s', %s", file, strerror(errno));
+                fprintf(stderr, "failed to unlink file '%s', %m", file);
             #endif
             goto out;
         }
