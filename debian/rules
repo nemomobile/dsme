@@ -12,7 +12,13 @@
 # This has to be exported to make some magic below work.
 export DH_OPTIONS
 
-CFLAGS = -Wall -g
+CFLAGS = -Wall
+
+ifneq (,$(findstring debug,$(DEB_BUILD_OPTIONS)))
+        CFLAGS += -g
+else
+        CFLAGS += -s
+endif
 
 ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
 	CFLAGS += -O0
