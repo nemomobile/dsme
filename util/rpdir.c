@@ -112,12 +112,7 @@ static char** open_files_list_new(char* dirs[])
     // p560
     // n/tmp/Xorg.0.log
     while (fgets(line, sizeof(line), f)) {
-        struct entry* this;
-
-        /* Ignore process info */
-        if (*line == 'p') {
-            continue;
-        }
+        struct entry* e;
 
         /* Something else than a file: skip */
         if (*line != 'n') {
@@ -126,21 +121,26 @@ static char** open_files_list_new(char* dirs[])
 
         line[strcspn(line, "\r\n")] = 0;
 
-        this = calloc(1, sizeof *this);
-        this->fname = strdup(&line[1]);
-        if (!this->fname) {
-            free(this);
+        e = calloc(1, sizeof *e);
+        if (!e) {
+            perror(ME MALLOC_ERR);
+            break;
+        }
+
+        e->fname = strdup(&line[1]);
+        if (!e->fname) {
+            free(e);
             perror(ME MALLOC_ERR);
             break;
         }
 
         entries++;
         if (entries == 1) {
-            first = this;
+            first = e;
         } else {
-            last->next = this;
+            last->next = e;
         }
-        last = this;
+        last = e;
     }
 
     files = calloc(entries + 1, sizeof(char*));
@@ -148,15 +148,16 @@ static char** open_files_list_new(char* dirs[])
     struct entry* file;
     struct entry* prev;
 
-    for (file = first, prev = 0; file ; file = file->next) {
-        if (prev) {
-            prev->fname = 0;
-            free(prev), prev = 0;
-        }
+    if (!files) {
+        perror(ME MALLOC_ERR);
+        exit(EXIT_FAILURE);
+    }
+
+    file = first; i = 0;
+    while (file) {
         files[i++] = file->fname;
         prev = file;
-    }
-    if (prev) {
+        file = file->next;
         free(prev);
     }
     files[i] = 0;
