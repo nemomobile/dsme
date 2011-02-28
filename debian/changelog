@@ -1,3 +1,9 @@
+dsme (0.61.43) unstable; urgency=low
+
+  * Add temp reaper by Matias (Fixes: NB#210532)
+
+ -- Semi Malinen <semi.malinen@nokia.com>  Mon, 28 Feb 2011 12:01:01 +0000
+
 dsme (0.61.42) unstable; urgency=low
 
   * Fix POLLNVAL loop (Fixes: NB#221870)
