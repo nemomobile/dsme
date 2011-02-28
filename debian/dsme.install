@@ -5,6 +5,7 @@ debian/tmp/sbin/dsme-server
 debian/tmp/sbin/dsmetemperature
 debian/tmp/sbin/dsmetool
 debian/tmp/sbin/getbootstate
+debian/tmp/sbin/rpdir
 debian/tmp/sbin/waitfordsme
 debian/tmp/lib/dsme/*.so*
 debian/tmp/etc/dsme/lifeguard.uids
