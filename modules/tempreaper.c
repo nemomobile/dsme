@@ -81,7 +81,6 @@ static pid_t reaper_process_new(void)
      */
     char* const argv[] = {(char*)"rpdir",
                           (char*)"/var/tmp",
-                          (char*)"/var/log",
                           (char*)0};
     pid_t pid = fork();
 
