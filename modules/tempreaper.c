@@ -49,7 +49,7 @@ static bool drop_privileges(void)
 {
     bool success = false;
     struct passwd  pwd;
-    struct passwd* result;
+    struct passwd* result = 0;
     char buf[GETPWNAM_BUFLEN];
 
     memset(&buf, 0, sizeof buf);
@@ -62,10 +62,10 @@ static bool drop_privileges(void)
         goto out;
     }
 
-    if (setuid(pwd.pw_uid) != 0) {
+    if (setgid(pwd.pw_gid) != 0) {
         goto out;
     }
-    if (setgid(pwd.pw_gid) != 0) {
+    if (setuid(pwd.pw_uid) != 0) {
         goto out;
     }
 
@@ -96,7 +96,7 @@ static pid_t reaper_process_new(void)
         }
 
         execv(RPDIR_PATH, argv);
-        _exit(EXIT_SUCCESS);
+        _exit(EXIT_FAILURE);
     } else if (pid == -1) {
         /* error */
         dsme_log(LOG_CRIT, "fork() failed: %s", strerror(errno));
@@ -110,7 +110,7 @@ static void temp_reaper_finished(GPid pid, gint status, gpointer unused)
 {
     reaper_pid = -1;
 
-    if (EXIT_FAILURE == status) {
+    if (WEXITSTATUS(status) != 0) {
         dsme_log(LOG_WARNING, "tempreaper: reaper process failed (PID %i).", pid);
         return;
     }
