@@ -42,6 +42,15 @@
 #define GETPWNAM_BUFLEN 1024
 #define MIN_PRIORITY 5
 #define RPDIR_PATH DSME_SBIN_PATH"/rpdir"
+//#define TEMPREAPER_DEBUG 1
+
+/* dsme's own logging is not available in the forked child process */
+#ifdef TEMPREAPER_DEBUG
+    #include <sys/syslog.h>
+    #define debuglog(args...) syslog(LOG_CRIT, args)
+#else
+    #define debuglog(...) do {} while (0)
+#endif
 
 static pid_t reaper_pid = -1;
 
@@ -59,13 +68,16 @@ static bool drop_privileges(void)
         (void)getpwnam_r("nobody", &pwd, buf, GETPWNAM_BUFLEN, &result);
     }
     if (!result) {
+        debuglog("tempreaper: unable to retrieve passwd entry");
         goto out;
     }
 
     if (setgid(pwd.pw_gid) != 0) {
+        debuglog("tempreaper: setgid() failed with pw_gid %i (%m)", pwd.pw_gid);
         goto out;
     }
     if (setuid(pwd.pw_uid) != 0) {
+        debuglog("tempreaper: setuid() failed with pw_uid %i (%m)", pwd.pw_uid);
         goto out;
     }
 
@@ -88,14 +100,17 @@ static pid_t reaper_process_new(void)
         /* Child; set a reasonably low priority, DSME runs with the priority -1
            so we don't want to use the inherited priority */
         if (setpriority(PRIO_PROCESS, 0, MIN_PRIORITY) != 0) {
+            debuglog("tempreaper: setpriority() failed");
             _exit(EXIT_FAILURE);
         }
 
         if (!drop_privileges()) {
+            debuglog("tempreaper: drop_privileges() failed");
             _exit(EXIT_FAILURE);
         }
 
         execv(RPDIR_PATH, argv);
+        debuglog("tempreaper: execv failed. path: " RPDIR_PATH);
         _exit(EXIT_FAILURE);
     } else if (pid == -1) {
         /* error */
