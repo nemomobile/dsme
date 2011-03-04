@@ -38,6 +38,7 @@
 #include "dsme/modules.h"
 #include "dsme/logging.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/socket.h>
@@ -56,12 +57,17 @@
 #define VALIDATOR_MAX_PAYLOAD 4096
 #endif
 
+#define DSME_CONFIG_VALIDATED_PATH "/var/lib/dsme/mandatory_files" // TODO
+
 
 static void stop_listening_to_validator(void);
+static bool read_file_to_list(const char* config_path, GSList** files);
+static bool is_in_list(const char* file, GSList* list);
 
 
 static int         validator_fd = -1; // TODO: make local in start_listening
-static GIOChannel* channel      =  0;
+static GIOChannel* channel         = 0;
+static GSList*     mandatory_files = 0;
 
 
 static void go_to_malf(const char* component, const char* details)
@@ -182,16 +188,29 @@ static gboolean handle_validator_message(GIOChannel*  source,
                      "Got Validator message [%s]",
                      (char*)NLMSG_DATA(nlh));
 
+            // TODO: check that the message is from the kernel
+
             char* component;
             char* details;
             parse_validator_message(NLMSG_DATA(nlh), &component, &details);
 
-            dsme_log(LOG_CRIT, "Security MALF: %s %s", component, details);
+            // if a list of mandatory files exists; check against it
+            if (mandatory_files && !is_in_list(details, mandatory_files)) {
+                // the file was not on the list => no MALF
+                dsme_log(LOG_INFO, "OK, not a mandatory file: %s", details);
+            } else {
+                // either there was no list of mandatory files,
+                // or this file was on the list => MALF
 
-            go_to_malf(component, details);
+                dsme_log(LOG_CRIT,
+                         "Security MALF: %s %s",
+                         component,
+                         details);
 
-            // NOTE: we leak component and details;
-            // it is OK because we are entering MALF anyway
+                go_to_malf(component, details);
+                // NOTE: we leak component and details;
+                // it is OK because we are entering MALF anyway
+            }
         }
     }
     if (condition & (G_IO_ERR | G_IO_HUP | G_IO_NVAL)) {
@@ -280,6 +299,7 @@ static const dsme_dbus_signal_binding_t signals[] = {
     { 0, 0 }
 };
 
+
 DSME_HANDLER(DSM_MSGTYPE_DBUS_CONNECT, client, msg)
 {
   dsme_log(LOG_DEBUG, "validatorlistener: DBUS_CONNECT");
@@ -299,19 +319,78 @@ module_fn_info_t message_handlers[] = {
 };
 
 
+static bool read_file_to_list(const char* config_path, GSList** files)
+{
+    bool  have_the_list = false;
+    FILE* config;
+
+    if ((config = fopen(config_path, "r")) == 0) {
+        // could not open list of files to validate; MALF
+        dsme_log(LOG_WARNING,
+                 "Could not open mandatory file list '%s': %m",
+                 config_path);
+        goto done;
+    }
+
+    char*   line   = 0;
+    size_t  size   = 0;
+    ssize_t length;
+
+    while ((length = getline(&line, &size, config)) != -1) {
+        // remove trailing newline
+        if (length > 0) {
+            if (line[length - 1] == '\n') {
+                --length;
+            }
+        }
+
+        // add line to config
+        if (files) {
+            *files = g_slist_append(*files, line);
+        }
+
+        line = 0;
+        size = 0;
+    }
+    have_the_list = true;
+
+    fclose(config);
+
+done:
+    return have_the_list;
+}
+
+static bool is_in_list(const char* file, GSList* list)
+{
+    GSList* node;
+
+    for (node = list; node != 0; node = g_slist_next(node)) {
+        if (strcmp(file, node->data) == 0) {
+            break;
+        }
+    }
+
+    return node != 0;
+}
+
+
 void module_init(module_t* handle)
 {
     dsme_log(LOG_DEBUG, "validatorlistener.so loaded");
 
-    if (!start_listening_to_validator()) {
+    if (!read_file_to_list(DSME_CONFIG_VALIDATED_PATH, &mandatory_files))
+    {
+        dsme_log(LOG_WARNING, "failed to load the list of mandatory files");
+    } else if (!start_listening_to_validator()) {
         dsme_log(LOG_CRIT, "failed to start listening to Validator");
-        // TODO: what now?
+        // TODO: go_to_malf();
     }
 }
 
 void module_fini(void)
 {
     stop_listening_to_validator();
+    g_slist_free(mandatory_files);
 
     dsme_log(LOG_DEBUG, "validatorlistener.so unloaded");
 }

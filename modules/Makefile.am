@@ -21,7 +21,8 @@ pkglib_LTLIBRARIES = startup.la              \
                      malf.la                 \
                      validatorlistener.la    \
                      diskmonitor.la          \
-                     tempreaper.la
+                     tempreaper.la           \
+                     dbusautoconnector.la
 
 noinst_HEADERS = dsme_dbus.h \
                  runlevel.h \
@@ -139,3 +140,7 @@ diskmonitor_la_SOURCES = diskmonitor.c
 
 tempreaper_la_SOURCES = tempreaper.c
 tempreaper_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
+
+dbusautoconnector_la_SOURCES = dbusautoconnector.c
+dbusautoconnector_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
+dbusautoconnector_la_LIBADD = $(GLIB_LIBS)
