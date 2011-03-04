@@ -98,6 +98,7 @@ const char *modules[] = {
     "validatorlistener.so", // TODO: hardcode this in dsme core
     "diskmonitor.so",
     "tempreaper.so",
+    "dbusautoconnector.so",
     NULL
 };
 

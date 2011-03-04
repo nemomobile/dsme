@@ -42,6 +42,12 @@
 #include <stdio.h>
 
 
+bool dsme_dbus_is_available(void)
+{
+    return dbus_bus_get(DBUS_BUS_SYSTEM, 0) != 0;
+}
+
+
 struct DsmeDbusMessage {
   DBusConnection* connection;
   DBusMessage*    msg;
@@ -603,7 +609,7 @@ static Server* server_new()
   Server* server = g_new(Server, 1);
 
   server->services = 0;
-  
+
   return server;
 }
 

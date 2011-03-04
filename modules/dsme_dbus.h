@@ -46,6 +46,8 @@ typedef struct dsme_dbus_signal_binding_t {
 } dsme_dbus_signal_binding_t;
 
 
+bool dsme_dbus_is_available(void);
+
 void dsme_dbus_bind_methods(bool*                      bound_already,
                             const dsme_dbus_binding_t* bindings,
                             const char*                service,
