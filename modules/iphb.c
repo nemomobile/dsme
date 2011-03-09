@@ -45,6 +45,7 @@
 #include <errno.h>
 #include <sys/epoll.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/un.h>
 #include <sys/time.h>
 
