@@ -38,6 +38,7 @@
 #include "dsme/modules.h"
 #include "dsme/logging.h"
 
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -63,6 +64,7 @@
 static void stop_listening_to_validator(void);
 static bool read_file_to_list(const char* config_path, GSList** files);
 static bool is_in_list(const char* file, GSList* list);
+static bool is_basename_in_list(const char* file, GSList* list);
 
 
 static int         validator_fd = -1; // TODO: make local in start_listening
@@ -195,10 +197,10 @@ static gboolean handle_validator_message(GIOChannel*  source,
             parse_validator_message(NLMSG_DATA(nlh), &component, &details);
 
             // if a list of mandatory files exists; check against it
-            if (mandatory_files && !is_in_list(details, mandatory_files)) {
-                // the file was not on the list => no MALF
-                dsme_log(LOG_INFO, "OK, not a mandatory file: %s", details);
-            } else {
+            if (!mandatory_files                     ||
+                is_in_list(details, mandatory_files) ||
+                is_basename_in_list(component, mandatory_files))
+            {
                 // either there was no list of mandatory files,
                 // or this file was on the list => MALF
 
@@ -210,6 +212,9 @@ static gboolean handle_validator_message(GIOChannel*  source,
                 go_to_malf(component, details);
                 // NOTE: we leak component and details;
                 // it is OK because we are entering MALF anyway
+            } else {
+                // the file was not on the list => no MALF
+                dsme_log(LOG_INFO, "OK, not a mandatory file: %s", details);
             }
         }
     }
@@ -366,6 +371,19 @@ static bool is_in_list(const char* file, GSList* list)
 
     for (node = list; node != 0; node = g_slist_next(node)) {
         if (strcmp(file, node->data) == 0) {
+            break;
+        }
+    }
+
+    return node != 0;
+}
+
+static bool is_basename_in_list(const char* file, GSList* list)
+{
+    GSList* node;
+
+    for (node = list; node != 0; node = g_slist_next(node)) {
+        if (strcmp(file, basename(node->data)) == 0) {
             break;
         }
     }
