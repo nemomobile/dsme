@@ -288,11 +288,10 @@ static void stop_listening_to_validator(void)
 }
 
 
+// TODO: move init_done_ind -> DSM_MSGTYPE_INIT_DONE code to diskmonitor
 static void init_done_ind(const DsmeDbusMessage* ind)
 {
-    dsme_log(LOG_DEBUG, "base_boot_done; not listening to Validator");
-    stop_listening_to_validator();
-
+    dsme_log(LOG_DEBUG, "base_boot_done");
     DSM_MSGTYPE_INIT_DONE msg = DSME_MSG_INIT(DSM_MSGTYPE_INIT_DONE);
     broadcast_internally(&msg);
 }
