@@ -4,6 +4,10 @@ dsme (0.61.46) unstable; urgency=low
   * Don't listen to the base_boot_done signal in validatorlistener but in diskmonitor
   * Add the -f option to rpdir (Fixes: NB#236891)
 
+  [ Denis Zalevskiy ]
+  * Conform to bmeipc API
+  * Replace deprecated bmeipc API calls
+
  -- Matias Muhonen <ext-matias.muhonen@nokia.com>  Wed, 16 Mar 2011 11:18:42 +0000
 
 dsme (0.61.45) unstable; urgency=low
