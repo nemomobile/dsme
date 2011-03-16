@@ -25,14 +25,7 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-// to stop listening to Validator:
-// dbus-send --system --type=signal /com/nokia/startup/signal com.nokia.startup.signal.base_boot_done
-
 #include <dsme/protocol.h>
-
-#include "validatorlistener.h"
-#include "dsme_dbus.h"
-#include "dbusproxy.h"
 
 #include "malf.h"
 #include "dsme/modules.h"
@@ -287,42 +280,6 @@ static void stop_listening_to_validator(void)
     }
 }
 
-
-// TODO: move init_done_ind -> DSM_MSGTYPE_INIT_DONE code to diskmonitor
-static void init_done_ind(const DsmeDbusMessage* ind)
-{
-    dsme_log(LOG_DEBUG, "base_boot_done");
-    DSM_MSGTYPE_INIT_DONE msg = DSME_MSG_INIT(DSM_MSGTYPE_INIT_DONE);
-    broadcast_internally(&msg);
-}
-
-static bool bound = false;
-
-static const dsme_dbus_signal_binding_t signals[] = {
-    { init_done_ind, "com.nokia.startup.signal", "base_boot_done" },
-    { 0, 0 }
-};
-
-
-DSME_HANDLER(DSM_MSGTYPE_DBUS_CONNECT, client, msg)
-{
-  dsme_log(LOG_DEBUG, "validatorlistener: DBUS_CONNECT");
-  dsme_dbus_bind_signals(&bound, signals);
-}
-
-DSME_HANDLER(DSM_MSGTYPE_DBUS_DISCONNECT, client, msg)
-{
-  dsme_log(LOG_DEBUG, "validatorlistener: DBUS_DISCONNECT");
-  dsme_dbus_unbind_signals(&bound, signals);
-}
-
-module_fn_info_t message_handlers[] = {
-  DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_CONNECT),
-  DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_DISCONNECT),
-  { 0 }
-};
-
-
 static bool read_file_to_list(const char* config_path, GSList** files)
 {
     bool  have_the_list = false;
@@ -389,7 +346,6 @@ static bool is_basename_in_list(const char* file, GSList* list)
 
     return node != 0;
 }
-
 
 void module_init(module_t* handle)
 {
