@@ -42,6 +42,9 @@
 #include <errno.h>
 
 
+#define DSME_STATIC_STRLEN(s) (sizeof(s) - 1)
+
+
 // TODO: try to find a header that #defines NETLINK_VALIDATOR
 //       and possibly the right group mask to use
 #ifndef NETLINK_VALIDATOR
@@ -51,11 +54,12 @@
 #define VALIDATOR_MAX_PAYLOAD 4096
 #endif
 
-#define DSME_CONFIG_VALIDATED_PATH "/var/lib/dsme/mandatory_files" // TODO
+#define DSME_CONFIG_VALIDATED_PATH   "/etc/init.conf"
+#define DSME_CONFIG_VALIDATED_PREFIX "mandatory_binary "
 
 
 static void stop_listening_to_validator(void);
-static bool read_file_to_list(const char* config_path, GSList** files);
+static bool read_mandatory_file_list(const char* config_path, GSList** files);
 static bool is_in_list(const char* file, GSList* list);
 static bool is_basename_in_list(const char* file, GSList* list);
 
@@ -280,7 +284,23 @@ static void stop_listening_to_validator(void)
     }
 }
 
-static bool read_file_to_list(const char* config_path, GSList** files)
+static bool is_mandatory(const char* line, char** path)
+{
+    const char mandatory_prefix[] = DSME_CONFIG_VALIDATED_PREFIX;
+    bool mandatory = false;
+
+    if (strncmp(line,
+                mandatory_prefix,
+                DSME_STATIC_STRLEN(mandatory_prefix)) == 0)
+    {
+        mandatory = true;
+        *path     = strdup(line + DSME_STATIC_STRLEN(mandatory_prefix));
+    }
+
+    return mandatory;
+}
+
+static bool read_mandatory_file_list(const char* config_path, GSList** files)
 {
     bool  have_the_list = false;
     FILE* config;
@@ -301,15 +321,17 @@ static bool read_file_to_list(const char* config_path, GSList** files)
         // remove trailing newline
         if (length > 0) {
             if (line[length - 1] == '\n') {
+                line[length - 1] = '\0';
                 --length;
             }
         }
 
         // add line to config
-        if (files) {
-            *files = g_slist_append(*files, line);
+        char* path;
+        if (files && is_mandatory(line, &path)) {
+            *files = g_slist_append(*files, path);
         }
-
+        free(line);
         line = 0;
         size = 0;
     }
@@ -351,7 +373,7 @@ void module_init(module_t* handle)
 {
     dsme_log(LOG_DEBUG, "validatorlistener.so loaded");
 
-    if (!read_file_to_list(DSME_CONFIG_VALIDATED_PATH, &mandatory_files))
+    if (!read_mandatory_file_list(DSME_CONFIG_VALIDATED_PATH, &mandatory_files))
     {
         dsme_log(LOG_WARNING, "failed to load the list of mandatory files");
     } else if (!start_listening_to_validator()) {
