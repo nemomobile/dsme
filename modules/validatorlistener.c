@@ -55,7 +55,7 @@
 #endif
 
 #define DSME_CONFIG_VALIDATED_PATH   "/etc/init.conf"
-#define DSME_CONFIG_VALIDATED_PREFIX "mandatory_binary "
+#define DSME_CONFIG_VALIDATED_PREFIX "mandatorybinary "
 
 
 static void stop_listening_to_validator(void);
