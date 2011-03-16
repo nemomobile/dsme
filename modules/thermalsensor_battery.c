@@ -56,14 +56,14 @@ static gboolean read_temperature(void);
 void*       the_cookie;
 void      (*report_temperature)(void* cookie, int temperature);
 
-static int  request_fd = -1;
+static int32_t  request_fd = -1;
 static bool got_status = false;
 
 static void connect_bme()
 {
   got_status = false;
 
-  if ((request_fd = bme_connect()) == -1) {
+  if ((request_fd = bmeipc_open()) == -1) {
       dsme_log(LOG_DEBUG, "could not connect to bme");
   } else {
       dsme_log(LOG_DEBUG, "connected to bme");
@@ -77,7 +77,7 @@ static void connect_bme()
                           0))
       {
           g_io_channel_unref(chan);
-          bme_disconnect();
+          bmeipc_close(request_fd);
           request_fd = -1;
           dsme_log(LOG_ERR, "g_io error; disconnected from bme");
       }
@@ -87,7 +87,7 @@ static void connect_bme()
 static void disconnect_bme()
 {
   if (request_fd != -1) {
-      bme_disconnect();
+      bmeipc_close(request_fd);
       request_fd = -1;
       dsme_log(LOG_DEBUG, "disconnected from bme");
   }
@@ -118,7 +118,7 @@ extern bool dsme_request_battery_temperature(
       req.flags   = EM_BATTERY_TEMP;
 
       dsme_log(LOG_DEBUG, "sending a request to bme");
-      if (bme_write(&req, sizeof(req)) != sizeof(req)) {
+      if (bmeipc_send(request_fd, &req, sizeof(req)) != sizeof(req)) {
           disconnect_bme();
       } else {
           request_sent = true;
@@ -161,7 +161,7 @@ static gboolean read_status(void)
   int32_t  err             = -1;
 
   dsme_log(LOG_DEBUG, "read status from bme");
-  if (bme_read(&err, sizeof(err)) == sizeof(err) && err >= 0) {
+  if (bmeipc_recv(request_fd, &err, sizeof(err)) == sizeof(err) && err >= 0) {
       keep_connection = true;
   }
 
@@ -174,7 +174,7 @@ static gboolean read_temperature(void)
   struct emsg_battery_info_reply resp;
 
   dsme_log(LOG_DEBUG, "read temperature from bme");
-  if (bme_read(&resp, sizeof(resp)) == sizeof(resp)) {
+  if (bmeipc_recv(request_fd, &resp, sizeof(resp)) == sizeof(resp)) {
       keep_connection = true;
 
       /* report the temperature to the thermal manager */
