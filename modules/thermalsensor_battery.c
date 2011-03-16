@@ -158,10 +158,10 @@ static gboolean handle_battery_temperature_response(GIOChannel*  source,
 static gboolean read_status(void)
 {
   bool keep_connection = false;
-  int  err             = -1;
+  int32_t  err             = -1;
 
   dsme_log(LOG_DEBUG, "read status from bme");
-  if (bme_read(&err, sizeof(err)) == sizeof(err) && !err) {
+  if (bme_read(&err, sizeof(err)) == sizeof(err) && err >= 0) {
       keep_connection = true;
   }
 
