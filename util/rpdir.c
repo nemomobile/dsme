@@ -57,6 +57,9 @@ static const int TIMEOUT = (60 * 30);
 /* Max number of allowed open file descriptors in ftw(). */
 static const size_t MAX_FTW_FDS = 100;
 
+/* Skip checking the file modification time and size? */
+static bool use_force = false;
+
 struct entry {
     struct entry*   next;
     char*           fname;
@@ -191,7 +194,8 @@ static int reaper(const char *file, const struct stat *sb, int flag)
         goto out;
     }
 
-    if (sb->st_size <= LEAVE_SMALL_FILES_ALONE_LIMIT) {
+    if (!use_force &&
+        sb->st_size <= LEAVE_SMALL_FILES_ALONE_LIMIT) {
         #ifdef DEBUG
             fprintf(stderr, "file '%s' size %ld too small, skipping\n", file, sb->st_size);
         #endif
@@ -203,7 +207,7 @@ static int reaper(const char *file, const struct stat *sb, int flag)
      * instead of finding age of file, we check is mtime/atime
      * older than checkpoint which we already have set to time in the past
      */
-    if ((sb->st_mtime < checkpoint) && (sb->st_atime < checkpoint)) {
+    if (use_force || (sb->st_mtime < checkpoint && sb->st_atime < checkpoint)) {
         if (is_open(file)) {
             #ifdef DEBUG
                 fprintf(stderr, "file '%s' size %ld mod_age=%lus acc_age=%lus but still open, not deleting",
@@ -243,16 +247,44 @@ static int reap(char* dirs[])
     return EXIT_SUCCESS;
 }
 
+static bool check_args(int argc, char* argv[])
+{
+    bool args_valid = true;
+
+    if (use_force && argc < 3) {
+        args_valid = false;
+        goto out;
+    }
+
+    if (argc < 2) {
+        args_valid = false;
+    }
+
+out:
+    return args_valid;
+}
+
 int main(int argc, char* argv[])
 {
-    if (argc < 2) {
-        fprintf(stderr, "Usage: " ME " <directory 1>, <directory 2>, ...\n");
+    size_t arg_dir;
+
+    if (argc > 1 && !strcmp(argv[1], "-f")) {
+        use_force = true;
+        arg_dir = 2;
+    } else {
+        arg_dir = 1;
+    }
+
+    if (!(check_args(argc, argv))) {
+        fprintf(stderr, "Usage: " ME " [OPTION]... DIRECTORY...\n");
+        fprintf(stderr, "Reap (remove) files in the given directories\n\n");
+        fprintf(stderr, "-f\tremove files regardless of file modification time and date\n");
         return EXIT_FAILURE;
     }
 
-    open_files = open_files_list_new(&argv[1]);
+    open_files = open_files_list_new(&argv[arg_dir]);
 
-    return reap(&argv[1]);
+    return reap(&argv[arg_dir]);
 
     // NOTE: we leak open_files but we are going to exit.
 }
