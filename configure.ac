@@ -1,5 +1,5 @@
 # Package name and version
-AC_INIT(dsme, 0.61.47)
+AC_INIT(dsme, 0.61.48)
 
 AM_INIT_AUTOMAKE
 
