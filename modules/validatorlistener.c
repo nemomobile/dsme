@@ -65,8 +65,10 @@ static bool is_basename_in_list(const char* file, GSList* list);
 
 
 static int         validator_fd = -1; // TODO: make local in start_listening
-static GIOChannel* channel         = 0;
-static GSList*     mandatory_files = 0;
+static GIOChannel* channel      = 0;
+
+static bool        got_mandatory_files = false;
+static GSList*     mandatory_files     = 0;
 
 
 static void go_to_malf(const char* component, const char* details)
@@ -194,7 +196,7 @@ static gboolean handle_validator_message(GIOChannel*  source,
             parse_validator_message(NLMSG_DATA(nlh), &component, &details);
 
             // if a list of mandatory files exists; check against it
-            if (!mandatory_files                     ||
+            if (!got_mandatory_files                 ||
                 is_in_list(details, mandatory_files) ||
                 is_basename_in_list(component, mandatory_files))
             {
@@ -376,9 +378,13 @@ void module_init(module_t* handle)
     if (!read_mandatory_file_list(DSME_CONFIG_VALIDATED_PATH, &mandatory_files))
     {
         dsme_log(LOG_WARNING, "failed to load the list of mandatory files");
-    } else if (!start_listening_to_validator()) {
-        dsme_log(LOG_CRIT, "failed to start listening to Validator");
-        // TODO: go_to_malf();
+    } else {
+        got_mandatory_files = true;
+
+        if (!start_listening_to_validator()) {
+            dsme_log(LOG_CRIT, "failed to start listening to Validator");
+            go_to_malf("dsme", "failed to start listening to Validator");
+        }
     }
 }
 
