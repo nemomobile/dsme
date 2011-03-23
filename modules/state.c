@@ -667,9 +667,11 @@ DSME_HANDLER(DSM_MSGTYPE_SET_CHARGER_STATE, conn, msg)
 
 DSME_HANDLER(DSM_MSGTYPE_SET_USB_STATE, conn, msg)
 {
-    mounted_to_pc = msg->mounted_to_pc;
+    if (mounted_to_pc != msg->mounted_to_pc) {
+        mounted_to_pc  = msg->mounted_to_pc;
 
-    dsme_log(LOG_INFO, "%smounted over USB", mounted_to_pc ? "" : "not ");
+        dsme_log(LOG_INFO, "%smounted over USB", mounted_to_pc ? "" : "not ");
+    }
 }
 
 
