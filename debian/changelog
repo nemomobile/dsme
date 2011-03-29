@@ -1,3 +1,10 @@
+dsme (0.61.49) unstable; urgency=low
+
+  [ Matias Muhonen ]
+  * Use ftw64() instead of ftw() in rpdir (Fixes: NB#241279)
+
+ -- Matias Muhonen <ext-matias.muhonen@nokia.com>  Tue, 29 Mar 2011 13:33:38 +0000
+
 dsme (0.61.48) unstable; urgency=low
 
   * Accept a mandatory list with no binary names (Fixes: NB#232110)
