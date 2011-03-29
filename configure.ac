@@ -128,7 +128,7 @@ AC_CHECK_LIB([rt], [clock_nanosleep], [AC_MSG_NOTICE([got librt])], AC_MSG_FAILU
 AC_CHECK_LIB([dsme], [dsmesock_init], [AC_MSG_NOTICE([got libdsme])], AC_MSG_FAILURE([libdsme required!]), [$GLIB_LIBS])
 
 # Check headers
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h stdint.h stdlib.h \
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h ftw.h inttypes.h limits.h stdint.h stdlib.h \
                   string.h strings.h sys/ioctl.h sys/socket.h sys/time.h    \
                   syslog.h unistd.h utmpx.h])
 
@@ -151,7 +151,7 @@ AC_FUNC_FORK
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 AC_FUNC_STRTOD
-AC_CHECK_FUNCS([atexit clock_gettime dup2 gettimeofday inet_ntoa memmove        \
+AC_CHECK_FUNCS([atexit clock_gettime dup2 ftw64 gettimeofday inet_ntoa memmove        \
                 memset realpath select setenv socket strcasecmp strdup strerror \
                 strndup strpbrk strrchr strstr strtoul uname utmpxname])
 
