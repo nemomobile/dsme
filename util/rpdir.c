@@ -185,7 +185,7 @@ static bool is_open(const char* file)
     return bsearch(&file, open_files, num_files, sizeof *open_files, string_cmp);
 }
 
-static int reaper(const char *file, const struct stat *sb, int flag)
+static int reaper(const char *file, const struct stat64 *sb, int flag)
 {
     if (flag != FTW_F) {
         #ifdef DEBUG
@@ -239,8 +239,8 @@ static int reap(char* dirs[])
     checkpoint = curt - TIMEOUT;
 
     for (i = 0; dirs[i]; i++) {
-        if (ftw(dirs[i], reaper, MAX_FTW_FDS) != 0) {
-            fprintf(stderr,  ME "ERROR traversing '%s': ftw() failed: %m\n",
+        if (ftw64(dirs[i], reaper, MAX_FTW_FDS) != 0) {
+            fprintf(stderr,  ME "ERROR traversing '%s': ftw64() failed: %m\n",
                     dirs[i]);
         }
     }
