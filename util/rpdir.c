@@ -210,16 +210,14 @@ static int reaper(const char *file, const struct stat *sb, int flag)
     if (use_force || (sb->st_mtime < checkpoint && sb->st_atime < checkpoint)) {
         if (is_open(file)) {
             #ifdef DEBUG
-                fprintf(stderr, "file '%s' size %ld mod_age=%lus acc_age=%lus but still open, not deleting",
+                fprintf(stderr, "file '%s' size %ld mod_age=%lus acc_age=%lus but still open, not deleting\n",
                         file, sb->st_size, curt-sb->st_mtime, curt-sb->st_atime);
             #endif
             goto out;
         }
 
         if (unlink(file) != 0) {
-            #ifdef DEBUG
-                fprintf(stderr, "failed to unlink file '%s', %m", file);
-            #endif
+            fprintf(stderr, ME "failed to unlink file '%s': %m\n", file);
             goto out;
         }
     } else {
@@ -241,7 +239,10 @@ static int reap(char* dirs[])
     checkpoint = curt - TIMEOUT;
 
     for (i = 0; dirs[i]; i++) {
-        ftw(dirs[i], reaper, MAX_FTW_FDS);
+        if (ftw(dirs[i], reaper, MAX_FTW_FDS) != 0) {
+            fprintf(stderr,  ME "ERROR traversing '%s': ftw() failed: %m\n",
+                    dirs[i]);
+        }
     }
 
     return EXIT_SUCCESS;
