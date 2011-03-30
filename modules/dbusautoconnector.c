@@ -28,6 +28,7 @@
 #include "dbusproxy.h"
 #include "dsme/modules.h"
 #include "dsme/logging.h"
+#include "dsme/timers.h"
 
 #include <dsme/protocol.h>
 #include <unistd.h>
@@ -46,9 +47,10 @@
 static void stop_dbus_watch(void);
 
 
-static int         inotify_fd = -1;
-static int         watch_fd   = -1;
-static GIOChannel* channel    =  0;
+static int          inotify_fd    = -1;
+static int          watch_fd      = -1;
+static GIOChannel*  channel       =  0;
+static dsme_timer_t connect_timer = 0;
 
 
 static void connect_to_dbus(void)
@@ -57,6 +59,26 @@ static void connect_to_dbus(void)
 
     broadcast_internally(&msg);
 }
+
+static int connect_to_dbus_if_available(void* dummy)
+{
+    if (dsme_dbus_is_available()) {
+        connect_to_dbus();
+
+        return 0; // connected; stop trying
+    } else {
+        return 1; // not connected; keep trying
+    }
+}
+
+static void try_connecting_to_dbus_until_successful(void)
+{
+    if (connect_to_dbus_if_available(0) != 0) {
+        // D-Bus not available yet; keep trying once a second until successful
+        connect_timer = dsme_create_timer(1, connect_to_dbus_if_available, 0);
+    }
+}
+
 
 static gboolean handle_inotify_event(GIOChannel*  source,
                                      GIOCondition condition,
@@ -82,7 +104,7 @@ static gboolean handle_inotify_event(GIOChannel*  source,
                 strcmp(event->name, DSME_SYSTEM_BUS_FILE) == 0)
             {
                 dsme_log(LOG_INFO, "D-Bus System bus socket created; connect");
-                connect_to_dbus();
+                try_connecting_to_dbus_until_successful();
                 keep_watching = false; // TODO: add support for re-connect
             }
         }
@@ -174,6 +196,7 @@ void module_init(module_t* handle)
         set_up_watch_for_dbus();
         if (dsme_dbus_is_available()) {
             connect_to_dbus();
+            stop_dbus_watch();
         }
     }
 }
@@ -181,6 +204,10 @@ void module_init(module_t* handle)
 void module_fini(void)
 {
     stop_dbus_watch();
+
+    if (connect_timer) {
+        dsme_destroy_timer(connect_timer);
+    }
 
     dsme_log(LOG_DEBUG, "dbusautoconnector.so unloaded");
 }
