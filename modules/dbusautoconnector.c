@@ -46,9 +46,9 @@
 static void stop_dbus_watch(void);
 
 
-int         inotify_fd = -1;
-int         watch_fd   = -1;
-GIOChannel* channel    =  0;
+static int         inotify_fd = -1;
+static int         watch_fd   = -1;
+static GIOChannel* channel    =  0;
 
 
 static void connect_to_dbus(void)
