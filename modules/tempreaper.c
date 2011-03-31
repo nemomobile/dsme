@@ -130,7 +130,7 @@ static void temp_reaper_finished(GPid pid, gint status, gpointer unused)
         return;
     }
 
-    dsme_log(LOG_DEBUG, "tempreaper: reaper process finished (PID %i).", pid);
+    dsme_log(LOG_INFO, "tempreaper: reaper process finished (PID %i).", pid);
 }
 
 static bool disk_space_running_out(const DSM_MSGTYPE_DISK_SPACE* msg)
@@ -156,6 +156,9 @@ DSME_HANDLER(DSM_MSGTYPE_DISK_SPACE, conn, msg)
 
         if (reaper_pid != -1) {
             g_child_watch_add(reaper_pid, temp_reaper_finished, temp_reaper_finished);
+
+            dsme_log(LOG_INFO, "tempreaper: reaper process started (PID %i).",
+                     reaper_pid);
         }
     }
 }
