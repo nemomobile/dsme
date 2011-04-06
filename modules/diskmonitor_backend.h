@@ -1,5 +1,5 @@
 /**
-   @file diskmonitor.h
+   @file diskmonitor_backend.h
 
    <p>
    Copyright (C) 2011 Nokia Corporation.
@@ -21,23 +21,17 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef DSME_DISKMONITOR_H
-#define DSME_DISKMONITOR_H
+#ifndef DSME_DISKMONITOR_BACKEND_H
+#define DSME_DISKMONITOR_BACKEND_H
 
-#include <dsme/messages.h>
-
-typedef struct {
-  DSMEMSG_PRIVATE_FIELDS
-  /*
-   * percent of disk capacity used (0-100)
-   */
-  int     blocks_percent_used;
-
-  // mount_path is passed in extra.
-} DSM_MSGTYPE_DISK_SPACE;
-
-enum {
-  DSME_MSG_ENUM(DSM_MSGTYPE_DISK_SPACE, 0x00002000),
-};
-
+#ifdef __cplusplus
+extern "C" {
 #endif
+
+void check_disk_space_usage(void);
+
+#ifdef __cplusplus
+};
+#endif
+
+#endif /* DSME_DISKMONITOR_BACKEND_H */

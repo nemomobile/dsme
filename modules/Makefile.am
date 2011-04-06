@@ -136,7 +136,10 @@ powerontimer_la_CFLAGS =  $(AM_CFLAGS) $(GLIB_CFLAGS)
 powerontimer_la_LIBADD = -lcal -lrt
 endif
 
-diskmonitor_la_SOURCES = diskmonitor.c
+diskmonitor_la_SOURCES = diskmonitor.c \
+				diskmonitor_backend.c \
+				diskmonitor.h \
+				diskmonitor_backend.h
 
 tempreaper_la_SOURCES = tempreaper.c
 tempreaper_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
