@@ -26,6 +26,9 @@
 // to send the base_boot_done signal:
 // dbus-send --system --type=signal /com/nokia/startup/signal com.nokia.startup.signal.base_boot_done
 
+// to request a disk space check:
+// dbus-send --system --type=method_call --dest=com.nokia.diskmonitor /com/nokia/diskmonitor/request com.nokia.diskmonitor.request.req_check
+
 #ifndef __cplusplus
 #define _GNU_SOURCE
 #endif
@@ -42,6 +45,7 @@
 #include "heartbeat.h"
 
 #include <stdbool.h>
+#include <stdlib.h>
 
 static bool init_done_received = false;
 
@@ -63,6 +67,12 @@ static const char diskmonitor_disk_space_change_ind[] = "disk_space_change_ind";
 
 static void req_check(const DsmeDbusMessage* request, DsmeDbusMessage** reply)
 {
+    char* sender = dsme_dbus_endpoint_name(request);
+    dsme_log(LOG_NOTICE,
+             "diskmonitor: check request received over D-Bus from %s",
+             sender ? sender : "(unknown)");
+    free(sender);
+
     check_disk_space_usage();
 }
 
