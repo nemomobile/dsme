@@ -48,6 +48,7 @@
 #include <stdlib.h>
 
 static bool init_done_received = false;
+static bool device_active      = false;
 
 static bool dbus_methods_bound = false;
 static bool dbus_signals_bound = false;
@@ -86,14 +87,24 @@ static const dsme_dbus_binding_t methods[] =
 
 static void init_done_ind(const DsmeDbusMessage* ind)
 {
-    dsme_log(LOG_DEBUG, "base_boot_done");
+    dsme_log(LOG_DEBUG, "diskmonitor: base_boot_done received");
 
     init_done_received = true;
 }
 
+static void mce_inactivity_sig(const DsmeDbusMessage* sig)
+{
+    const int inactive = dsme_dbus_message_get_int(sig);
+
+    device_active = !inactive;
+
+    dsme_log(LOG_DEBUG, "diskmonitor: mce_inactivity_sig received");
+}
+
 static const dsme_dbus_signal_binding_t signals[] =
 {
-    { init_done_ind, "com.nokia.startup.signal", "base_boot_done" },
+    { init_done_ind,      "com.nokia.startup.signal", "base_boot_done" },
+    { mce_inactivity_sig, "com.nokia.mce.signal",     "system_inactivity_ind" },
     { 0, 0 }
 };
 
