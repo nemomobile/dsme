@@ -54,6 +54,38 @@ static bool dbus_methods_bound = false;
 static bool dbus_signals_bound = false;
 
 /* ========================================================================= *
+ * Helpers
+ * ========================================================================= */
+
+static int disk_check_interval(void)
+{
+    int interval;
+
+    if (device_active) {
+        interval = 300;   /* 5 minutes */
+    } else {
+        interval = 1800;  /* 30 minutes */
+    }
+    return interval;
+}
+
+static void schedule_next_wakeup(void)
+{
+    DSM_MSGTYPE_WAIT msg = DSME_MSG_INIT(DSM_MSGTYPE_WAIT);
+    msg.req.mintime = disk_check_interval();
+    msg.req.maxtime = msg.req.mintime + 120;
+    msg.req.pid     = 0;
+    msg.data        = 0;
+
+    broadcast_internally(&msg);
+}
+
+static bool init_done(void)
+{
+    return init_done_received;
+}
+
+/* ========================================================================= *
  * D-Bus Query API
  * ========================================================================= */
 
@@ -94,9 +126,15 @@ static void init_done_ind(const DsmeDbusMessage* ind)
 
 static void mce_inactivity_sig(const DsmeDbusMessage* sig)
 {
-    const int inactive = dsme_dbus_message_get_int(sig);
+    const int inactive                  = dsme_dbus_message_get_int(sig);
+    const bool new_device_active_state  = !inactive;
 
-    device_active = !inactive;
+    if (device_active != new_device_active_state) {
+        device_active = new_device_active_state;
+
+        /* activity state changed; adjust the schedule */
+        schedule_next_wakeup();
+    }
 
     dsme_log(LOG_DEBUG, "diskmonitor: mce_inactivity_sig received");
 }
@@ -107,30 +145,6 @@ static const dsme_dbus_signal_binding_t signals[] =
     { mce_inactivity_sig, "com.nokia.mce.signal",     "system_inactivity_ind" },
     { 0, 0 }
 };
-
-/* ========================================================================= *
- * Helpers
- * ========================================================================= */
-
-static void schedule_next_wakeup(void)
-{
-    /* Don't cause too frequent wakeups for checking the disks;
-     * the check is now twice in an hour.
-     */
-
-    DSM_MSGTYPE_WAIT msg = DSME_MSG_INIT(DSM_MSGTYPE_WAIT);
-    msg.req.mintime = 1800; /* 30 minutes */
-    msg.req.maxtime = msg.req.mintime + 120;
-    msg.req.pid     = 0;
-    msg.data        = 0;
-
-    broadcast_internally(&msg);
-}
-
-static bool init_done(void)
-{
-    return init_done_received;
-}
 
 /* ========================================================================= *
  * Internal DSME event handling
