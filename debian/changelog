@@ -1,3 +1,10 @@
+dsme (0.61.50) unstable; urgency=low
+
+  [ Matias Muhonen ]
+  * Storage space monitor (Fixes: NB#241806)
+
+ -- Matias Muhonen <ext-matias.muhonen@nokia.com>  Thu, 07 Apr 2011 09:27:23 +0000
+
 dsme (0.61.49) unstable; urgency=low
 
   [ Matias Muhonen ]
