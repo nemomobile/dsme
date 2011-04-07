@@ -28,9 +28,8 @@
 
 // to request a disk space check:
 // dbus-send --system --print-reply --dest=com.nokia.diskmonitor /com/nokia/diskmonitor/request com.nokia.diskmonitor.request.req_check
-
-#ifndef __cplusplus
-#define _GNU_SOURCE
+#ifndef _GNU_SOURCE
+# define _GNU_SOURCE
 #endif
 
 #include <iphbd/iphb_internal.h>
@@ -46,12 +45,19 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
+#include <time.h>
 
-static bool init_done_received = false;
-static bool device_active      = false;
+static bool init_done_received           = false;
+static bool device_active                = false;
 
-static bool dbus_methods_bound = false;
-static bool dbus_signals_bound = false;
+static bool dbus_methods_bound           = false;
+static bool dbus_signals_bound           = false;
+
+static time_t last_check_time            = 0;
+
+static const int ACTIVE_CHECK_INTERVAL   = 300;   /* 5 minutes */
+static const int IDLE_CHECK_INTERVAL     = 1800;  /* 30 minutes */
+static const int MAXTIME_FROM_LAST_CHECK = 900;   /* 15 minutes */
 
 /* ========================================================================= *
  * Helpers
@@ -62,9 +68,9 @@ static int disk_check_interval(void)
     int interval;
 
     if (device_active) {
-        interval = 300;   /* 5 minutes */
+        interval = ACTIVE_CHECK_INTERVAL;
     } else {
-        interval = 1800;  /* 30 minutes */
+        interval = IDLE_CHECK_INTERVAL;
     }
     return interval;
 }
@@ -80,9 +86,11 @@ static void schedule_next_wakeup(void)
     broadcast_internally(&msg);
 }
 
-static bool init_done(void)
+static void check_disk_space(void)
 {
-    return init_done_received;
+    if (init_done_received) {
+        check_disk_space_usage(), last_check_time = time(0);
+    }
 }
 
 /* ========================================================================= *
@@ -106,7 +114,7 @@ static void req_check(const DsmeDbusMessage* request, DsmeDbusMessage** reply)
              sender ? sender : "(unknown)");
     free(sender);
 
-    check_disk_space_usage();
+    check_disk_space();
 
     *reply = dsme_dbus_reply_new(request);
 }
@@ -128,15 +136,27 @@ static void mce_inactivity_sig(const DsmeDbusMessage* sig)
 {
     const int inactive                  = dsme_dbus_message_get_int(sig);
     const bool new_device_active_state  = !inactive;
-
-    if (device_active != new_device_active_state) {
-        device_active = new_device_active_state;
-
-        /* activity state changed; adjust the schedule */
-        schedule_next_wakeup();
-    }
+    time_t now                          = time(0);
+    int seconds_from_last_check         = (now - last_check_time);
 
     dsme_log(LOG_DEBUG, "diskmonitor: mce_inactivity_sig received");
+
+    if (new_device_active_state == device_active) {
+        /* no change in the inactivity state; don't adjust the schedule */
+        return;
+    }
+
+    device_active = new_device_active_state;
+
+    if (device_active && seconds_from_last_check >= MAXTIME_FROM_LAST_CHECK) {
+        dsme_log(LOG_DEBUG, "diskmonitor: more than %i seconds from the last check, checking",
+                 seconds_from_last_check);
+
+        check_disk_space();
+    }
+
+    /* adjust the wake-up schedule */
+    schedule_next_wakeup();
 }
 
 static const dsme_dbus_signal_binding_t signals[] =
@@ -152,9 +172,7 @@ static const dsme_dbus_signal_binding_t signals[] =
 
 DSME_HANDLER(DSM_MSGTYPE_WAKEUP, client, msg)
 {
-    if (init_done()) {
-        check_disk_space_usage();
-    }
+    check_disk_space();
 
     schedule_next_wakeup();
 }
