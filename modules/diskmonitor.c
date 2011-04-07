@@ -27,7 +27,7 @@
 // dbus-send --system --type=signal /com/nokia/startup/signal com.nokia.startup.signal.base_boot_done
 
 // to request a disk space check:
-// dbus-send --system --type=method_call --dest=com.nokia.diskmonitor /com/nokia/diskmonitor/request com.nokia.diskmonitor.request.req_check
+// dbus-send --system --print-reply --dest=com.nokia.diskmonitor /com/nokia/diskmonitor/request com.nokia.diskmonitor.request.req_check
 
 #ifndef __cplusplus
 #define _GNU_SOURCE
@@ -74,6 +74,8 @@ static void req_check(const DsmeDbusMessage* request, DsmeDbusMessage** reply)
     free(sender);
 
     check_disk_space_usage();
+
+    *reply = dsme_dbus_reply_new(request);
 }
 
 static const dsme_dbus_binding_t methods[] =
@@ -156,8 +158,8 @@ DSME_HANDLER(DSM_MSGTYPE_DISK_SPACE, conn, msg)
                              diskmonitor_sig_interface,
                              diskmonitor_disk_space_change_ind);
 
-    dsme_dbus_message_append_int(sig, msg->blocks_percent_used);
     dsme_dbus_message_append_string(sig, mount_path);
+    dsme_dbus_message_append_int(sig, msg->blocks_percent_used);
     dsme_dbus_signal_emit(sig);
 }
 
