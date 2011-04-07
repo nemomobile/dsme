@@ -28,6 +28,7 @@
 
 // to request a disk space check:
 // dbus-send --system --print-reply --dest=com.nokia.diskmonitor /com/nokia/diskmonitor/request com.nokia.diskmonitor.request.req_check
+
 #ifndef _GNU_SOURCE
 # define _GNU_SOURCE
 #endif
@@ -79,7 +80,7 @@ static void schedule_next_wakeup(void)
 {
     DSM_MSGTYPE_WAIT msg = DSME_MSG_INIT(DSM_MSGTYPE_WAIT);
     msg.req.mintime = disk_check_interval();
-    msg.req.maxtime = msg.req.mintime + 120;
+    msg.req.maxtime = msg.req.mintime + 60;
     msg.req.pid     = 0;
     msg.data        = 0;
 
