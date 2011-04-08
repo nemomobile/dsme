@@ -33,6 +33,8 @@
 # define _GNU_SOURCE
 #endif
 
+#define LOGPFIX "diskmonitor: "
+
 #include <iphbd/iphb_internal.h>
 
 #include "dsme_dbus.h"
@@ -44,8 +46,12 @@
 #include "dsme/logging.h"
 #include "heartbeat.h"
 
+#include <sys/time.h>
+
+#include <errno.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 static bool init_done_received           = false;
@@ -64,6 +70,16 @@ static const int CHECK_THRESHOLD         = 60;    /* This is how often we allow 
 /* ========================================================================= *
  * Helpers
  * ========================================================================= */
+
+static void monotime_get(struct timeval *tv)
+{
+    struct timespec ts = { 0, 0 };
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) == -1) {
+        dsme_log(LOG_WARNING, LOGPFIX"%s: %s", "CLOCK_MONOTONIC",
+                 strerror(errno));
+    }
+    TIMESPEC_TO_TIMEVAL(tv, &ts);
+}
 
 static int disk_check_interval(void)
 {
@@ -90,8 +106,11 @@ static void schedule_next_wakeup(void)
 
 static void check_disk_space(void)
 {
+    struct timeval monotime;
+    monotime_get(&monotime);
+
     if (init_done_received) {
-        check_disk_space_usage(), last_check_time = time(0);
+        check_disk_space_usage(), last_check_time = monotime.tv_sec;
     }
 }
 
@@ -110,13 +129,11 @@ static const char diskmonitor_disk_space_change_ind[] = "disk_space_change_ind";
 
 static void req_check(const DsmeDbusMessage* request, DsmeDbusMessage** reply)
 {
-    time_t now                  = time(0);
-    int seconds_from_last_check = (now - last_check_time);
-    char* sender                = dsme_dbus_endpoint_name(request);
-    dsme_log(LOG_NOTICE,
-             "diskmonitor: check request received over D-Bus from %s",
-             sender ? sender : "(unknown)");
-    free(sender);
+    struct timeval monotime;
+    int seconds_from_last_check;
+
+    monotime_get(&monotime);
+    seconds_from_last_check = monotime.tv_sec - last_check_time;
 
     if (seconds_from_last_check >= CHECK_THRESHOLD) {
         check_disk_space();
@@ -124,7 +141,7 @@ static void req_check(const DsmeDbusMessage* request, DsmeDbusMessage** reply)
         schedule_next_wakeup();
     } else {
         dsme_log(LOG_DEBUG,
-                 "diskmonitor: %i seconds from the last disk space check request, skip this request",
+                 LOGPFIX"%i seconds from the last disk space check request, skip this request",
                  seconds_from_last_check);
     }
 
@@ -139,7 +156,7 @@ static const dsme_dbus_binding_t methods[] =
 
 static void init_done_ind(const DsmeDbusMessage* ind)
 {
-    dsme_log(LOG_DEBUG, "diskmonitor: base_boot_done received");
+    dsme_log(LOG_DEBUG, LOGPFIX"base_boot_done received");
 
     init_done_received = true;
 }
@@ -148,10 +165,13 @@ static void mce_inactivity_sig(const DsmeDbusMessage* sig)
 {
     const int inactive                  = dsme_dbus_message_get_int(sig);
     const bool new_device_active_state  = !inactive;
-    time_t now                          = time(0);
-    int seconds_from_last_check         = (now - last_check_time);
+    struct timeval monotime;
+    int seconds_from_last_check;
 
-    dsme_log(LOG_DEBUG, "diskmonitor: mce_inactivity_sig received");
+    monotime_get(&monotime);
+    seconds_from_last_check = monotime.tv_sec - last_check_time;
+
+    dsme_log(LOG_DEBUG, LOGPFIX"mce_inactivity_sig received");
 
     if (new_device_active_state == device_active) {
         /* no change in the inactivity state; don't adjust the schedule */
@@ -161,7 +181,7 @@ static void mce_inactivity_sig(const DsmeDbusMessage* sig)
     device_active = new_device_active_state;
 
     if (device_active && seconds_from_last_check >= MAXTIME_FROM_LAST_CHECK) {
-        dsme_log(LOG_DEBUG, "diskmonitor: more than %i seconds from the last check, checking",
+        dsme_log(LOG_DEBUG, LOGPFIX"more than %i seconds from the last check, checking",
                  seconds_from_last_check);
 
         check_disk_space();
@@ -191,7 +211,7 @@ DSME_HANDLER(DSM_MSGTYPE_WAKEUP, client, msg)
 
 DSME_HANDLER(DSM_MSGTYPE_DBUS_CONNECT, client, msg)
 {
-    dsme_log(LOG_DEBUG, "diskmonitor: DBUS_CONNECT");
+    dsme_log(LOG_DEBUG, LOGPFIX"DBUS_CONNECT");
 
     dsme_dbus_bind_methods(&dbus_methods_bound, methods, diskmonitor_service, diskmonitor_req_interface);
     dsme_dbus_bind_signals(&dbus_signals_bound, signals);
@@ -199,7 +219,7 @@ DSME_HANDLER(DSM_MSGTYPE_DBUS_CONNECT, client, msg)
 
 DSME_HANDLER(DSM_MSGTYPE_DBUS_DISCONNECT, client, msg)
 {
-   dsme_log(LOG_DEBUG, "diskmonitor: DBUS_DISCONNECT");
+   dsme_log(LOG_DEBUG, LOGPFIX"DBUS_DISCONNECT");
 
    dsme_dbus_unbind_methods(&dbus_methods_bound, methods, diskmonitor_service, diskmonitor_req_interface);
    dsme_dbus_unbind_signals(&dbus_signals_bound, signals);
