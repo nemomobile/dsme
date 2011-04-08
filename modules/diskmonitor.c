@@ -56,9 +56,10 @@ static bool dbus_signals_bound           = false;
 
 static time_t last_check_time            = 0;
 
-static const int ACTIVE_CHECK_INTERVAL   = 300;   /* 5 minutes */
-static const int IDLE_CHECK_INTERVAL     = 1800;  /* 30 minutes */
-static const int MAXTIME_FROM_LAST_CHECK = 900;   /* 15 minutes */
+static const int ACTIVE_CHECK_INTERVAL   = 300;   /* When the device is used, this is how often we check the disk space */
+static const int IDLE_CHECK_INTERVAL     = 1800;  /* When the device is not used, this is how often we check the disk space */
+static const int MAXTIME_FROM_LAST_CHECK = 900;   /* After this many seconds from the last check, force a check when the device is actived */
+static const int CHECK_THRESHOLD         = 60;    /* This is how often we allow disk space check to be requested */
 
 /* ========================================================================= *
  * Helpers
@@ -109,13 +110,23 @@ static const char diskmonitor_disk_space_change_ind[] = "disk_space_change_ind";
 
 static void req_check(const DsmeDbusMessage* request, DsmeDbusMessage** reply)
 {
-    char* sender = dsme_dbus_endpoint_name(request);
+    time_t now                  = time(0);
+    int seconds_from_last_check = (now - last_check_time);
+    char* sender                = dsme_dbus_endpoint_name(request);
     dsme_log(LOG_NOTICE,
              "diskmonitor: check request received over D-Bus from %s",
              sender ? sender : "(unknown)");
     free(sender);
 
-    check_disk_space();
+    if (seconds_from_last_check >= CHECK_THRESHOLD) {
+        check_disk_space();
+
+        schedule_next_wakeup();
+    } else {
+        dsme_log(LOG_DEBUG,
+                 "diskmonitor: %i seconds from the last disk space check request, skip this request",
+                 seconds_from_last_check);
+    }
 
     *reply = dsme_dbus_reply_new(request);
 }
