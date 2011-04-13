@@ -782,10 +782,17 @@ void dsme_dbus_bind_signals(bool*                             bound_already,
       const dsme_dbus_signal_binding_t* binding = bindings;
 
       while (binding && binding->handler) {
-          if (!client_bind(client_instance(),
-                           binding->handler,
-                           binding->interface,
-                           binding->name))
+          Client* client;
+
+          if (!(client = client_instance())) {
+              dsme_log(LOG_ERR,
+                       "Could not create D-Bus client for '%s'",
+                       binding->name);
+              // TODO: roll back the ones that succeeded and break?
+          } else if (!client_bind(client,
+                                  binding->handler,
+                                  binding->interface,
+                                  binding->name))
           {
               dsme_log(LOG_ERR, "D-Bus binding for '%s' failed", binding->name);
               // TODO: roll back the ones that succeeded and break?
