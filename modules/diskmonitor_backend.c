@@ -46,6 +46,7 @@ static disk_use_limit_t disk_space_use_limits[] = {
    /* [mount path, max usage percent] */
    {  "/",                        90 },
    {  "/tmp",                     95 },
+   {  "/home/user",               95 },
    {  "/home/user/MyDocs",        95 }
 };
 
