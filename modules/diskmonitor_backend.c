@@ -45,9 +45,9 @@ typedef struct {
 static disk_use_limit_t disk_space_use_limits[] = {
    /* [mount path, max usage percent] */
    {  "/",                        90 },
-   {  "/tmp",                     95 },
-   {  "/home",                    95 },
-   {  "/home/user/MyDocs",        95 }
+   {  "/tmp",                     90 },
+   {  "/home",                    90 },
+   {  "/home/user/MyDocs",        90 }
 };
 
 static disk_use_limit_t* find_use_limit_for_mount(const char* mntpoint)
