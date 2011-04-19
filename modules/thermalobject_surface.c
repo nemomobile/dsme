@@ -39,14 +39,19 @@
 static bool get_surface_temperature(thermal_object_t*         thermal_object,
                                     temperature_handler_fn_t* callback);
 
+/* thermal limits for device surface */
+/*
+ * Based on https://projects.maemo.org/bugzilla/show_bug.cgi?id=231167#c9
+ * on 2011-04-19:
+ */
 static thermal_object_configuration_t surface_thermal_conf = {
   "surface",
   {
-      /* (min, max], [mintime, maxtime] */
-      {    -1,  55,        55,      60 }, /* NORMAL  */
-      {    55,  57,        55,      60 }, /* WARNING */
-      {    57,  59,        20,      30 }, /* ALERT   */
-      {    59,  99,        20,      30 }, /* FATAL   */
+      /* [min, max], [mintime, maxtime] */
+      {    -1,  56,        55,      60 }, /* NORMAL  */
+      {    56,  59,        55,      60 }, /* WARNING */
+      {    59,  63,        20,      30 }, /* ALERT   */
+      {    63,  99,        20,      30 }, /* FATAL   */
   },
   get_surface_temperature
 };
