@@ -1,6 +1,6 @@
 dsme (0.61.53) unstable; urgency=low
 
-  *  Bug 249323 - Need to add feature to system heartbeat to synchronize multiple clients in fixed time 
+  *  Fixes: NB#249323 - Need to add feature to system heartbeat to synchronize multiple clients in fixed time 
 
  -- Raimo Vuonnala <raimo.vuonnala@nokia.com>  Thu, 21 Apr 2011 11:02:27 +0300
 
