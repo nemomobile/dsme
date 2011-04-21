@@ -49,6 +49,8 @@
 #include <sys/un.h>
 #include <sys/time.h>
 
+#include <time.h>
+
 #include <glib.h>
 
 
@@ -101,6 +103,8 @@ static int kernelfd = -1; /* handle to the kernel */
 static int epollfd  = -1; /* handle to the epoll instance */
 
 static dsme_timer_t wakeup_timer = 0;
+
+                             static struct timespec ts_started = {0, 0};
 
 
 /**
@@ -168,6 +172,9 @@ static void close_kernel_fd(void)
 static bool start_service(void)
 {
     struct sockaddr_un addr;
+
+    (void)clock_gettime(CLOCK_MONOTONIC, &ts_started);
+
 
     listenfd = socket(PF_UNIX, SOCK_STREAM, 0);
     if (listenfd < 0) {
@@ -556,15 +563,16 @@ drop_client_and_fail:
     return false;
 }
 
-static bool handle_wait_req(const struct _iphb_wait_req_t* req,
+static bool handle_wait_req(const struct _iphb_wait_req_t* req_const,
                             client_t*                      client,
                             time_t                         now)
 {
     bool client_woken = false;
+    struct _iphb_wait_req_t req = *req_const;
 
-    if (req->maxtime == 0 && req->mintime == 0) {
+    if (req.maxtime == 0 && req.mintime == 0) {
         if (!client->pid) {
-            client->pid = req->pid;
+            client->pid = req.pid;
             dsme_log(LOG_DEBUG,
                      "client with PID %lu connected",
                      (unsigned long)client->pid);
@@ -575,29 +583,48 @@ static bool handle_wait_req(const struct _iphb_wait_req_t* req,
             client_woken = true;
         }
         client->wait_started = 0;
-        client->mintime      = req->mintime;
-        client->maxtime      = req->maxtime;
+        client->mintime      = req.mintime;
+        client->maxtime      = req.maxtime;
     } else {
-        if (req->mintime && req->maxtime == req->mintime) {
-            dsme_log(client->pid ? LOG_WARNING : LOG_DEBUG,
+        if (req.mintime && req.maxtime == req.mintime) {
+            struct timespec ts_now;
+            int             slots_passed;
+
+            dsme_log(LOG_DEBUG,
                      "client with pid %lu signaled interest of waiting with"
-                       " nonoptimal times (min=%d/max=%d)",
+                       " fixed time %d",
                      (unsigned long)client->pid,
-                     (int)req->mintime,
-                     (int)req->maxtime);
+                     (int)req.mintime);
+
+            (void)clock_gettime(CLOCK_MONOTONIC, &ts_now);
+
+            slots_passed = (ts_now.tv_sec - ts_started.tv_sec) / req_const->mintime;       
+            req.mintime = ts_started.tv_sec + (slots_passed + 1)*req_const->mintime - ts_now.tv_sec;
+            if (req.mintime <= 1)
+                req.mintime = ts_started.tv_sec + (slots_passed + 2)*req_const->mintime - ts_now.tv_sec;
+            req.maxtime = req.mintime + 1; /* allow tolerance because of math above */
+
+            dsme_log(LOG_DEBUG,
+                     "fixed reqtimes for client with pid %lu"
+                       " (min=%d/max=%d)",
+                     (unsigned long)client->pid,
+                     (int)req.mintime,
+                     (int)req.maxtime);
+
+
         } else {
             dsme_log(LOG_DEBUG,
                      "client with pid %lu signaled interest of waiting"
                        " (min=%d/max=%d)",
                      (unsigned long)client->pid,
-                     (int)req->mintime,
-                     (int)req->maxtime);
+                     (int)req.mintime,
+                     (int)req.maxtime);
         }
 
-        client->pid          = req->pid;
+        client->pid          = req.pid;
         client->wait_started = now;
-        client->mintime      = req->mintime;
-        client->maxtime      = req->maxtime;
+        client->mintime      = req.mintime;
+        client->maxtime      = req.maxtime;
     }
 
     return client_woken;
