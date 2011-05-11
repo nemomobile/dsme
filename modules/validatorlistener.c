@@ -138,6 +138,7 @@ static void parse_validator_message(const char* msg,
     while (p && *p && parse_validator_line(&p, &key, &text)) {
         if (strcmp(key, "Fail") == 0) {
             *vreason = atoi(text);
+            free(text);
         } else if (strcmp(key, "Process") == 0) {
             free(*component);
             *component = text;
@@ -246,6 +247,8 @@ static gboolean handle_validator_message(GIOChannel*  source,
             } else {
                 // the file was not on the list => no MALF
                 dsme_log(LOG_INFO, "OK, not a mandatory file: %s", details);
+                free(component);
+                free(details);
             }
         }
     }
