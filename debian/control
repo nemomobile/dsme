@@ -1,7 +1,7 @@
 Source: dsme
 Section: misc
 Priority: optional
-Maintainer: Semi Malinen <semi.malinen@nokia.com>
+Maintainer: Antti Virtanen <antti.i.virtanen@nokia.com>
 Uploaders: Ismo Laitinen <ismo.laitinen@nokia.com>, David Weinehall <david.weinehall@nokia.com>, Philippe De Swert <philippe.de-swert@nokia.com>
 Build-Depends: debhelper (>= 4.1.0),
  aegis-builder (>= 1.4),
