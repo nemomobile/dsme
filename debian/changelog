@@ -1,3 +1,9 @@
+dsme (0.61.54) unstable; urgency=low
+
+  * Don't malf on no reference hash (Fixes: NB#253870)
+
+ -- Matias Muhonen <ext-matias.muhonen@nokia.com>  Wed, 11 May 2011 07:03:42 +0000
+
 dsme (0.61.53) unstable; urgency=low
 
   *  Fixes: NB#249323 - Need to add feature to system heartbeat to synchronize multiple clients in fixed time 
