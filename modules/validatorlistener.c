@@ -70,6 +70,8 @@ static GIOChannel* channel      = 0;
 static bool        got_mandatory_files = false;
 static GSList*     mandatory_files     = 0;
 
+static const int   VREASON_OK          = 0; // validation ok
+static const int   VREASON_HLIST       = 2; // reference value not found
 
 static void go_to_malf(const char* component, const char* details)
 {
@@ -116,17 +118,27 @@ static bool parse_validator_line(const char** msg, char** key, char** text)
 }
 
 static void parse_validator_message(const char* msg,
+                                    int*        vreason,
                                     char**      component,
                                     char**      details)
 {
+    *vreason   = VREASON_OK;
     *component = 0;
     *details   = 0;
 
     const char* p = msg;
     char*       key;
     char*       text;
+
+    // skip leading space
+    while (p && *p && isspace(*p)) {
+        p++;
+    }
+
     while (p && *p && parse_validator_line(&p, &key, &text)) {
-        if (strcmp(key, "Process") == 0) {
+        if (strcmp(key, "Fail") == 0) {
+            *vreason = atoi(text);
+        } else if (strcmp(key, "Process") == 0) {
             free(*component);
             *component = text;
         } else if (strcmp(key, "File") == 0) {
@@ -144,6 +156,31 @@ static void parse_validator_message(const char* msg,
     if (!*details) {
         *details = strdup("(unknown)");
     }
+}
+
+static bool check_security_malf(int vreason, char* component, char* details)
+{
+    bool success = true;
+
+    // no list of mandatory files => MALF
+    if (!got_mandatory_files) {
+        success = false;
+        goto out;
+    }
+
+    // a list of mandatory files exists; check against it
+    if (is_in_list(details, mandatory_files) ||
+        is_basename_in_list(component, mandatory_files)) {
+
+        // this file was on the list => MALF if the validation failed
+        // because of anything else than a missing reference hash
+        if (vreason != VREASON_HLIST) {
+            success = false;
+        }
+    }
+
+out:
+    return success;
 }
 
 static gboolean handle_validator_message(GIOChannel*  source,
@@ -191,20 +228,15 @@ static gboolean handle_validator_message(GIOChannel*  source,
 
             // TODO: check that the message is from the kernel
 
+            int   vreason;
             char* component;
             char* details;
-            parse_validator_message(NLMSG_DATA(nlh), &component, &details);
+            parse_validator_message(NLMSG_DATA(nlh), &vreason, &component, &details);
 
-            // if a list of mandatory files exists; check against it
-            if (!got_mandatory_files                 ||
-                is_in_list(details, mandatory_files) ||
-                is_basename_in_list(component, mandatory_files))
-            {
-                // either there was no list of mandatory files,
-                // or this file was on the list => MALF
-
+            if (!check_security_malf(vreason, component, details)) {
                 dsme_log(LOG_CRIT,
-                         "Security MALF: %s %s",
+                         "Security MALF: %i %s %s",
+                         vreason,
                          component,
                          details);
 
