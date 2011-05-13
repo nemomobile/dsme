@@ -30,6 +30,7 @@
 
 #include "dsme/dsmesock.h"
 #include "dsme/logging.h"
+#include "dsme/modulebase.h"
 #include "dsme/protocol.h"
 
 #include <glib.h>
@@ -176,10 +177,10 @@ static gboolean accept_client(GIOChannel*  source,
   }
 
   if (!check_client_credentials(newfd)) {
-    dsme_log(LOG_CRIT, "DSME: dropping dsmesock client (pid %i, uid %i, gid %i), no dsme::DeviceStateControl credential",
-             newconn->ucred.pid,
-             newconn->ucred.uid,
-             newconn->ucred.gid);
+    char* name = endpoint_name_by_pid(newconn->ucred.pid);
+    dsme_log(LOG_CRIT, "DSME: dropping dsmesock client %s, no dsme::DeviceStateControl credential",
+             name);
+    free(name);
     close_client(newconn);
     goto out;
   }
