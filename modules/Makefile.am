@@ -16,7 +16,6 @@ pkglib_LTLIBRARIES = startup.la              \
                      emergencycalltracker.la \
                      usbtracker.la           \
                      iphb.la                 \
-                     rebootloopdetector.la   \
                      thermalflagger.la       \
                      malf.la                 \
                      validatorlistener.la    \
@@ -103,8 +102,6 @@ iphb_la_SOURCES = iphb.c
 iphb_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
 iphb_la_CPPFLAGS = $(AM_CPPFLAGS)
 iphb_la_LIBADD = -lbmeipc $(GLIB_LIBS)
-
-rebootloopdetector_la_SOURCES = rebootloopdetector.c
 
 thermalflagger_la_SOURCES = thermalflagger.c
 
