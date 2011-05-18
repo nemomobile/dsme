@@ -57,6 +57,8 @@ iphbd/hbtest
 iphbd/libiphb.pc
 iphbd/libiphb-uninstalled.pc
 
+test/testdriver
+
 m4/
 util/batttest
 util/bootstate

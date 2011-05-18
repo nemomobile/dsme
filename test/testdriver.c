@@ -24,7 +24,9 @@
 
 /* INTRUSIONS */
 
-#include "../modulebase.c"
+#include "../dsme/modulebase.c"
+#include "../modules/dsme_dbus.h"
+#include "../modules/malf.h"
 
 /* INCLUDES */
 
@@ -41,17 +43,17 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <getopt.h>
 
 
+static const char* dsme_module_path = "../modules/.libs/";
 
 static bool message_queue_is_empty(void)
 {
   int     count = 0;
   GSList* node;
 
-  for (node = message_queue; node; node = node->next) {
-      ++count;
-  }
+  count = g_slist_length(message_queue);
 
   if (count == 1) {
       fprintf(stderr, "[=> 1 more message queued]\n");
@@ -75,6 +77,7 @@ static void* queued_(unsigned type, const char* name)
 {
   dsmemsg_generic_t* msg = 0;
   GSList*            node;
+  char*              other_messages = 0;
 
   for (node = message_queue; node; node = node->next)
   {
@@ -85,10 +88,23 @@ static void* queued_(unsigned type, const char* name)
           free(m);
           message_queue = g_slist_delete_link(message_queue, node);
           break;
+      } else {
+          if (other_messages == 0) {
+              asprintf(&other_messages, "%x", m->data->type_);
+          } else {
+              char* s = 0;
+              asprintf(&s, "%s, %x", other_messages, m->data->type_);
+              free(other_messages), other_messages = s;
+          }
       }
   }
 
   fprintf(stderr, msg ? "[=> %s was queued]\n" : "[=> %s was not queued\n", name);
+
+  if (other_messages) {
+      fprintf(stderr, "[=> other messages: %s]\n", other_messages);
+      free(other_messages);
+  }
   return msg;
 }
 
@@ -243,6 +259,65 @@ void dsme_destroy_timer(dsme_timer_t t)
 }
 
 
+/*
+  STUB for dsme_dbus
+*/
+#include <dbus/dbus.h>
+
+/* storage for message bindings */
+static GSList* dbus_signal_bindings;
+
+struct DsmeDbusMessage {
+  DBusConnection* connection;
+  DBusMessage*    msg;
+  DBusMessageIter iter;
+};
+
+void dsme_dbus_unbind_signals(bool* really_bound,
+                              const dsme_dbus_signal_binding_t* bindings)
+{
+  if (really_bound && *really_bound) {
+      const dsme_dbus_signal_binding_t* binding = bindings;
+
+      while (binding && binding->handler) {
+          GSList* signal;
+
+          for (signal = dbus_signal_bindings; signal; signal = signal->next) {
+              dsme_dbus_signal_binding_t* stored = signal->data;
+
+              if (stored->handler == binding->handler &&
+                  strcmp(stored->interface, binding->interface) &&
+                  strcmp(stored->name, binding->name)) {
+                  dbus_signal_bindings = g_slist_delete_link(dbus_signal_bindings, signal);
+              }
+          }
+          ++binding;
+      }
+      *really_bound = false;
+  }
+}
+
+
+void dsme_dbus_bind_signals(bool*                             bound_already,
+                            const dsme_dbus_signal_binding_t* bindings)
+{
+  if (bound_already && !*bound_already) {
+      const dsme_dbus_signal_binding_t* binding = bindings;
+
+      while (binding && binding->handler) {
+          dbus_signal_bindings = g_slist_prepend(dbus_signal_bindings, (gpointer)binding);
+
+          ++binding;
+      }
+  }
+}
+
+int dsme_dbus_message_get_int(const DsmeDbusMessage* msg)
+{
+  assert(0);
+  return 0;
+}
+
 /* TEST DRIVER */
 
 static module_t* load_module_under_test(const char* path)
@@ -279,6 +354,7 @@ static void initialize(void)
   if (!dsme_log_open(LOG_METHOD_STDOUT, 7, false, "    ", 0, 0, "")) {
       fatal("dsme_log_open() failed");
   }
+  setenv("DSME_RD_FLAGS_ENV", rd_mode, true);
 }
 
 static void finalize(void)
@@ -293,6 +369,7 @@ static void run_(testcase* test, const char* name)
   fprintf(stderr, "\n[ ******** STARTING TESTCASE '%s' ******** ]\n", name);
   reset_timers();
   test();
+  fprintf(stderr, "\n[ ******** DONE TESTCASE '%s' ******** ]\n", name);
 }
 
 
@@ -323,10 +400,12 @@ static module_t* load_state_module(const char*  bootstate,
                                    dsme_state_t expected_state)
 {
   module_t* module;
+  gchar* module_name = g_strconcat(dsme_module_path, "state.so", NULL);
 
   setenv("BOOTSTATE", bootstate, true);
-  module = load_module_under_test("../modules/libstate.so");
+  module = load_module_under_test(module_name);
   unsetenv("BOOTSTATE");
+  g_free(module_name);
 
   DSM_MSGTYPE_STATE_CHANGE_IND* ind;
   assert((ind = queued(DSM_MSGTYPE_STATE_CHANGE_IND)));
@@ -368,12 +447,6 @@ static void request_shutdown_expecting_actdead(module_t* state)
   assert(msg2->runlevel == 5);
   free(msg2);
 
-#if 0
-  DSM_MSGTYPE_HWWD_KICK* msg3;
-  assert((msg3 = queued(DSM_MSGTYPE_HWWD_KICK)));
-  free(msg3);
-#endif
-
   assert(!timer_exists());
   assert(message_queue_is_empty());
 }
@@ -395,12 +468,6 @@ static void expect_shutdown_or_reboot(module_t*    module,
   assert(timer_exists());
 
   trigger_timer();
-
-#if 0
-  DSM_MSGTYPE_HWWD_KICK* ind3;
-  assert((ind3 = queued(DSM_MSGTYPE_HWWD_KICK)));
-  free(ind3);
-#endif
 
   DSM_MSGTYPE_SHUTDOWN* msg3;
   assert((msg3 = queued(DSM_MSGTYPE_SHUTDOWN)));
@@ -436,13 +503,14 @@ static void request_shutdown_expecting_shutdown(module_t* state)
 static void testcase1(void)
 {
   /* request shutdown right after starting in user state */
-
   module_t* state = load_state_module("USER", DSME_STATE_USER);
   assert(!timer_exists());
 
   request_shutdown_expecting_actdead(state);
 
   unload_module_under_test(state);
+
+  assert(g_slist_length(dbus_signal_bindings) == 0);
 }
 
 static void testcase2(void)
@@ -573,11 +641,6 @@ static void testcase5(void)
 
   // expect shutdown
   trigger_timer();
-#if 0
-  DSM_MSGTYPE_HWWD_KICK* ind3;
-  assert((ind3 = queued(DSM_MSGTYPE_HWWD_KICK)));
-  free(ind3);
-#endif
   DSM_MSGTYPE_SHUTDOWN* msg2;
   assert((msg2 = queued(DSM_MSGTYPE_SHUTDOWN)));
   assert(msg2->runlevel == 0);
@@ -742,11 +805,6 @@ static void testcase12(void)
   assert((msg2 = queued(DSM_MSGTYPE_SHUTDOWN)));
   assert(msg2->runlevel == 0);
   free(msg2);
-#if 0
-  DSM_MSGTYPE_HWWD_KICK* ind4;
-  assert((ind4 = queued(DSM_MSGTYPE_HWWD_KICK)));
-  free(ind4);
-#endif
   assert(!timer_exists());
   assert(message_queue_is_empty());
 
@@ -959,11 +1017,10 @@ static void testcase18(void)
   assert((ind = queued(DSM_MSGTYPE_STATE_CHANGE_IND)));
   assert(ind->state == DSME_STATE_USER);
   free(ind);
-#if 0
-  DSM_MSGTYPE_HWWD_KICK* ind2;
-  assert((ind2 = queued(DSM_MSGTYPE_HWWD_KICK)));
-  free(ind2);
-#endif
+
+  assert(timer_exists());
+  trigger_timer();
+
   DSM_MSGTYPE_CHANGE_RUNLEVEL* req;
   assert((req = queued(DSM_MSGTYPE_CHANGE_RUNLEVEL)));
   assert(req->runlevel == 2);
@@ -997,75 +1054,84 @@ static void testcase19(void)
   request_shutdown_expecting_actdead(state);
 
   unload_module_under_test(state);
+
 }
 
 static void testcase20(void)
 {
   /* weird $BOOTSTATE cases */
+  gchar* module_name = g_strconcat(dsme_module_path, "state.so", NULL);
 
   // do not specify $BOOTSTATE
-  module_t* state = load_module_under_test("../modules/libstate.so");
+  module_t* state = load_module_under_test(module_name);
   DSM_MSGTYPE_STATE_CHANGE_IND* ind;
-  assert((ind = queued(DSM_MSGTYPE_STATE_CHANGE_IND)));
-  assert(ind->state == DSME_STATE_MALF);
+  assert(ind = queued(DSM_MSGTYPE_STATE_CHANGE_IND));
+  assert(ind->state == DSME_STATE_USER);
   free(ind);
   assert(message_queue_is_empty());
   assert(!timer_exists());
   unload_module_under_test(state);
 
   // specify a bad $BOOTSTATE
-  state = load_state_module("DIIBADAABA", DSME_STATE_MALF);
+  state = load_state_module("DIIBADAABA", DSME_STATE_USER);
+
+  assert(timer_exists());
+  trigger_timer();
+  DSM_MSGTYPE_ENTER_MALF* msg;
+  assert(msg = queued(DSM_MSGTYPE_ENTER_MALF));
+  free(msg);
+
   assert(!timer_exists());
   assert(message_queue_is_empty());
   unload_module_under_test(state);
 
   // specify SHUTDOWN
   setenv("BOOTSTATE", "SHUTDOWN", true);
-  state = load_module_under_test("../modules/libstate.so");
+  state = load_module_under_test(module_name);
   unsetenv("BOOTSTATE");
   expect_shutdown(state);
   unload_module_under_test(state);
 
   // specify SHUTDOWN
   setenv("BOOTSTATE", "SHUTDOWN", true);
-  state = load_module_under_test("../modules/libstate.so");
+  state = load_module_under_test(module_name);
   unsetenv("BOOTSTATE");
   expect_shutdown(state);
   unload_module_under_test(state);
 
   // specify BOOT
   setenv("BOOTSTATE", "BOOT", true);
-  state = load_module_under_test("../modules/libstate.so");
+  state = load_module_under_test(module_name);
   unsetenv("BOOTSTATE");
   expect_reboot(state);
   unload_module_under_test(state);
+
+  g_free(module_name);
 }
 
 static void testcase21(void)
 {
   /* non-rd_mode cases and cal problems */
 
+  gchar* module_name = g_strconcat(dsme_module_path, "state.so", NULL);
+
   // non-rd_mode
   rd_mode = "";
+  unsetenv("DSME_RD_FLAGS_ENV");
   setenv("BOOTSTATE", "DIIBADAABA", true);
-  module_t* state = load_module_under_test("../modules/libstate.so");
+  module_t* state = load_module_under_test(module_name);
   unsetenv("BOOTSTATE");
   DSM_MSGTYPE_STATE_CHANGE_IND* ind;
-  assert((ind = queued(DSM_MSGTYPE_STATE_CHANGE_IND)));
-  assert(ind->state == DSME_STATE_MALF);
+  assert(ind = queued(DSM_MSGTYPE_STATE_CHANGE_IND));
+  assert(ind->state == DSME_STATE_USER);
   free(ind);
   assert(message_queue_is_empty());
   assert(timer_exists());
   trigger_timer();
-#if 0
-  DSM_MSGTYPE_HWWD_KICK* ind3;
-  assert((ind3 = queued(DSM_MSGTYPE_HWWD_KICK)));
-  free(ind3);
-#endif
-  DSM_MSGTYPE_SHUTDOWN* msg;
-  assert((msg = queued(DSM_MSGTYPE_SHUTDOWN)));
-  assert(msg->runlevel == 0);
-  free(msg);
+  DSM_MSGTYPE_ENTER_MALF* malfmsg;
+  assert((malfmsg = queued(DSM_MSGTYPE_ENTER_MALF)));
+  //TODO: Should the reason / component be checked?
+  free(malfmsg);
   assert(message_queue_is_empty());
   assert(!timer_exists());
   unload_module_under_test(state);
@@ -1073,24 +1139,22 @@ static void testcase21(void)
   // cal problem
   rd_mode = 0;
   setenv("BOOTSTATE", "DIIBADAABA", true);
-  state = load_module_under_test("../modules/libstate.so");
+  state = load_module_under_test(module_name);
   unsetenv("BOOTSTATE");
-  assert((ind = queued(DSM_MSGTYPE_STATE_CHANGE_IND)));
-  assert(ind->state == DSME_STATE_MALF);
+  assert(ind = queued(DSM_MSGTYPE_STATE_CHANGE_IND));
+  assert(ind->state == DSME_STATE_USER);
   free(ind);
   assert(message_queue_is_empty());
   assert(timer_exists());
   trigger_timer();
-#if 0
-  assert((ind3 = queued(DSM_MSGTYPE_HWWD_KICK)));
-  free(ind3);
-#endif
-  assert((msg = queued(DSM_MSGTYPE_SHUTDOWN)));
-  assert(msg->runlevel == 0);
-  free(msg);
+  assert(malfmsg = queued(DSM_MSGTYPE_ENTER_MALF));
+  //TODO: Should the reason / component be checked?
+  free(malfmsg);
   assert(message_queue_is_empty());
   assert(!timer_exists());
   unload_module_under_test(state);
+
+  g_free(module_name);
 }
 
 static void testcase22(void)
@@ -1130,11 +1194,6 @@ static void testcase23(void)
   assert(timer_exists());
 
   trigger_timer();
-#if 0
-  DSM_MSGTYPE_HWWD_KICK* ind4;
-  assert((ind4 = queued(DSM_MSGTYPE_HWWD_KICK)));
-  free(ind4);
-#endif
   DSM_MSGTYPE_SHUTDOWN* msg2;
   assert((msg2 = queued(DSM_MSGTYPE_SHUTDOWN)));
   assert(msg2->runlevel == 0);
@@ -1163,108 +1222,36 @@ static void testcase23(void)
 }
 
 
-
-/* LIBREBOOTLOOPDETECTOR TESTS */
-
-#define RLD_TMPFILE "/tmp/dsme_rld_test_file"
-
-static module_t* load_rld_module()
-{
-    module_t* module;
-
-    setenv("DSME_REBOOTLOOP_FILE", RLD_TMPFILE, true);
-    setenv("DSME_REBOOTLOOP_TIME", "2", true);
-    module = load_module_under_test("../modules/librebootloopdetector.so");
-    unsetenv("DSME_REBOOTLOOP_FILE");
-    unsetenv("DSME_REBOOTLOOP_TIME");
-
-    return module;
-}
-
-static bool get_reboot_count(unsigned* count)
-{
-    bool  got = false;
-    FILE* f;
-    f = fopen(RLD_TMPFILE, "r");
-    if (f) {
-        if (fscanf(f, "%*d %d", count) == 1) {
-            got = true;
-        }
-        fclose(f);
-    }
-
-    return got;
-}
-
-static void rldtest_first_boot()
-{
-    unlink(RLD_TMPFILE);
-    module_t* rld = load_rld_module();
-    unload_module_under_test(rld);
-
-    unsigned reboot_count;
-    assert(get_reboot_count(&reboot_count));
-    assert(reboot_count == 0);
-    assert(!timer_exists());
-    assert(message_queue_is_empty());
-}
-
-static void rldtest_slow_reboot()
-{
-    fprintf(stderr, "[sleeping for 3 seconds]\n");
-    sleep(3);
-    module_t* rld = load_rld_module();
-    unload_module_under_test(rld);
-
-    unsigned reboot_count;
-    assert(get_reboot_count(&reboot_count));
-    assert(reboot_count == 0);
-    assert(!timer_exists());
-    assert(message_queue_is_empty());
-}
-
-static void rldtest_quick_reboot()
-{
-    module_t* rld = load_rld_module();
-    unload_module_under_test(rld);
-
-    unsigned reboot_count;
-    assert(get_reboot_count(&reboot_count));
-    assert(reboot_count == 1);
-    assert(!timer_exists());
-    assert(message_queue_is_empty());
-}
-
-static void rldtest_too_many_reboots()
-{
-    fprintf(stderr, "[sleeping for 3 seconds]\n");
-    sleep(3);
-    int i;
-    for (i = 0; i <= 11; ++i) {
-        assert(!timer_exists());
-        assert(message_queue_is_empty());
-
-        module_t* rld = load_rld_module();
-        unload_module_under_test(rld);
-
-        unsigned reboot_count;
-        assert(get_reboot_count(&reboot_count));
-        assert(reboot_count == i);
-    }
-
-    assert(!timer_exists());
-    DSM_MSGTYPE_SHUTDOWN_REQ* msg;
-    assert((msg = queued(DSM_MSGTYPE_SHUTDOWN_REQ)));
-    free(msg);
-    assert(message_queue_is_empty());
-}
-
-
 /* MAIN */
 
-int main(int argc, const char* argv[])
+int main(int argc, char** argv)
 {
   initialize();
+
+  int optc;
+  int opt_index;
+
+  const char optline[] = "";
+  struct option const options[] = {
+      { "module-path", required_argument, 0, 'P' },
+      { 0, 0, 0, 0 }
+  };
+
+  /* Parse the command-line options */
+  while ((optc = getopt_long(argc, argv, optline,
+			     options, &opt_index)) != -1) {
+      switch (optc) {
+      case 'P':
+          dsme_module_path = strdup(optarg);
+          break;
+
+      default:
+          fprintf(stderr, "\nInvalid parameters\n");
+          fprintf(stderr, "\n[* * *   F A I L U R E   * * *]\n\n");
+          return EXIT_SUCCESS;
+      }
+  }
+
 
   run(testcase1);
   run(testcase2);
@@ -1291,15 +1278,10 @@ int main(int argc, const char* argv[])
   run(testcase22);
   run(testcase23);
 
-  run(rldtest_first_boot);
-  run(rldtest_slow_reboot);
-  run(rldtest_quick_reboot);
-  run(rldtest_too_many_reboots);
-  run(rldtest_slow_reboot);
-
   finalize();
 
   fprintf(stderr, "\n[* * *   S U C C E S S   * * *]\n\n");
 
   return EXIT_SUCCESS;
 }
+

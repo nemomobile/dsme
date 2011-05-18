@@ -8,6 +8,7 @@ dsme (0.61.55) unstable; urgency=low
 
   [Jyrki Hämäläinen]
   * Cleanup WD kicking in the state module
+  * Fix the testdriver
 
  -- Antti Virtanen <antti.i.virtanen@nokia.com>  Wed, 11 May 2011 14:37:27 +0300
 
