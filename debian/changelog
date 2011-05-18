@@ -6,6 +6,9 @@ dsme (0.61.55) unstable; urgency=low
   [Matias Muhonen]
   * Allow dsmesock usage only with the dsme::DeviceStateControl credential (Fixes: NB#255241)
 
+  [Jyrki Hämäläinen]
+  * Cleanup WD kicking in the state module
+
  -- Antti Virtanen <antti.i.virtanen@nokia.com>  Wed, 11 May 2011 14:37:27 +0300
 
 dsme (0.61.54) unstable; urgency=low

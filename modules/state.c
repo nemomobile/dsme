@@ -137,7 +137,6 @@ static bool start_delayed_user_timer(unsigned seconds);
 static int delayed_user_fn(void* unused);
 static void stop_delayed_runlevel_timers(void);
 static void change_runlevel(dsme_state_t state);
-static void kick_wds(void);
 
 static void start_malf_timer(const char* reason,
                              const char* component,
@@ -422,10 +421,6 @@ static void start_delayed_shutdown_timer(unsigned seconds)
 
 static int delayed_shutdown_fn(void* unused)
 {
-  /* first kick WD's for the last time */
-  kick_wds();
-
-  /* then do the shutdown */
   DSM_MSGTYPE_SHUTDOWN msg = DSME_MSG_INIT(DSM_MSGTYPE_SHUTDOWN);
   msg.runlevel = state2runlevel(current_state);
   broadcast_internally(&msg);
@@ -487,20 +482,9 @@ static int delayed_user_fn(void* unused)
 
 static void change_runlevel(dsme_state_t state)
 {
-  /* first kick WD's for the last time */
-  kick_wds();
-
-  /* then change the runlevel */
   DSM_MSGTYPE_CHANGE_RUNLEVEL msg = DSME_MSG_INIT(DSM_MSGTYPE_CHANGE_RUNLEVEL);
   msg.runlevel = state2runlevel(state);
   broadcast_internally(&msg);
-}
-
-// TODO: this could be removed since dsme will automatically kick wd's
-//       when going down
-static void kick_wds(void)
-{
-    kill(getppid(), SIGHUP);
 }
 
 static void stop_delayed_runlevel_timers(void)
