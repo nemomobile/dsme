@@ -2,6 +2,7 @@ dsme (0.61.55) unstable; urgency=low
 
   [Antti Virtanen]
   * Fixed memory leaks from validator netlink message handling.
+  * Added dependency to upstart and requesting dsme::DeviceStateControl for /sbin/init.
 
   [Matias Muhonen]
   * Allow dsmesock usage only with the dsme::DeviceStateControl credential (Fixes: NB#255241)

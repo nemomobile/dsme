@@ -11,4 +11,8 @@
     <credential name="CAP::sys_nice" />
     <for path="/sbin/dsme-server" />
   </request>
+  <request>
+    <credential name="dsme::DeviceStateControl" />
+    <for path="upstart::/sbin/init" />
+  </request>
 </aegis>

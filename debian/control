@@ -23,7 +23,7 @@ Standards-Version: 3.7.2
 Package: dsme
 Section: misc
 Architecture: any
-Depends: ${shlibs:Depends}, libdsme0.2.0 (>= 0.61.6)
+Depends: ${shlibs:Depends}, libdsme0.2.0 (>= 0.61.6), upstart
 Conflicts: getbootstate
 Replaces: getbootstate
 Provides: getbootstate
