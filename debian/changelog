@@ -1,3 +1,9 @@
+dsme (0.61.56) unstable; urgency=low
+
+  * Increased CHARGER_DISCONNECT_TIMEOUT to 10 sec.
+
+ -- Antti Virtanen <antti.i.virtanen@nokia.com>  Tue, 24 May 2011 16:22:47 +0200
+
 dsme (0.61.55) unstable; urgency=low
 
   [Antti Virtanen]

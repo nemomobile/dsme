@@ -60,7 +60,7 @@
  * Timer value for actdead shutdown timer. This is how long we wait before doing a
  * shutdown when the charger is disconnected in acting dead state
  */
-#define CHARGER_DISCONNECT_TIMEOUT 3
+#define CHARGER_DISCONNECT_TIMEOUT 10
 
 /**
  * Timer value for shutdown timer. This is how long we wait for apps to close.
