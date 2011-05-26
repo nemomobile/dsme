@@ -22,15 +22,16 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <dsme/state.h>
+#include <dsme/messages.h>
+#include <dsme/protocol.h>
+#include <dsme/processwd.h>
+
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <time.h>
-
-#include <dsme/messages.h>
-#include <dsme/protocol.h>
-#include <dsme/processwd.h>
 
 #include <stdio.h>
 #define tblog(a, b, c) fprintf(stderr, c);

@@ -1,4 +1,3 @@
-debian/tmp/sbin/batttest
 debian/tmp/sbin/bootstate
 debian/tmp/sbin/dsme
 debian/tmp/sbin/dsme-server

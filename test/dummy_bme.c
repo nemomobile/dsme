@@ -22,10 +22,12 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -98,8 +100,22 @@ enum {
     NUM_POLL_FDS        /* Number of descriptors */
 };
 
+static volatile sig_atomic_t sig_caught = 0;
+
+
 /* Client's socket descriptor that is in listening state */
 int umsfd = -1;
+
+
+/* Function prototypes */
+void bme_server_shutdown(void);
+int bme_server_init(void);
+int bme_handle_new_client(int fd);
+int em_srv_battery_info_req(struct emsg_battery_info_req *reqp, int client);
+int bme_extmsg_handler(int client);
+int bme_reply_client(int client, int status, void *msg, int size);
+int bme_send_status_to_client(int client, int status);
+void bme_shutdown(void);
 
 
 /*
@@ -270,7 +286,7 @@ void bme_shutdown()
 int main(int argc, char *argv[])
 {
     struct pollfd ufds[NUM_POLL_FDS];
-    int res, exit_status = EXIT_FAILURE, sig_caught = 0;
+    int res, exit_status = EXIT_FAILURE;
     char *name;
 
     name = strrchr(argv[0], '/');

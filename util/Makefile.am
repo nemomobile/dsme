@@ -11,9 +11,7 @@ ACLOCAL_AMFLAGS = -I m4
 #
 # Build targets
 #
-sbin_PROGRAMS = batttest    \
-                dsmetool    \
-                dsmetest    \
+sbin_PROGRAMS = dsmetool    \
                 bootstate   \
                 waitfordsme \
                 rpdir
@@ -22,12 +20,7 @@ sbin_SCRIPTS = dsmetemperature
 
 noinst_PROGRAMS = dsmereboot
 
-
-batttest_SOURCES = batttest.c
-
 dsmetool_SOURCES = dsmetool.c
-
-dsmetest_SOURCES = dsmetest.c
 
 bootstate_SOURCES = bootstate.c
 

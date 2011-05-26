@@ -2,11 +2,29 @@
 # Generic options
 #
 ACLOCAL_AMFLAGS = -I m4
+AM_CFLAGS = $(C_GENFLAGS) $(C_OPTFLAGS) $(GLIB_CFLAGS) -DDSME_LOG_ENABLE
+AM_LDFLAGS = -pthread
+AM_CPPFLAGS = $(CPP_GENFLAGS)
+LDADD = $(GLIB_LIBS) -ldsme
 
 #
 # Build targets
 #
-sbin_PROGRAMS = testdriver
+sbin_PROGRAMS = batttest \
+		dsmetest \
+		dummy_bme \
+		processwdtest \
+		testdriver		
+
+batttest_SOURCES = batttest.c
+
+dummy_bme_SOURCES = dummy_bme.c
+
+dsmetest_SOURCES = dsmetest.c
+
+processwdtest_SOURCES = processwdtest.c
+
+testdriver_SOURCES = testdriver.c
 
 testdriver_CFLAGS = $(C_GENFLAGS) $(C_OPTFLAGS) -DDSME_LOG_ENABLE
 testdriver_LDFLAGS = -pthread -rdynamic
