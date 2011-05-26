@@ -1,1 +1,1 @@
-SUBDIRS = dsme modules util getbootstate
+SUBDIRS = dsme modules util test getbootstate

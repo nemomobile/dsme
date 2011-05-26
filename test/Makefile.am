@@ -10,7 +10,7 @@ LDADD = $(GLIB_LIBS) -ldsme
 #
 # Build targets
 #
-sbin_PROGRAMS = batttest \
+noinst_PROGRAMS = batttest \
 		dsmetest \
 		dummy_bme \
 		processwdtest \
