@@ -20,13 +20,6 @@ else
 	CFLAGS += -O2
 endif
 
-# To build testcases as well, add "testcases" to DEB_BUILD_OPTIONS
-ifneq (,$(findstring testcases,$(DEB_BUILD_OPTIONS)))
-	DH_OPTIONS=
-else
-	DH_OPTIONS=-Ndsme-testcases
-endif
-
 configure: configure-stamp
 configure-stamp:
 	dh_testdir
@@ -40,18 +33,15 @@ build: build-stamp
 
 build-stamp: configure-stamp
 
-# To build testcases as well, add "testcases" to DEB_BUILD_OPTIONS
-ifneq (,$(findstring testcases,$(DEB_BUILD_OPTIONS)))
-	$(MAKE) tests
-else
 # The rationale for /sbin and /lib/dsme: DSME needs to be available on bootup before networking starts.
 # Also see http://tldp.org/LDP/Linux-Filesystem-Hierarchy/html/sbin.html and
 # http://tldp.org/LDP/Linux-Filesystem-Hierarchy/html/lib.html
 	dh_auto_configure -- --disable-static --exec-prefix=""
 	dh_auto_build
-endif
+	dh_auto_test
 
 	touch build-stamp
+
 
 clean:
 	dh_testdir
