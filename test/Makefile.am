@@ -6,6 +6,7 @@ AM_CFLAGS = $(C_GENFLAGS) $(C_OPTFLAGS) $(GLIB_CFLAGS) -DDSME_LOG_ENABLE
 AM_LDFLAGS = -pthread
 AM_CPPFLAGS = $(CPP_GENFLAGS)
 LDADD = $(GLIB_LIBS) -ldsme
+TESTS = testdriver
 
 #
 # Build targets
