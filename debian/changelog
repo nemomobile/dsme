@@ -1,8 +1,12 @@
 dsme (0.61.56) unstable; urgency=low
 
+  [Antti Virtanen]
   * Increased CHARGER_DISCONNECT_TIMEOUT to 15 sec.
 
- -- Antti Virtanen <antti.i.virtanen@nokia.com>  Tue, 24 May 2011 16:22:47 +0200
+  [Matias Muhonen]
+  * Fix a race between waitfordsme and dsmesock/accept_client (Fixes: NB#259843)
+
+ -- Matias Muhonen <ext-matias.muhonen@nokia.com>  Thu, 26 May 2011 09:24:50 +0000
 
 dsme (0.61.55) unstable; urgency=low
 
