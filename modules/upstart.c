@@ -29,6 +29,7 @@
 #include "runlevel.h"
 #include "dsme/modules.h"
 #include "dsme/logging.h"
+#include "dsme/modulebase.h"
 
 #include <dbus/dbus.h>
 #include <stdio.h>
@@ -46,8 +47,8 @@
 
 
 static bool save_state_for_getbootstate(dsme_runlevel_t runlevel);
-static bool telinit(dsme_runlevel_t runlevel);
-static void shutdown(dsme_runlevel_t runlevel);
+static bool telinit_internal(dsme_runlevel_t runlevel);
+static void shutdown_internal(dsme_runlevel_t runlevel);
 static bool remount_mmc_readonly(void);
 
 
@@ -201,7 +202,7 @@ static bool save_state_for_getbootstate(dsme_runlevel_t runlevel)
    @todo Make sure that the runlevel change takes place
 */
 // TODO: D-Bus marshalling is way ugly; needs to be abstracted
-static bool telinit(dsme_runlevel_t runlevel)
+static bool telinit_internal(dsme_runlevel_t runlevel)
 {
     bool            runlevel_changed = false;
     DBusError       error;
@@ -334,7 +335,7 @@ done:
  * This function will do the shutdown or reboot (based on desired runlevel).
  * In case of failure, function will shutdown/reboot by itself.
  */
-static void shutdown(dsme_runlevel_t runlevel)
+static void shutdown_internal(dsme_runlevel_t runlevel)
 {
   if ((runlevel != DSME_RUNLEVEL_REBOOT)   &&
       (runlevel != DSME_RUNLEVEL_SHUTDOWN) &&
@@ -349,11 +350,13 @@ static void shutdown(dsme_runlevel_t runlevel)
                                                 "Malf");
 
   /* If runlevel change fails, handle the shutdown/reboot by DSME */
-  if (!telinit(runlevel))
+  if (!telinit_internal(runlevel))
   {
       dsme_log(LOG_CRIT, "Doing forced shutdown/reboot");
       sync();
+
       (void)remount_mmc_readonly();
+
       if (runlevel == DSME_RUNLEVEL_SHUTDOWN ||
           runlevel == DSME_RUNLEVEL_MALF)
       {
@@ -363,6 +366,7 @@ static void shutdown(dsme_runlevel_t runlevel)
               sleep(3);
               if (system("/sbin/poweroff") != 0) {
                   dsme_log(LOG_ERR, "/sbin/poweroff failed again");
+                  goto fail_and_exit;
               }
           }
       } else {
@@ -372,14 +376,18 @@ static void shutdown(dsme_runlevel_t runlevel)
               sleep(3);
               if (system("/sbin/reboot") != 0) {
                   dsme_log(LOG_ERR, "/sbin/reboot failed again");
+                  goto fail_and_exit;
               }
           }
       }
 
-      dsme_log(LOG_CRIT, "Entering busy-loop");
-      while(1)
-          for(;;) {}
   }
+
+  return;
+
+fail_and_exit:
+  dsme_log(LOG_CRIT, "Closing to clean-up!");
+  dsme_exit(EXIT_FAILURE);
 }
 
 
@@ -430,8 +438,8 @@ static bool remount_mmc_readonly(void)
       args[2] = (char*)&mntpoint;
       /* try to remount read-only */
       if ((pid = fork()) < 0) {
-          dsme_log(LOG_CRIT, "fork failed, exiting");
-          exit(EXIT_FAILURE);
+          dsme_log(LOG_CRIT, "fork failed, no way to remount");
+          return false;
       } else if (pid == 0) {
           execv("/bin/mount", args);
           execv("/sbin/mount", args);
@@ -459,12 +467,12 @@ static bool remount_mmc_readonly(void)
 
 DSME_HANDLER(DSM_MSGTYPE_CHANGE_RUNLEVEL, conn, msg)
 {
-  (void)telinit(msg->runlevel);
+  (void)telinit_internal(msg->runlevel);
 }
 
 DSME_HANDLER(DSM_MSGTYPE_SHUTDOWN, conn, msg)
 {
-  shutdown(msg->runlevel);
+  shutdown_internal(msg->runlevel);
 }
 
 

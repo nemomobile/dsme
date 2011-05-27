@@ -98,6 +98,11 @@ int add_single_handler(u_int32_t       msg_type,
                        handler_fn_t*   callback,
                        const module_t* owner);
 
+/**
+   Wrapper to make dsme process exit cleanly
+*/
+void dsme_exit(int exit_code);
+
 enum {
     DSME_MSG_ENUM(DSM_MSGTYPE_IDLE, 0x00001337),
 };

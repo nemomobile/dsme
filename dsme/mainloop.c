@@ -37,6 +37,7 @@ typedef enum { NOT_STARTED, RUNNING, STOPPED } main_loop_state_t;
 static volatile main_loop_state_t state    = NOT_STARTED;
 static GMainLoop*                 the_loop = 0;
 static int                        signal_pipe[2];
+static int                        main_loop_exit_code = EXIT_SUCCESS;
 
 static gboolean handle_signal(GIOChannel*  source,
                               GIOCondition condition,
@@ -126,10 +127,16 @@ void dsme_main_loop_run(void (*iteration)(void))
     }
 }
 
-void dsme_main_loop_quit(void)
+void dsme_main_loop_quit(int exit_code)
 {
     if (state == RUNNING) {
         state = STOPPED;
+
+        dsme_log_stop();
+
+        if (main_loop_exit_code < exit_code) {
+            main_loop_exit_code = exit_code;
+        }
 
         ssize_t bytes_written;
         while ((bytes_written = write(signal_pipe[1], "*", 1)) == -1 &&
@@ -139,3 +146,9 @@ void dsme_main_loop_quit(void)
         }
     }
 }
+
+int dsme_main_loop_exit_code(void)
+{
+    return main_loop_exit_code;
+}
+

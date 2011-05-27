@@ -42,6 +42,7 @@
 #include "dsme/timers.h"
 #include "dsme/modules.h"
 #include "dsme/logging.h"
+#include "dsme/modulebase.h"
 #include <dsme/state.h>
 
 #include "dsme/dsme-rd-mode.h"
@@ -301,12 +302,12 @@ static void try_to_change_state(dsme_state_t new_state)
               /* actdead init done; runlevel change from actdead to user state */
               if (start_delayed_user_timer(USER_TIMER_MIN_TIMEOUT)) {
                   change_state(new_state);
-              }
+              } 
           } else {
               /* actdead init not done; wait longer to change from actdead to user state */
               if (start_delayed_user_timer(USER_TIMER_MAX_TIMEOUT)) {
                   change_state(new_state);
-              }
+              } 
           }
       } else if (current_state == DSME_STATE_USER) {
           actdead_switch_done = false;
@@ -315,12 +316,12 @@ static void try_to_change_state(dsme_state_t new_state)
               /* user init done; runlevel change from user to actdead state */
               if (start_delayed_actdead_timer(ACTDEAD_TIMER_MIN_TIMEOUT)) {
                   change_state(new_state);
-              }
+              } 
           } else {
               /* user init not done; wait longer to change from user to actdead state */
               if (start_delayed_actdead_timer(ACTDEAD_TIMER_MAX_TIMEOUT)) {
                   change_state(new_state);
-              }
+              } 
           }
       }
       break;
@@ -413,7 +414,8 @@ static void start_delayed_shutdown_timer(unsigned seconds)
                                                        NULL)))
       {
           dsme_log(LOG_CRIT, "Could not create a shutdown timer; exit!");
-          exit(EXIT_FAILURE);
+          dsme_exit(EXIT_FAILURE);
+          return;
       }
       dsme_log(LOG_NOTICE, "Shutdown or reboot in %i seconds", seconds);
   }
@@ -437,7 +439,8 @@ static bool start_delayed_actdead_timer(unsigned seconds)
                                                       NULL)))
       {
           dsme_log(LOG_CRIT, "Could not create an actdead timer; exit!");
-          exit(EXIT_FAILURE);
+          dsme_exit(EXIT_FAILURE);
+          return false;
       }
       success = true;
       dsme_log(LOG_NOTICE, "Actdead in %i seconds", seconds);
@@ -463,7 +466,8 @@ static bool start_delayed_user_timer(unsigned seconds)
                                                    NULL)))
       {
           dsme_log(LOG_CRIT, "Could not create a user timer; exit!");
-          exit(EXIT_FAILURE);
+          dsme_exit(EXIT_FAILURE);
+          return false;
       }
       success = true;
       dsme_log(LOG_NOTICE, "User in %i seconds", seconds);

@@ -26,6 +26,7 @@
 #include <dsme/protocol.h>
 #include <dsme/messages.h>
 #include <dsme/state.h>
+#include "../modules/malf.h"
 
 #include <stdlib.h>
 #include <sys/types.h>
@@ -44,6 +45,7 @@ void send_shutdown_req(bool battlow);
 void send_powerup_req(void);
 void send_reboot_req(void);
 void send_alarm_state(bool alarm_set);
+void send_malf_req(void);
 
 static dsmesock_connection_t *conn;
 
@@ -56,7 +58,9 @@ void usage(const char *name)
 	printf("	-B --battlow			Request battery low shutdown from DSME\n");
 	printf("	-R --reboot			Request reboot from DSME\n");
 	printf("	-a --alarm			Change alarm state (0 = not set, 1 = set)\n");
-	printf("	-h --help			Print usage\n");
+	printf("	-M --malf			Request MALF state\n");
+        printf("	-h --help			Print usage\n");
+
 }
 
 void send_shutdown_req(bool battlow)
@@ -100,6 +104,17 @@ void send_reboot_req(void)
   printf("Reboot request sent!\n");
 }
 
+void send_malf_req(void)
+{
+  char* details = strdup("Entering malf from dsmetest");
+  DSM_MSGTYPE_ENTER_MALF msg = DSME_MSG_INIT(DSM_MSGTYPE_ENTER_MALF);
+  msg.reason = DSME_MALF_SOFTWARE;
+  msg.component = NULL;
+  
+  dsmesock_send_with_extra(conn, &msg, sizeof(details), details);
+  printf("MALF request sent!\n");
+}
+
 int main(int argc, char *argv[])
 {
 	const char *program_name = argv[0];
@@ -109,7 +124,8 @@ int main(int argc, char *argv[])
 	int powerup = -1;
 	int reboot = -1;
 	int alarm = -1;
-	const char *short_options = "UBshRa:";
+        int malf = -1;
+	const char *short_options = "UBshRMa:";
 	const struct option long_options[] = {
 		{"shutdown", 0, NULL, 's'},
 		{"battlow", 0, NULL, 'B'},
@@ -117,6 +133,7 @@ int main(int argc, char *argv[])
 		{"help", 0, NULL, 'h'},
 		{"powerup", 0, NULL, 'U'},
 		{"reboot", 0, NULL, 'R'},
+        	{"malf", 0, NULL, 'M'},
 		{0, 0, 0, 0}
 	};
 
@@ -140,17 +157,21 @@ int main(int argc, char *argv[])
 		case 'a':
 			alarm = atoi(optarg);
 			break;
+		case 'M':
+			malf = 1;
+                        break;
 		case 'h':
 			usage(program_name);
 			return EXIT_SUCCESS;
 			break;
+		break;
 		case '?':
 			usage(program_name);
 			return EXIT_FAILURE;
 			break;
 		}
 	} while (next_option != -1);
-	
+
 	/* check if unknown parameters or no parameters at all were given */
 	if (argc == 1 || optind < argc) {
 		usage(program_name);
@@ -174,6 +195,9 @@ int main(int argc, char *argv[])
 
 	if (alarm != -1)
 		send_alarm_state(alarm != 0);
+
+        if (malf != -1)
+                send_malf_req();
 
 	dsmesock_close(conn);
 

@@ -57,6 +57,7 @@ iphbd/hbtest
 iphbd/libiphb.pc
 iphbd/libiphb-uninstalled.pc
 
+test/abnormalexitwrapper_tester
 test/batttest
 test/dsmetest
 test/dummy_bme

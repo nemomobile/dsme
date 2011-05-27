@@ -6,6 +6,10 @@ dsme (0.61.56) unstable; urgency=low
   [Matias Muhonen]
   * Fix a race between waitfordsme and dsmesock/accept_client (Fixes: NB#259843)
 
+  [Jyrki Hämäläinen]
+  * Implemented cleaner exit handling
+  * Empty log buffer correctly when exiting the process
+
  -- Matias Muhonen <ext-matias.muhonen@nokia.com>  Thu, 26 May 2011 09:24:50 +0000
 
 dsme (0.61.55) unstable; urgency=low

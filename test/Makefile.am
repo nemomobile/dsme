@@ -15,7 +15,10 @@ noinst_PROGRAMS = batttest \
 		dsmetest \
 		dummy_bme \
 		processwdtest \
-		testdriver		
+		testdriver \
+		abnormalexitwrapper_tester
+
+pkglib_LTLIBRARIES = libabnormalexitwrapper.la
 
 batttest_SOURCES = batttest.c
 
@@ -36,3 +39,11 @@ testdriver_LDADD = $(GLIB_LIBS) -lpthread -ldl -ldsme -lcreds \
                    ../dsme/dsme_server-logging.o \
                    ../dsme/dsme_server-mainloop.o \
                    ../dsme/dsme_server-dsme-rd-mode.o
+
+abnormalexitwrapper_tester_SOURCES = abnormalexitwrapper_tester.c
+abnormalexitwrapper_tester_LDFLAGS = -pthread -rdynamic
+
+libabnormalexitwrapper_la_SOURCES = abnormalexitwrapper.c
+libabnormalexitwrapper_la_CFLAGS = $(C_GENFLAGS) $(C_OPTFLAGS) $(DBUS_CFLAGS) -DDSME_LOG_ENABLE
+libabnormalexitwrapper_la_LDFLAGS = -pthread -module -avoid-version -shared -ldl
+

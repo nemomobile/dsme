@@ -27,6 +27,7 @@
 #include "dsme/logging.h"
 #include "dsme/mainloop.h"
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -44,7 +45,7 @@ static gboolean emit_heartbeat_message(GIOChannel*  source,
     if (condition & (G_IO_ERR | G_IO_HUP)) {
         // the wd process has probably died; remove the watch & quit
         dsme_log(LOG_DEBUG, "heartbeat: I/O error or HUP");
-        dsme_main_loop_quit();
+        dsme_main_loop_quit(EXIT_FAILURE);
         return false;
     }
 

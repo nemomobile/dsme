@@ -95,7 +95,7 @@ void signal_handler(int sig)
   switch (sig) {
     case SIGINT:
     case SIGTERM:
-      dsme_main_loop_quit();
+      dsme_main_loop_quit(EXIT_SUCCESS);
       break;
   }
 }
@@ -302,5 +302,5 @@ int main(int argc, char *argv[])
   dsme_log_close();
 #endif
 
-  return EXIT_SUCCESS;
+  return dsme_main_loop_exit_code();
 }

@@ -50,6 +50,7 @@
 /* Function prototypes */
 static void log_to_null(int prio, const char* message);
 static void log_to_stderr(int prio, const char* message);
+static int deque_log_buffer(volatile unsigned *p_read_count);
 
 /* This variable holds the address of the logging functions */
 static void (*dsme_log_routine)(int prio, const char* message) =
@@ -85,6 +86,10 @@ static sem_t ring_buffer_sem;
 /* ring buffer write and read counters */
 static volatile unsigned write_count = 0;
 static volatile unsigned read_count  = 0;
+
+/* Thread enable & status */
+static volatile int thread_enabled = 0;
+static volatile int thread_running = 0;
 
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 // SIMO HACKING
@@ -326,29 +331,43 @@ void dsme_log_txt(int level, const char* fmt, ...)
 }
 
 /*
+ * Reads messages from buffer and passes them to logger backend
+ */
+static int deque_log_buffer(volatile unsigned *p_read_count)
+{
+    int buffer_not_empty = (*p_read_count != write_count);
+
+    if (buffer_not_empty) {
+        log_entry* entry = &ring_buffer[*p_read_count % DSME_MAX_LOG_BUFFER_ENTRIES];
+
+        dsme_log_routine(entry->prio, entry->message);
+
+        ++(*p_read_count);
+    }
+
+    return buffer_not_empty;
+}
+
+/*
  * This is the logging thread that reads log entries from
  * the ring buffer and writes them to their final destination.
  */
 static void* logging_thread(void* param)
 {
+    thread_running = 1;
 
-    while (true) {
+    while (thread_enabled) {
         while (sem_wait(&ring_buffer_sem) == -1) {
             continue;
         }
 
-        if( read_count != write_count ) {
-	    log_entry* entry =
-		 &ring_buffer[read_count % DSME_MAX_LOG_BUFFER_ENTRIES];
-	    
-	    dsme_log_routine(entry->prio, entry->message);
-	    
-	    ++read_count;
-	}
+	// ignore return value, semaphore takes care of that.
+	deque_log_buffer(&read_count);
 
-        dsme_log_cb_execute_all();
+	dsme_log_cb_execute_all();
     }
 
+    thread_running = 0;
     return 0;
 }
 
@@ -446,6 +465,7 @@ out:
     }
 
     /* create the logging thread */
+    thread_enabled = 1;
     pthread_attr_t     tattr;
     pthread_t          tid;
     struct sched_param param;
@@ -479,6 +499,17 @@ void dsme_log_set_verbosity(int verbosity)
  */
 void dsme_log_close(void)
 {
+    volatile unsigned readcount_copy;
+    // Give logging thread a chance to stop
+    if (thread_running) {
+        dsme_log_stop();
+    }
+
+    readcount_copy = read_count;
+    while (deque_log_buffer(&readcount_copy)) {
+        /* EMPTY LOOP */
+    }
+
     switch (logopt.method) {
         case LOG_METHOD_STDOUT:
             fflush(stdout);
@@ -499,5 +530,11 @@ void dsme_log_close(void)
             return;
     }
 }
+
+void dsme_log_stop(void)
+{
+    thread_enabled = 0;
+}
+
 
 #endif /* DSME_LOG_ENABLE */

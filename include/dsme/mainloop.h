@@ -27,6 +27,8 @@
 
 void dsme_main_loop_run(void (*iteration)(void));
 
-void dsme_main_loop_quit(void);
+void dsme_main_loop_quit(int exit_code);
+
+int dsme_main_loop_exit_code(void);
 
 #endif

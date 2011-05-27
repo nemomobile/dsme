@@ -103,6 +103,11 @@ void dsme_log_set_verbosity(int verbosity);
 */
 void dsme_log_close(void);
 
+/**
+   Ask logging thread to stop
+*/
+void dsme_log_stop(void);
+
 #ifdef __cplusplus
 }
 #endif

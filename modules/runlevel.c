@@ -90,7 +90,9 @@ static void shutdown(dsme_runlevel_t runlevel)
   {
       dsme_log(LOG_CRIT, "Doing forced shutdown/reboot");
       sync();
+
       (void)remount_mmc_readonly();
+
       if (runlevel == DSME_RUNLEVEL_SHUTDOWN ||
           runlevel == DSME_RUNLEVEL_MALF)
       {
@@ -100,6 +102,7 @@ static void shutdown(dsme_runlevel_t runlevel)
               sleep(3);
               if (system("/sbin/poweroff") != 0) {
                   dsme_log(LOG_ERR, "/sbin/poweroff failed again");
+                  goto fail_and_exit;
               }
           }
       } else {
@@ -109,14 +112,18 @@ static void shutdown(dsme_runlevel_t runlevel)
               sleep(3);
               if (system("/sbin/reboot") != 0) {
                   dsme_log(LOG_ERR, "/sbin/reboot failed again");
+                  goto fail_and_exit;
               }
           }
       }
 
-      dsme_log(LOG_CRIT, "Entering busy-loop");
-      while(1)
-          for(;;) {}
   }
+
+  return;
+
+fail_and_exit:
+  dsme_log(LOG_CRIT, "Closing to clean-up!");
+  dsme_exit(EXIT_FAILURE);
 }
 
 
@@ -168,7 +175,7 @@ static bool remount_mmc_readonly(void)
       /* try to remount read-only */
       if ((pid = fork()) < 0) {
           dsme_log(LOG_CRIT, "fork failed, exiting");
-          exit(EXIT_FAILURE);
+          return false;
       } else if (pid == 0) {
           execv("/bin/mount", args);
           execv("/sbin/mount", args);

@@ -31,6 +31,7 @@
 #include "dsme/messages.h"
 #include "dsme/protocol.h"
 #include "dsme/logging.h"
+#include "dsme/mainloop.h"
 
 #include <glib.h>
 #include <stdio.h>
@@ -725,3 +726,10 @@ int modulebase_shutdown(void)
 
 	return 0;
 }
+
+void dsme_exit(int exit_code)
+{
+  dsme_main_loop_quit(exit_code);
+}
+
+

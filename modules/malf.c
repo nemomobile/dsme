@@ -30,6 +30,7 @@
 #include "runlevel.h"
 #include "dsme/modules.h"
 #include "dsme/logging.h"
+#include "dsme/modulebase.h"
 
 #include <stdlib.h>
 #include <errno.h>
@@ -43,6 +44,7 @@ static const char* const malf_reason_name[] = {
     "SECURITY"
 };
 
+static const char* default_component = "(no component)";
 
 static bool enter_malf(DSME_MALF_REASON reason,
                        const char*      component,
@@ -70,7 +72,8 @@ static bool enter_malf(DSME_MALF_REASON reason,
     };
     if ((pid = fork()) < 0) {
         dsme_log(LOG_CRIT, "fork failed, exiting");
-        exit(EXIT_FAILURE);
+        dsme_exit(EXIT_FAILURE);
+        return false;
     } else if (pid == 0) {
         execv("/usr/sbin/enter_malf", args);
 
@@ -92,7 +95,9 @@ static bool enter_malf(DSME_MALF_REASON reason,
 
 DSME_HANDLER(DSM_MSGTYPE_ENTER_MALF, conn, malf)
 {
-    if (!enter_malf(malf->reason, malf->component, DSMEMSG_EXTRA(malf))) {
+    if (!enter_malf(malf->reason,
+                    malf->component ? malf->component : default_component,
+                    DSMEMSG_EXTRA(malf))) {
         /*
          * entering MALF failed; force shutdown by talking directly
          * to the init module (bypassing the state module)
