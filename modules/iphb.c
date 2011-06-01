@@ -48,17 +48,14 @@
 #include <sys/stat.h>
 #include <sys/un.h>
 #include <sys/time.h>
-
 #include <time.h>
-
 #include <glib.h>
-
 
 #define DSME_MAX_EPOLL_EVENTS   10
 
-
-
-/**@brief  Allocated structure of one client in the linked client list in iphbd */
+/**
+ * @brief  Allocated structure of one client in the linked client list in iphbd
+ */
 typedef struct _client_t {
     int               fd;           /*!< IPC (Unix domain) socket or -1 */
     endpoint_t*       conn;         /*!< internal client endpoint (if fd == -1) */
@@ -72,9 +69,7 @@ typedef struct _client_t {
 
 typedef bool (condition_func)(client_t* client, time_t now);
 
-
 static bool epoll_add(int fd, void* ptr);
-
 static gboolean read_epoll(GIOChannel*  source,
                            GIOCondition condition,
                            gpointer     data);
@@ -83,8 +78,6 @@ static bool handle_client_req(struct epoll_event* event, time_t now);
 static bool handle_wait_req(const struct _iphb_wait_req_t* req,
                             client_t*                      client,
                             time_t                         now);
-static condition_func mintime_passed;
-static condition_func maxtime_passed;
 static void wakeup_clients_if(condition_func should_wake_up, time_t now);
 static int wakeup_clients_if2(condition_func should_wake_up, time_t now);
 static bool wakeup(client_t* client, time_t now);
@@ -95,21 +88,18 @@ static void close_and_free_client(client_t* client);
 static void sync_hwwd_feeder(void);
 static void stop_wakeup_timer(void);
 
-
+static condition_func mintime_passed;
+static condition_func maxtime_passed;
 static client_t* clients = NULL;	/* linked lits of connected clients */
-
 static int listenfd = -1; /* IPC client listen/accept handle */
 static int kernelfd = -1; /* handle to the kernel */
 static int epollfd  = -1; /* handle to the epoll instance */
-
 static dsme_timer_t wakeup_timer = 0;
-
-                             static struct timespec ts_started = {0, 0};
-
+static struct timespec ts_started = {0, 0};
 
 /**
-   Open kernel module handle - retry later if fails (meaning LKM is not loaded)
-*/
+ * Open kernel module handle - retry later if fails (meaning LKM is not loaded)
+ */
 static void open_kernel_fd(void)
 {
     static bool kernel_module_load_error_logged = false;
@@ -162,19 +152,16 @@ static void close_kernel_fd(void)
     }
 }
 
-
-
-
 /**
-   Start up daemon. Does not fail if kernel module is not loaded
-*/
-// TODO: clean up in error cases (good god, C sucks here)
+ * Start up daemon. Does not fail if kernel module is not loaded
+ *
+ * @todo clean up in error cases
+ */
 static bool start_service(void)
 {
     struct sockaddr_un addr;
 
     (void)clock_gettime(CLOCK_MONOTONIC, &ts_started);
-
 
     listenfd = socket(PF_UNIX, SOCK_STREAM, 0);
     if (listenfd < 0) {
@@ -244,16 +231,13 @@ fail:
     return false;
 }
 
-
 /**
-   Add new client to list.
-
-   @param fd	Socket descriptor
-
-   @todo	Is abort OK if malloc fails?
-
-*/
-
+ * Add new client to list.
+ *
+ * @param fd	Socket descriptor
+ *
+ * @todo	Is abort OK if malloc fails?
+ */
 static client_t* new_client(int fd)
 {
     client_t* client;
@@ -333,9 +317,6 @@ static int external_clients()
     return count;
 }
 
-
-
-
 static void send_stats(client_t *client)
 {
     struct iphb_stats stats   = { 0 };
@@ -373,7 +354,6 @@ static void send_stats(client_t *client)
                  strerror(errno));  // do not drop yet
     }
 }
-
 
 static bool epoll_add(int fd, void* ptr)
 {
@@ -509,7 +489,6 @@ static bool is_timer_needed(int* optimal_sleep_time)
     }
 }
 
-
 static bool handle_client_req(struct epoll_event* event, time_t now)
 {
     client_t* client       = event->data.ptr;
@@ -598,10 +577,10 @@ static bool handle_wait_req(const struct _iphb_wait_req_t* req_const,
 
             (void)clock_gettime(CLOCK_MONOTONIC, &ts_now);
 
-            slots_passed = (ts_now.tv_sec - ts_started.tv_sec) / req_const->mintime;       
-            req.mintime = ts_started.tv_sec + (slots_passed + 1)*req_const->mintime - ts_now.tv_sec;
+            slots_passed = (ts_now.tv_sec - ts_started.tv_sec) / req_const->mintime;
+            req.mintime = ts_started.tv_sec + (slots_passed + 1) * req_const->mintime - ts_now.tv_sec;
             if (req.mintime <= 1)
-                req.mintime = ts_started.tv_sec + (slots_passed + 2)*req_const->mintime - ts_now.tv_sec;
+                req.mintime = ts_started.tv_sec + (slots_passed + 2) * req_const->mintime - ts_now.tv_sec;
             req.maxtime = req.mintime + 1; /* allow tolerance because of math above */
 
             dsme_log(LOG_DEBUG,
@@ -610,8 +589,6 @@ static bool handle_wait_req(const struct _iphb_wait_req_t* req_const,
                      (unsigned long)client->pid,
                      (int)req.mintime,
                      (int)req.maxtime);
-
-
         } else {
             dsme_log(LOG_DEBUG,
                      "client with pid %lu signaled interest of waiting"
@@ -629,7 +606,6 @@ static bool handle_wait_req(const struct _iphb_wait_req_t* req_const,
 
     return client_woken;
 }
-
 
 static void wakeup_clients_if(condition_func* should_wake_up, time_t now)
 {
@@ -742,8 +718,6 @@ static bool wakeup(client_t* client, time_t now)
     return woken_up;
 }
 
-
-
 static void delete_clients(void)
 {
     while (clients) {
@@ -790,7 +764,6 @@ static void close_and_free_client(client_t* client)
 
     free(client);
 }
-
 
 // synchronice to HW WD feeding process by listening to its heartbeat
 DSME_HANDLER(DSM_MSGTYPE_HEARTBEAT, conn, msg)
@@ -857,14 +830,12 @@ static void stop_wakeup_timer(void)
     }
 }
 
-
 module_fn_info_t message_handlers[] = {
     DSME_HANDLER_BINDING(DSM_MSGTYPE_HEARTBEAT),
     DSME_HANDLER_BINDING(DSM_MSGTYPE_WAIT),
     DSME_HANDLER_BINDING(DSM_MSGTYPE_IDLE),
     { 0 }
 };
-
 
 void module_init(module_t* handle)
 {
