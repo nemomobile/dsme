@@ -1,3 +1,10 @@
+dsme (0.61.57) unstable; urgency=low
+
+  * Fixes: NB#260776 - Scheduled synchronization NOT working with all accounts if device time set to past 
+    - use clock_gettime(clock_gettime(CLOCK_MONOTONIC, ...) instead of time()
+
+ -- Raimo Vuonnala <raimo.vuonnala@nokia.com>  Wed, 08 Jun 2011 10:15:45 +0300
+
 dsme (0.61.56) unstable; urgency=low
 
   [Antti Virtanen]

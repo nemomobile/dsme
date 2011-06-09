@@ -322,7 +322,10 @@ static void send_stats(client_t *client)
     struct iphb_stats stats   = { 0 };
     client_t*         c       = clients;
     unsigned int      next_hb = 0;
-    time_t            now     = time(0);
+    struct timespec   ts_now;
+
+    (void)clock_gettime(CLOCK_MONOTONIC, &ts_now);
+
 
     while (c) {
         stats.clients++;
@@ -331,7 +334,7 @@ static void send_stats(client_t *client)
         }
 
         if (c->wait_started) {
-            unsigned int wait_time = c->wait_started + c->maxtime - now;
+            unsigned int wait_time = c->wait_started + c->maxtime - ts_now.tv_sec;
             if (!next_hb) {
                 next_hb = wait_time;
             } else {
@@ -395,7 +398,9 @@ static gboolean read_epoll(GIOChannel*  source,
     }
     dsme_log(LOG_DEBUG, "epollfd_wait => %d events", nfds);
 
-    time_t now = time(0);
+    struct timespec   ts_now;
+
+    (void)clock_gettime(CLOCK_MONOTONIC, &ts_now);
 
     /* go through new events */
     for (i = 0; i < nfds; ++i) {
@@ -422,13 +427,13 @@ static gboolean read_epoll(GIOChannel*  source,
             while (read(kernelfd, 0, 0) == -1 && errno == EINTR);
         } else {
             /* deal with old clients */
-            if (handle_client_req(&events[i], now)) {
+            if (handle_client_req(&events[i], ts_now.tv_sec)) {
                 wakeup_condition = mintime_passed;
             }
         }
     }
 
-    wakeup_clients_if(wakeup_condition, now);
+    wakeup_clients_if(wakeup_condition, ts_now.tv_sec);
 
     sync_hwwd_feeder();
 
@@ -440,9 +445,10 @@ static int handle_wakeup_timeout(void* unused)
 {
     dsme_log(LOG_DEBUG, "*** TIMEOUT ***");
 
-    time_t now = time(0);
+    struct timespec   ts_now;
+    (void)clock_gettime(CLOCK_MONOTONIC, &ts_now);
 
-    wakeup_clients_if(maxtime_passed, now);
+    wakeup_clients_if(maxtime_passed, ts_now.tv_sec);
 
     sync_hwwd_feeder();
 
@@ -452,7 +458,11 @@ static int handle_wakeup_timeout(void* unused)
 static bool is_timer_needed(int* optimal_sleep_time)
 {
     bool   client_found = false;
-    time_t now          = time(0);
+
+    struct timespec   ts_now;
+    (void)clock_gettime(CLOCK_MONOTONIC, &ts_now);
+
+
     int    sleep_time   = 0;
 
     client_t* client = clients;
@@ -461,17 +471,17 @@ static bool is_timer_needed(int* optimal_sleep_time)
         if (is_external_client(client) && client->wait_started) {
             // does this client need to wake up before previous ones?
             if (!client_found ||
-                client->wait_started + client->maxtime < now + sleep_time)
+                client->wait_started + client->maxtime < ts_now.tv_sec + sleep_time)
             {
                 client_found = true;
                 // make sure to keep sleep_time >= 0
-                if (client->wait_started + client->maxtime <= now) {
+                if (client->wait_started + client->maxtime <= ts_now.tv_sec) {
                     // this client should have been woken up already!
                     sleep_time = 0;
                     break;
                 } else {
                     // we have a new shortest sleep time
-                    sleep_time = client->wait_started + client->maxtime - now;
+                    sleep_time = client->wait_started + client->maxtime - ts_now.tv_sec;
                 }
             }
         }
@@ -772,10 +782,13 @@ DSME_HANDLER(DSM_MSGTYPE_HEARTBEAT, conn, msg)
 
     stop_wakeup_timer();
 
-    time_t now = time(0);
+
+    struct timespec   ts_now;
+    (void)clock_gettime(CLOCK_MONOTONIC, &ts_now);
+
 
     // TODO: should we wake up mintime sleepers to sync on hwwd?
-    wakeup_clients_if(maxtime_passed, now);
+    wakeup_clients_if(maxtime_passed, ts_now.tv_sec);
 }
 
 static void sync_hwwd_feeder(void)
@@ -789,7 +802,9 @@ DSME_HANDLER(DSM_MSGTYPE_WAIT, conn, msg)
 
     stop_wakeup_timer();
 
-    time_t now = time(0);
+    struct timespec   ts_now;
+    (void)clock_gettime(CLOCK_MONOTONIC, &ts_now);
+
 
     client_t* client = list_find_internal_client(conn, msg->data);
     if (!client) {
@@ -797,7 +812,7 @@ DSME_HANDLER(DSM_MSGTYPE_WAIT, conn, msg)
         list_add_client(client);
     }
 
-    handle_wait_req(&msg->req, client, now);
+    handle_wait_req(&msg->req, client, ts_now.tv_sec);
 
     // we don't want to wake anyone else up for internal clients showing up
     // TODO: or do we?
