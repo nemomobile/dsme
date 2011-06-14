@@ -53,6 +53,7 @@
 
 static dsmesock_connection_t* conn;
 
+static int get_version(bool testmode);
 
 static void usage(const char* name)
 {
@@ -77,6 +78,10 @@ static void connect_to_dsme(void)
         perror("dsmesock_connect");
         exit(EXIT_FAILURE);
     }
+    /* This gives enough time for DSME to check
+       the socket permissions before we close the socket
+       connection */
+    (void)get_version(true);
 }
 
 static void disconnect_from_dsme(void)
@@ -101,7 +106,7 @@ static void send_to_dsme_with_string(const void* msg, const char* s)
 }
 
 
-static int get_version(void)
+static int get_version(bool testmode)
 {
     DSM_MSGTYPE_GET_VERSION   req_msg =
           DSME_MSG_INIT(DSM_MSGTYPE_GET_VERSION);
@@ -110,9 +115,11 @@ static int get_version(void)
     fd_set                    rfds;
     int                       ret = -1;
 
-    printf("dsmetool version: %s\n", STRINGIFY(PRG_VERSION));
+    if (!testmode) {
+        printf("dsmetool version: %s\n", STRINGIFY(PRG_VERSION));
 
-    connect_to_dsme();
+        connect_to_dsme();
+    }
 
     send_to_dsme(&req_msg);
 
@@ -146,13 +153,15 @@ static int get_version(void)
     }
 
     char* version = (char*)DSMEMSG_EXTRA(retmsg);
-    if (version != 0) {
+    if (version != 0 && !testmode) {
         version[DSMEMSG_EXTRA_SIZE(retmsg) - 1] = '\0';
         printf("DSME version: %s\n", version);
     }
 
     free(p);
-    disconnect_from_dsme();
+    if (!testmode) {
+        disconnect_from_dsme();
+    }
 
     return 0;
 }
@@ -259,7 +268,7 @@ int main(int argc, char* argv[])
                 return send_reboot_request();
                 break;
             case 'v':
-                return get_version();
+                return get_version(false);
                 break;
             case 'a':
                 return send_ta_test_request();
