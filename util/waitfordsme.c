@@ -56,7 +56,7 @@ int main(int argc, char* argv[]) {
 
 	gettimeofday(&start, NULL);
 
-	printf("%s: Wait for DSME socket...\n", argv[0]);
+	printf("%s (pid %i): Wait for DSME socket...\n", argv[0], getpid());
 	fflush(stdout);
 
 	while (1) {
