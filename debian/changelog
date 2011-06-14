@@ -1,3 +1,10 @@
+dsme (0.61.58) unstable; urgency=low
+
+  [Matias Muhonen]
+  * Fix a race between waitfordsme and dsmesock/accept_client (Fixes: NB#259843)
+
+ -- Matias Muhonen <ext-matias.muhonen@nokia.com>  Tue, 14 Jun 2011 08:58:04 +0000
+
 dsme (0.61.57) unstable; urgency=low
 
   * Fixes: NB#260776 - Scheduled synchronization NOT working with all accounts if device time set to past 
@@ -9,9 +16,6 @@ dsme (0.61.56) unstable; urgency=low
 
   [Antti Virtanen]
   * Increased CHARGER_DISCONNECT_TIMEOUT to 15 sec.
-
-  [Matias Muhonen]
-  * Fix a race between waitfordsme and dsmesock/accept_client (Fixes NB#259843)
 
   [Jyrki Hämäläinen]
   * Implemented cleaner exit handling
