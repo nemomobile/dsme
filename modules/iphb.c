@@ -438,7 +438,7 @@ static gboolean read_epoll(GIOChannel*  source,
     sync_hwwd_feeder();
 
     // TODO: should we ever stop?
-    return true;
+    return TRUE;
 }
 
 static int handle_wakeup_timeout(void* unused)
