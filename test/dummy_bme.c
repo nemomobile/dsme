@@ -137,7 +137,7 @@ int bme_server_init(void)
 
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = PF_UNIX;
-    strcpy(addr.sun_path, sockname);
+    strncpy(addr.sun_path, sockname, sizeof(addr.sun_path) - 1);
     size = strlen(addr.sun_path) + sizeof(addr.sun_family);
 
     if (bind(umsfd, (struct sockaddr*) &addr, size) < 0) {
