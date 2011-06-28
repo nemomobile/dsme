@@ -78,6 +78,10 @@ static void connect_to_dsme(void)
         perror("dsmesock_connect");
         exit(EXIT_FAILURE);
     }
+    if (conn->fd < 0) {
+        perror("dsmesock_connect");
+        exit(EXIT_FAILURE);
+    }
     /* This gives enough time for DSME to check
        the socket permissions before we close the socket
        connection */
