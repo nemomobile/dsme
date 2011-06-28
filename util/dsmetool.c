@@ -3,10 +3,11 @@
 
    Dsmetool can be used to send commands to DSME.
    <p>
-   Copyright (C) 2004-2010 Nokia Corporation.
+   Copyright (C) 2004-2011 Nokia Corporation.
 
    @author Ismo Laitinen <ismo.laitinen@nokia.com>
    @author Semi Malinen <semi.malinen@nokia.com>
+   @author Matias Muhonen <ext-matias.muhonen@nokia.com>
 
    This file is part of Dsme.
 
