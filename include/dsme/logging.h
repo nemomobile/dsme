@@ -29,6 +29,7 @@
 /* Even if syslog is not used, use the message levels therein */
 #include <syslog.h>
 #include <stdbool.h>
+#include <unistd.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,10 +43,10 @@ typedef enum {
     LOG_METHOD_STDERR, /* Print messages to stderr */
     LOG_METHOD_SYSLOG, /* Use syslog(3) */
     LOG_METHOD_FILE    /* Output messages to the file */
-} log_method; 
+} log_method;
 
 
-/** 
+/**
    Logs a single message.
 
    @param level Message level, one of the following:
@@ -107,6 +108,8 @@ void dsme_log_close(void);
    Ask logging thread to stop
 */
 void dsme_log_stop(void);
+
+char* pid2text(pid_t pid);
 
 #ifdef __cplusplus
 }

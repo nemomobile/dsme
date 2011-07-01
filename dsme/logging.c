@@ -428,7 +428,7 @@ bool dsme_log_open(log_method  method,
 out:
                 fprintf(stderr,
                         "STI init failed, will fall back to stderr method\n");
-                dsme_log_routine = log_to_stderr;    
+                dsme_log_routine = log_to_stderr;
             }
         case LOG_METHOD_STDOUT:
             dsme_log_routine = log_to_stdout;
@@ -536,5 +536,37 @@ void dsme_log_stop(void)
     thread_enabled = 0;
 }
 
+char* pid2text(pid_t pid)
+{
+    char* str;
+    int ret = -1;
+    if (logopt.verbosity == LOG_DEBUG)
+    {
+        char* path;
+        if (asprintf(&path, "/proc/%ld/stat", (long)pid))
+        {
+            FILE* file = fopen(path, "r");
+            if (file != NULL)
+            {
+                long tmp;
+                char proc[64];
+                int ret2;
+
+                ret2 = fscanf(file, "%ld %s", &tmp, proc);
+                if (ret2 != EOF && ret2 == 2)
+                {
+                    ret = asprintf(&str, "%ld %s", (long)pid, proc);
+                }
+                fclose(file);
+            }
+            free(path);
+        }
+    }
+    else
+    {
+        ret = asprintf(&str, "%ld", (long)pid);
+    }
+    return (ret ? str : strdup("error"));
+}
 
 #endif /* DSME_LOG_ENABLE */
