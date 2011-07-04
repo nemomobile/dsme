@@ -540,22 +540,25 @@ char* pid2text(pid_t pid)
 {
     char* str;
     int ret = -1;
+    if (pid == 0)
+        return strdup("<internal>");
     if (logopt.verbosity == LOG_DEBUG)
     {
         char* path;
-        if (asprintf(&path, "/proc/%ld/stat", (long)pid))
+        if (asprintf(&path, "/proc/%ld/cmdline", (long)pid))
         {
             FILE* file = fopen(path, "r");
             if (file != NULL)
             {
-                long tmp;
-                char proc[64];
+                char* proc = NULL;
                 int ret2;
 
-                ret2 = fscanf(file, "%ld %s", &tmp, proc);
-                if (ret2 != EOF && ret2 == 2)
+                ret2 = fscanf(file, "%ms", &proc);
+                if (ret2 == 1)
                 {
-                    ret = asprintf(&str, "%ld %s", (long)pid, proc);
+                    ret = asprintf(&str, "%ld (%s)", (long)pid, proc);
+                    if (proc)
+                        free(proc);
                 }
                 fclose(file);
             }
@@ -566,7 +569,7 @@ char* pid2text(pid_t pid)
     {
         ret = asprintf(&str, "%ld", (long)pid);
     }
-    return (ret ? str : strdup("error"));
+    return (ret > -1 ? str : strdup("<error>"));
 }
 
 #endif /* DSME_LOG_ENABLE */

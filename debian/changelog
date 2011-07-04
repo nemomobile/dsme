@@ -4,6 +4,9 @@ dsme (0.62.0) unstable; urgency=low
   * Don't link the dsme binary to unused dependencies (Fixes: NB#266894)
   * Check for socket connect errors in dsmetool (Fixes: NB#269307)
 
+  [Antti Virtanen]
+  * Include process name into iphb module log messages if verbose logging used.
+
  -- Matias Muhonen <ext-matias.muhonen@nokia.com>  Tue, 28 Jun 2011 10:38:03 +0000
 
 dsme (0.61.58) unstable; urgency=low
