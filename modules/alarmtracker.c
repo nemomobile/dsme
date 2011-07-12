@@ -1,8 +1,11 @@
 /**
    @file alarmtracker.c
 
-   Track the alarm state from the alarm queue indications sent by timed.
-   This is needed for device state selection by the state module.
+   Track the alarm state from the alarm queue indications sent by the time daemon (timed).
+   This is needed for device state selection in the state module;
+   if an alarm is set, we go to the acting dead state instead of a reboot or
+   shutdown. This allows the device to wake up due to an alarm.
+
    <p>
    Copyright (C) 2009-2010 Nokia Corporation.
 
@@ -49,6 +52,10 @@
 #include <string.h>
 
 
+/*
+ * Store the alarm queue state in a file; it is used to restore the alarm queue state
+ * when the module is loaded.
+ */
 #define ALARM_STATE_FILE     "/var/lib/dsme/alarm_queue_status"
 #define ALARM_STATE_FILE_TMP "/var/lib/dsme/alarm_queue_status.tmp"
 
