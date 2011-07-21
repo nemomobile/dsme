@@ -323,5 +323,7 @@ void module_fini(void)
 {
   dsme_dbus_unbind_signals(&bound, signals);
 
+  save_alarm_queue_status();
+
   dsme_log(LOG_DEBUG, "alarmtracker.so unloaded");
 }
