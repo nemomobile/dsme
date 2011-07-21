@@ -6,7 +6,8 @@ AM_CFLAGS = $(C_GENFLAGS) $(C_OPTFLAGS) $(GLIB_CFLAGS) -DDSME_LOG_ENABLE
 AM_LDFLAGS = -pthread
 AM_CPPFLAGS = $(CPP_GENFLAGS)
 LDADD = $(GLIB_LIBS) -ldsme
-TESTS = testdriver
+TESTS = testmod_state \
+	testmod_alarmtracker
 
 #
 # Build targets
@@ -15,7 +16,8 @@ noinst_PROGRAMS = batttest \
 		dsmetest \
 		dummy_bme \
 		processwdtest \
-		testdriver \
+		testmod_state \
+		testmod_alarmtracker \
 		abnormalexitwrapper_tester
 
 pkglib_LTLIBRARIES = libabnormalexitwrapper.la
@@ -28,17 +30,29 @@ dsmetest_SOURCES = dsmetest.c
 
 processwdtest_SOURCES = processwdtest.c
 
-testdriver_SOURCES = testdriver.c
-
-testdriver_CFLAGS = $(C_GENFLAGS) $(C_OPTFLAGS) -DDSME_LOG_ENABLE
-testdriver_LDFLAGS = -pthread -rdynamic
-testdriver_CPPFLAGS = $(CPP_GENFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS)
+testmod_state_SOURCES = testmod_state.c
+testmod_state_CFLAGS = $(C_GENFLAGS) $(C_OPTFLAGS) -DDSME_LOG_ENABLE
+testmod_state_LDFLAGS = -pthread -rdynamic
+testmod_state_CPPFLAGS = $(CPP_GENFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS)
 # FIXME: including .o files in the following is quite hackish
-testdriver_LDADD = $(GLIB_LIBS) -lpthread -ldl -ldsme -lcreds \
+testmod_state_LDADD = $(GLIB_LIBS) -ldbus-1 -lpthread -ldl -ldsme -lcreds \
                    ../dsme/dsme_server-dsmesock.o \
                    ../dsme/dsme_server-logging.o \
                    ../dsme/dsme_server-mainloop.o \
                    ../dsme/dsme_server-dsme-rd-mode.o
+
+testmod_alarmtracker_SOURCES = testmod_alarmtracker.c
+testmod_alarmtracker_CFLAGS = $(C_GENFLAGS) $(C_OPTFLAGS) -DDSME_LOG_ENABLE
+testmod_alarmtracker_LDFLAGS = -pthread -rdynamic
+testmod_alarmtracker_CPPFLAGS = $(CPP_GENFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS)
+# FIXME: including .o files in the following is quite hackish
+testmod_alarmtracker_LDADD = $(GLIB_LIBS) -ldbus-1 -ldbus-glib-1 -lpthread -ldl -ldsme -lcreds \
+                   ../dsme/dsme_server-logging.o \
+                   ../dsme/dsme_server-mainloop.o
+#		   ../modules/dbusproxy_la-dsme_dbus.o
+#                   ../dsme/dsme_server-dsmesock.o \
+#                   ../dsme/dsme_server-dsme-rd-mode.o
+
 
 abnormalexitwrapper_tester_SOURCES = abnormalexitwrapper_tester.c
 abnormalexitwrapper_tester_LDFLAGS = -pthread -rdynamic

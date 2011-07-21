@@ -10,6 +10,8 @@ dsme (0.62.0) unstable; urgency=low
   [Jyrki Hämäläinen]
   * Remove log callback function support as it is only used in the alarmtracker module.
   * Use IPHB wakeups for saving the alarm queue status file.
+  * Extended the module tests with new test stubs.
+  * Implemented test cases for the alarmtracker module.
 
  -- Matias Muhonen <ext-matias.muhonen@nokia.com>  Tue, 28 Jun 2011 10:38:03 +0000
 
