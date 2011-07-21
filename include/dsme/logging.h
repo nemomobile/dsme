@@ -68,9 +68,6 @@ typedef enum {
 void dsme_log_txt(int level, const char *fmt, ...)
     __attribute__((format(printf,2,3)));
 void dsme_log_raw(int level, const char *fmt, ...) __attribute__((format(printf,2,3)));
-void dsme_log_wakeup(void);
-int dsme_log_cb_attach(void (*fn)(void));
-int dsme_log_cb_detach(void (*fn)(void));
 
 /* Macros */
 #define dsme_log(level, fmt...) dsme_log_txt(level, fmt)

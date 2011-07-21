@@ -45,6 +45,8 @@
 #include <dsme/protocol.h>
 #include <dsme/alarm_limit.h>
 
+#include <iphbd/iphb_internal.h>
+
 #include <stdio.h>
 #include <limits.h>
 #include <time.h>
@@ -68,8 +70,18 @@ static bool   external_state_alarm_set    = false;
 
 static dsme_timer_t alarm_state_transition_timer = 0;
 
+static void schedule_next_wakeup(void)
+{
+    DSM_MSGTYPE_WAIT msg = DSME_MSG_INIT(DSM_MSGTYPE_WAIT);
+    msg.req.mintime = 0;
+    msg.req.maxtime = msg.req.mintime + 120;
+    msg.req.pid     = 0;
+    msg.data        = 0;
 
-static void save_alarm_queue_status_cb(void)
+    broadcast_internally(&msg);
+}
+
+static void save_alarm_queue_status(void)
 {
   if (alarm_state_file_up_to_date) {
       return;
@@ -115,6 +127,11 @@ static void save_alarm_queue_status_cb(void)
       /* do not retry to avoid spamming the log */
       alarm_state_file_up_to_date = true;
   }
+}
+
+DSME_HANDLER(DSM_MSGTYPE_WAKEUP, client, msg)
+{
+  save_alarm_queue_status();
 }
 
 static void restore_alarm_queue_status(void)
@@ -241,9 +258,8 @@ static void alarm_queue_status_ind(const DsmeDbusMessage* ind)
 
         dsme_log(LOG_DEBUG, "got new alarm: %ld", alarm_queue_head);
 
-        /* save alarm queue status in the logger thread */
         alarm_state_file_up_to_date = false;
-        dsme_log_wakeup();
+        schedule_next_wakeup();
     } else {
         dsme_log(LOG_DEBUG, "got old alarm: %ld", alarm_queue_head);
     }
@@ -282,6 +298,7 @@ DSME_HANDLER(DSM_MSGTYPE_STATE_QUERY, client, req)
 }
 
 module_fn_info_t message_handlers[] = {
+  DSME_HANDLER_BINDING(DSM_MSGTYPE_WAKEUP),
   DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_CONNECT),
   DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_DISCONNECT),
   DSME_HANDLER_BINDING(DSM_MSGTYPE_STATE_QUERY),
@@ -299,17 +316,12 @@ void module_init(module_t* handle)
 
   restore_alarm_queue_status();
 
-  /* attach a callback for saving alarms from the logger thread */
-  dsme_log_cb_attach(save_alarm_queue_status_cb);
-
   set_alarm_state();
 }
 
 void module_fini(void)
 {
   dsme_dbus_unbind_signals(&bound, signals);
-
-  dsme_log_cb_detach(save_alarm_queue_status_cb);
 
   dsme_log(LOG_DEBUG, "alarmtracker.so unloaded");
 }

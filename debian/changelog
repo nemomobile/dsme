@@ -7,6 +7,10 @@ dsme (0.62.0) unstable; urgency=low
   [Antti Virtanen]
   * Include process name into iphb module log messages if verbose logging used.
 
+  [Jyrki Hämäläinen]
+  * Remove log callback function support as it is only used in the alarmtracker module.
+  * Use IPHB wakeups for saving the alarm queue status file.
+
  -- Matias Muhonen <ext-matias.muhonen@nokia.com>  Tue, 28 Jun 2011 10:38:03 +0000
 
 dsme (0.61.58) unstable; urgency=low

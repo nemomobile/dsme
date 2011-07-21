@@ -106,46 +106,6 @@ void dsme_log_raw(int level, const char *fmt, ...) {
   }
 }
 
-void dsme_log_wakeup(void) {
-  sem_post(&ring_buffer_sem);
-}
-
-#define DSME_MAX_LOG_CALLBACKS 4
-
-static void (*log_cb[DSME_MAX_LOG_CALLBACKS])(void);
-
-int dsme_log_cb_attach(void (*fn)(void))
-{
-  int i;
-  for( i = 0; i < DSME_MAX_LOG_CALLBACKS; ++i ) {
-    if( log_cb[i] == 0 ) {
-      log_cb[i] = fn;
-      return 1;
-    }
-  }
-  return 0;
-}
-
-int dsme_log_cb_detach(void (*fn)(void))
-{
-  int i;
-  for( i = 0; i < DSME_MAX_LOG_CALLBACKS; ++i ) {
-    if( log_cb[i] == fn ) {
-      log_cb[i] = 0;
-      return 1;
-    }
-  }
-  return 0;
-}
-
-static void dsme_log_cb_execute_all(void)
-{
-  int i;
-  for( i = 0; i < DSME_MAX_LOG_CALLBACKS; ++i ) {
-    if( log_cb[i] != 0 ) log_cb[i]();
-  }
-}
-
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // SIMO HACKING
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -363,8 +323,6 @@ static void* logging_thread(void* param)
 
 	// ignore return value, semaphore takes care of that.
 	deque_log_buffer(&read_count);
-
-	dsme_log_cb_execute_all();
     }
 
     thread_running = 0;
