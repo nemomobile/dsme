@@ -6,6 +6,7 @@ AM_CFLAGS = $(C_GENFLAGS) $(C_OPTFLAGS) $(DBUS_CFLAGS) $(GLIB_CFLAGS) -DDSME_LOG
 AM_LDFLAGS = -Wl,--as-needed -pthread -rdynamic $(GLIB_LIBS) -ldsme -ldbus-1 -ldbus-glib-1 -lpthread -ldl -ldsme -lcreds
 AM_CPPFLAGS = $(CPP_GENFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS)
 TESTS = testmod_alarmtracker \
+	testmod_emergencycalltracker \
 	testmod_state \
 	testmod_usbtracker
 
@@ -17,6 +18,7 @@ noinst_PROGRAMS = batttest \
 		dummy_bme \
 		processwdtest \
 		testmod_alarmtracker \
+		testmod_emergencycalltracker \
 		testmod_state \
                 testmod_usbtracker \
 		abnormalexitwrapper_tester
@@ -36,6 +38,10 @@ processwdtest_SOURCES = processwdtest.c
 testmod_alarmtracker_SOURCES = testmod_alarmtracker.c
 testmod_alarmtracker_LDADD = ../dsme/dsme_server-logging.o \
                    ../dsme/dsme_server-mainloop.o
+
+testmod_emergencycalltracker_SOURCES = testmod_emergencycalltracker.c
+testmod_emergencycalltracker_LDADD = ../dsme/dsme_server-logging.o \
+                                     ../dsme/dsme_server-mainloop.o
 
 testmod_state_SOURCES = testmod_state.c
 testmod_state_LDADD = ../dsme/dsme_server-dsmesock.o \
