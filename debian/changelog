@@ -3,6 +3,7 @@ dsme (0.62.0) unstable; urgency=low
   [Matias Muhonen]
   * Don't link the dsme binary to unused dependencies (Fixes: NB#266894)
   * Check for socket connect errors in dsmetool (Fixes: NB#269307)
+  * Beautify the automake test configuration
 
   [Antti Virtanen]
   * Include process name into iphb module log messages if verbose logging used.
