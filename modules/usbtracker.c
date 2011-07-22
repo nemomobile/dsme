@@ -26,8 +26,8 @@
 */
 /*
  * To change usb state, use one of these:
- * dbus-send --type=signal --system /com/meego/dsme com.meego.usb_moded.signal.sig_usb_state_ind string:mass_storage
- * dbus-send --type=signal --system /com/meego/dsme com.meego.usb_moded.signal.sig_usb_state_ind string:none
+ * dbus-send --type=signal --system /com/meego/usb_moded com.meego.usb_moded.signal.sig_usb_state_ind string:mass_storage
+ * dbus-send --type=signal --system /com/meego/usb_moded com.meego.usb_moded.signal.sig_usb_state_ind string:none
  */
 
 #include "state-internal.h"
