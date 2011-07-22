@@ -101,6 +101,19 @@ int dsme_dbus_message_get_int(const DsmeDbusMessage* msg)
   return i;
 }
 
+const char* dsme_dbus_message_get_string(const DsmeDbusMessage* msg)
+{
+  const char* s = "";
+
+  if (msg) {
+      // TODO: check type!
+      dbus_message_iter_get_basic((DBusMessageIter*)&msg->iter, &s);
+      message_iter_next((DBusMessageIter*)&msg->iter);
+  }
+
+  return s;
+}
+
 static inline void dsme_dbus_stub_send_signal(DBusMessage* signal)
 {
   GSList* item;

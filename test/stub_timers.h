@@ -44,7 +44,7 @@ static void reset_timers(void)
   timers = 0;
 }
 
-static bool timer_exists(void)
+static inline bool timer_exists(void)
 {
   int count = 0;
   int i;
