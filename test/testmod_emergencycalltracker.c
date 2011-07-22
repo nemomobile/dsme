@@ -1,7 +1,7 @@
 /**
-   @file testmod_usbtracker.c
+   @file testmod_emergencycalltracker.c
 
-   A test driver for the usbtracker module
+   A test driver for the emergencycalltracker module
    <p>
    Copyright (C) 2011 Nokia Corporation
 
