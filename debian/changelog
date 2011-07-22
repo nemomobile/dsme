@@ -4,6 +4,7 @@ dsme (0.62.0) unstable; urgency=low
   * Don't link the dsme binary to unused dependencies (Fixes: NB#266894)
   * Check for socket connect errors in dsmetool (Fixes: NB#269307)
   * Beautify the automake test configuration
+  * Implemented test cases for the usbtracker module
 
   [Antti Virtanen]
   * Include process name into iphb module log messages if verbose logging used.

@@ -15,8 +15,9 @@ noinst_PROGRAMS = batttest \
 		dsmetest \
 		dummy_bme \
 		processwdtest \
-		testmod_state \
 		testmod_alarmtracker \
+		testmod_state \
+                testmod_usbtracker \
 		abnormalexitwrapper_tester
 
 pkglib_LTLIBRARIES = libabnormalexitwrapper.la
@@ -31,15 +32,19 @@ processwdtest_SOURCES = processwdtest.c
 
 # FIXME: including .o files is quite hackish
 
+testmod_alarmtracker_SOURCES = testmod_alarmtracker.c
+testmod_alarmtracker_LDADD = ../dsme/dsme_server-logging.o \
+                   ../dsme/dsme_server-mainloop.o
+
 testmod_state_SOURCES = testmod_state.c
 testmod_state_LDADD = ../dsme/dsme_server-dsmesock.o \
                    ../dsme/dsme_server-logging.o \
                    ../dsme/dsme_server-mainloop.o \
                    ../dsme/dsme_server-dsme-rd-mode.o
 
-testmod_alarmtracker_SOURCES = testmod_alarmtracker.c
-testmod_alarmtracker_LDADD = ../dsme/dsme_server-logging.o \
-                   ../dsme/dsme_server-mainloop.o
+testmod_usbtracker_SOURCES = testmod_usbtracker.c
+testmod_usbtracker_LDADD = ../dsme/dsme_server-logging.o \
+                           ../dsme/dsme_server-mainloop.o
 
 abnormalexitwrapper_tester_SOURCES = abnormalexitwrapper_tester.c
 
