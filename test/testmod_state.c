@@ -115,7 +115,8 @@ static module_t* load_state_module(const char*  bootstate,
       free(ind2);
   }
 
-  assert(message_queue_is_empty());
+  // TODO: this assert is not valid in case we MALF when loading the module
+  // assert(message_queue_is_empty());
 
   return module;
 }
@@ -772,12 +773,9 @@ static void testcase20(void)
   // specify a bad $BOOTSTATE
   state = load_state_module("DIIBADAABA", DSME_STATE_USER);
 
-  assert(timer_exists());
-  trigger_timer();
   DSM_MSGTYPE_ENTER_MALF* msg;
   assert(msg = queued(DSM_MSGTYPE_ENTER_MALF));
   free(msg);
-
   assert(!timer_exists());
   assert(message_queue_is_empty());
   unload_module_under_test(state);
@@ -822,9 +820,7 @@ static void testcase21(void)
   assert(ind = queued(DSM_MSGTYPE_STATE_CHANGE_IND));
   assert(ind->state == DSME_STATE_USER);
   free(ind);
-  assert(message_queue_is_empty());
-  assert(timer_exists());
-  trigger_timer();
+  assert(!message_queue_is_empty());
   DSM_MSGTYPE_ENTER_MALF* malfmsg;
   assert((malfmsg = queued(DSM_MSGTYPE_ENTER_MALF)));
   //TODO: Should the reason / component be checked?
@@ -841,9 +837,7 @@ static void testcase21(void)
   assert(ind = queued(DSM_MSGTYPE_STATE_CHANGE_IND));
   assert(ind->state == DSME_STATE_USER);
   free(ind);
-  assert(message_queue_is_empty());
-  assert(timer_exists());
-  trigger_timer();
+  assert(!message_queue_is_empty());
   assert(malfmsg = queued(DSM_MSGTYPE_ENTER_MALF));
   //TODO: Should the reason / component be checked?
   free(malfmsg);

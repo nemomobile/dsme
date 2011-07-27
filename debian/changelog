@@ -5,6 +5,7 @@ dsme (0.62.0) unstable; urgency=low
   * Check for socket connect errors in dsmetool (Fixes: NB#269307)
   * Beautify the automake test configuration
   * Implemented test cases for the usbtracker and emergencycalltracker modules
+  * DSME enters MALF with a delay in boot (Fixes: NB#272448)
 
   [Antti Virtanen]
   * Include process name into iphb module log messages if verbose logging used.
