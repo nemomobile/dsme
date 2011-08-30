@@ -42,9 +42,7 @@ static bool set_oom_adj_value(int i)
   }
 
   if (fprintf(file, "%i", i) < 0) {
-      int tmp = errno;
       (void)fclose(file);
-      tmp = errno;
       return false;
   }
 

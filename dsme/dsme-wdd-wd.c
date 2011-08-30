@@ -84,6 +84,9 @@ void dsme_wd_kick(void)
               dummy = write(STDERR_FILENO, msg, DSME_STATIC_STRLEN(msg));
               dummy = write(STDERR_FILENO, wd[i].file, strlen(wd[i].file));
               dummy = write(STDERR_FILENO, "\n", 1);
+              if (dummy < 0) {
+                  break;
+              }
 
               /* must not kick later wd's if an earlier one fails */
               break;
