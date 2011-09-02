@@ -69,8 +69,6 @@ static void check_mount_use_limit(const char* mntpoint, disk_use_limit_t* use_li
     struct statfs s;
     int blocks_percent_used;
 
-    memset(&s, 0, sizeof(s));
-
     if (statfs(mntpoint, &s) != 0 || s.f_blocks <= 0) {
         dsme_log(LOG_WARNING, "failed to statfs the mount point (%s).", mntpoint);
         return;

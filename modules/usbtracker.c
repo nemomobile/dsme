@@ -1,7 +1,7 @@
 /**
    @file usbtracker.c
 
-   Track the USB connection status by listening to usb_moded's indications.
+   Track the USB connection status by listening to usbd's indications.
    This is needed for device state selection by the state module,
    so that we will not allow reboot/shutdown while the device is
    mounted to a host PC over USB.

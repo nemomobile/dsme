@@ -62,10 +62,7 @@ test/batttest
 test/dsmetest
 test/dummy_bme
 test/processwdtest
-test/testmod_alarmtracker
-test/testmod_emergencycalltracker
-test/testmod_state
-test/testmod_usbtracker
+test/testdriver
 
 m4/
 util/bootstate

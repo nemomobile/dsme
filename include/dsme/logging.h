@@ -29,7 +29,6 @@
 /* Even if syslog is not used, use the message levels therein */
 #include <syslog.h>
 #include <stdbool.h>
-#include <unistd.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,10 +42,10 @@ typedef enum {
     LOG_METHOD_STDERR, /* Print messages to stderr */
     LOG_METHOD_SYSLOG, /* Use syslog(3) */
     LOG_METHOD_FILE    /* Output messages to the file */
-} log_method;
+} log_method; 
 
 
-/**
+/** 
    Logs a single message.
 
    @param level Message level, one of the following:
@@ -68,6 +67,9 @@ typedef enum {
 void dsme_log_txt(int level, const char *fmt, ...)
     __attribute__((format(printf,2,3)));
 void dsme_log_raw(int level, const char *fmt, ...) __attribute__((format(printf,2,3)));
+void dsme_log_wakeup(void);
+int dsme_log_cb_attach(void (*fn)(void));
+int dsme_log_cb_detach(void (*fn)(void));
 
 /* Macros */
 #define dsme_log(level, fmt...) dsme_log_txt(level, fmt)
@@ -105,8 +107,6 @@ void dsme_log_close(void);
    Ask logging thread to stop
 */
 void dsme_log_stop(void);
-
-char* pid2text(pid_t pid);
 
 #ifdef __cplusplus
 }

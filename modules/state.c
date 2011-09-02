@@ -82,6 +82,9 @@
 #define USER_TIMER_MIN_TIMEOUT 2
 #define USER_TIMER_MAX_TIMEOUT 15
 
+/* In non-R&D mode we enter malf after this many seconds in MALF */
+#define ENTER_MALF_TIMER 2
+
 /* Seconds from overheating or empty battery to the start of shutdown timer */
 #define DSME_THERMAL_SHUTDOWN_TIMER       8
 #define DSME_BATTERY_EMPTY_SHUTDOWN_TIMER 8
@@ -114,6 +117,7 @@ static dsme_state_t current_state = DSME_STATE_NOT_SET;
 /* timers for delayed setting of state bits */
 static dsme_timer_t overheat_timer           = 0;
 static dsme_timer_t charger_disconnect_timer = 0;
+static dsme_timer_t malf_timer               = 0;
 
 /* timers for giving other programs a bit of time before shutting down */
 static dsme_timer_t delayed_shutdown_timer   = 0;
@@ -134,6 +138,11 @@ static bool start_delayed_user_timer(unsigned seconds);
 static int delayed_user_fn(void* unused);
 static void stop_delayed_runlevel_timers(void);
 static void change_runlevel(dsme_state_t state);
+
+static void start_malf_timer(const char* reason,
+                             const char* component,
+                             const char* details);
+static int delayed_malf_fn(void* unused);
 
 static void start_overheat_timer(void);
 static int  delayed_overheat_fn(void* unused);
@@ -526,6 +535,54 @@ static int delayed_overheat_fn(void* unused)
 
   return 0; /* stop the interval */
 }
+
+
+// TODO: pass these via the timer data pointer
+static char* malf_reason    = 0;
+static char* malf_component = 0;
+static char* malf_details   = 0;
+
+static void start_malf_timer(const char* reason,
+                             const char* component,
+                             const char* details)
+{
+  if (!malf_timer) {
+      malf_reason    = strdup(reason);
+      malf_component = strdup(component);
+      malf_details   = details ? strdup(details) : 0;
+
+      if (!(malf_timer = dsme_create_timer(ENTER_MALF_TIMER,
+                                           delayed_malf_fn,
+                                           NULL)))
+      {
+          dsme_log(LOG_CRIT, "Could not create a timer; malf immediately!");
+          delayed_malf_fn(0);
+      } else {
+          dsme_log(LOG_CRIT,
+                   "MALF in %d seconds",
+                   ENTER_MALF_TIMER);
+      }
+  }
+}
+
+static int delayed_malf_fn(void* unused)
+{
+  DSM_MSGTYPE_ENTER_MALF malf = DSME_MSG_INIT(DSM_MSGTYPE_ENTER_MALF);
+  malf.reason          = strcmp(malf_reason, "HARDWARE") ? DSME_MALF_SOFTWARE
+                                                         : DSME_MALF_HARDWARE;
+  malf.component       = malf_component;
+
+  if (malf_details) {
+      broadcast_internally_with_extra(&malf,
+                                      strlen(malf_details) + 1,
+                                      malf_details);
+  } else {
+      broadcast_internally(&malf);
+  }
+
+  return 0; /* stop the interval */
+}
+
 
 static void start_charger_disconnect_timer(void)
 {
@@ -973,25 +1030,6 @@ static void parse_malf_info(char*  malf_info,
     }
 }
 
-static void enter_malf(const char* reason,
-                       const char* component,
-                       const char* details)
-{
-  char* malf_details   = details ? strdup(details) : 0;
-  DSM_MSGTYPE_ENTER_MALF malf = DSME_MSG_INIT(DSM_MSGTYPE_ENTER_MALF);
-  malf.reason          = strcmp(reason, "HARDWARE") ? DSME_MALF_SOFTWARE
-                                                    : DSME_MALF_HARDWARE;
-  malf.component       = strdup(component);
-
-  if (malf_details) {
-      broadcast_internally_with_extra(&malf,
-                                      strlen(malf_details) + 1,
-                                      malf_details);
-  } else {
-      broadcast_internally(&malf);
-  }
-}
-
 /*
  * If string 'string' begins with prefix 'prefix',
  * DSME_SKIP_PREFIX returns a pointer to the first character
@@ -1052,7 +1090,7 @@ static void set_initial_state_bits(const char* bootstate)
   if (p && *p) {
       // we got a bootstate followed by malf information
 
-      // If allowed to malf, enter malf
+      // If allowed to malf, enter malf after the timer
       if (must_malf || !rd_mode_enabled()) {
           char* reason    = 0;
           char* component = 0;
@@ -1060,7 +1098,7 @@ static void set_initial_state_bits(const char* bootstate)
 
           char* malf_info = strdup(p);
           parse_malf_info(malf_info, &reason, &component, &details);
-          enter_malf(reason, component, details);
+          start_malf_timer(reason, component, details);
           free(malf_info);
 
       } else {

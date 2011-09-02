@@ -1,22 +1,10 @@
-dsme (0.62.0) unstable; urgency=low
+dsme (0.61.59) unstable; urgency=low
 
   [Matias Muhonen]
   * Don't link the dsme binary to unused dependencies (Fixes: NB#266894)
   * Check for socket connect errors in dsmetool (Fixes: NB#269307)
-  * Beautify the automake test configuration
-  * Implemented test cases for the usbtracker and emergencycalltracker modules
-  * DSME enters MALF with a delay in boot (Fixes: NB#272448)
 
-  [Antti Virtanen]
-  * Include process name into iphb module log messages if verbose logging used.
-
-  [Jyrki Hämäläinen]
-  * Remove log callback function support as it is only used in the alarmtracker module.
-  * Use IPHB wakeups for saving the alarm queue status file.
-  * Extended the module tests with new test stubs.
-  * Implemented test cases for the alarmtracker module.
-
- -- Matias Muhonen <ext-matias.muhonen@nokia.com>  Tue, 28 Jun 2011 10:38:03 +0000
+ -- Antti Virtanen <antti.i.virtanen@nokia.com>  Wed, 03 Aug 2011 14:15:46 +0300
 
 dsme (0.61.58) unstable; urgency=low
 

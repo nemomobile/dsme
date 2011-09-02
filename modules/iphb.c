@@ -351,12 +351,10 @@ static void send_stats(client_t *client)
     if (send(client->fd, &stats, sizeof(stats), MSG_DONTWAIT|MSG_NOSIGNAL) !=
         sizeof(stats))
     {
-        char* pidtxt = pid2text(client->pid);
         dsme_log(LOG_ERR,
-                 "failed to send to client with PID %s (%s)",
-                 pidtxt,
+                 "failed to send to client with PID %lu (%s)",
+                 (unsigned long)client->pid,
                  strerror(errno));  // do not drop yet
-        free(pidtxt);
     }
 }
 
@@ -440,7 +438,7 @@ static gboolean read_epoll(GIOChannel*  source,
     sync_hwwd_feeder();
 
     // TODO: should we ever stop?
-    return TRUE;
+    return true;
 }
 
 static int handle_wakeup_timeout(void* unused)
@@ -510,11 +508,9 @@ static bool handle_client_req(struct epoll_event* event, time_t now)
         event->events & EPOLLRDHUP ||
         event->events & EPOLLHUP)
     {
-        char* pidtxt = pid2text(client->pid);
         dsme_log(LOG_DEBUG,
-                 "client with PID %s disappeared",
-                 pidtxt);
-        free(pidtxt);
+                 "client with PID %lu disappeared",
+                 (unsigned long)client->pid);
         goto drop_client_and_fail;
     }
 
@@ -525,16 +521,13 @@ static bool handle_client_req(struct epoll_event* event, time_t now)
     struct _iphb_req_t req = { 0 };
 
     if (recv(client->fd, &req, sizeof(req), MSG_WAITALL) <= 0) {
-        char* pidtxt = pid2text(client->pid);
         dsme_log(LOG_ERR,
-                 "failed to read from client with PID %s (%s)",
-                 pidtxt,
+                 "failed to read from client with PID %lu (%s)",
+                 (unsigned long)client->pid,
                  strerror(errno));
-        free(pidtxt);
         goto drop_client_and_fail;
     }
 
-    char* pidtxt;
     switch (req.cmd) {
         case IPHB_WAIT:
             client_woken = handle_wait_req(&req.u.wait, client, now);
@@ -545,12 +538,10 @@ static bool handle_client_req(struct epoll_event* event, time_t now)
             break;
 
         default:
-            pidtxt = pid2text(client->pid);
             dsme_log(LOG_ERR,
-                     "client with PID %s gave invalid command 0x%x, drop it",
-                     pidtxt,
+                     "client with PID %lu gave invalid command 0x%x, drop it",
+                     (unsigned long)client->pid,
                      (unsigned int)req.cmd);
-            free(pidtxt);
             goto drop_client_and_fail;
     }
 
@@ -569,19 +560,17 @@ static bool handle_wait_req(const struct _iphb_wait_req_t* req_const,
     struct _iphb_wait_req_t req = *req_const;
 
     if (req.maxtime == 0 && req.mintime == 0) {
-        char* pidtxt = pid2text(client->pid);
         if (!client->pid) {
             client->pid = req.pid;
             dsme_log(LOG_DEBUG,
-                     "client with PID %s connected",
-                     pidtxt);
+                     "client with PID %lu connected",
+                     (unsigned long)client->pid);
         } else {
             dsme_log(LOG_DEBUG,
-                     "client with PID %s canceled wait",
-                     pidtxt);
+                     "client with PID %lu canceled wait",
+                     (unsigned long)client->pid);
             client_woken = true;
         }
-        free(pidtxt);
         client->wait_started = 0;
         client->mintime      = req.mintime;
         client->maxtime      = req.maxtime;
@@ -589,12 +578,11 @@ static bool handle_wait_req(const struct _iphb_wait_req_t* req_const,
         if (req.mintime && req.maxtime == req.mintime) {
             struct timespec ts_now;
             int             slots_passed;
-            char* pidtxt = pid2text(req.pid);
 
             dsme_log(LOG_DEBUG,
-                     "client with PID %s signaled interest of waiting with"
+                     "client with pid %lu signaled interest of waiting with"
                        " fixed time %d",
-                     pidtxt,
+                     (unsigned long)client->pid,
                      (int)req.mintime);
 
             (void)clock_gettime(CLOCK_MONOTONIC, &ts_now);
@@ -606,21 +594,18 @@ static bool handle_wait_req(const struct _iphb_wait_req_t* req_const,
             req.maxtime = req.mintime + 1; /* allow tolerance because of math above */
 
             dsme_log(LOG_DEBUG,
-                     "fixed reqtimes for client with PID %s"
+                     "fixed reqtimes for client with pid %lu"
                        " (min=%d/max=%d)",
-                     pidtxt,
+                     (unsigned long)client->pid,
                      (int)req.mintime,
                      (int)req.maxtime);
-            free(pidtxt);
         } else {
-            char* pidtxt = pid2text(req.pid);
             dsme_log(LOG_DEBUG,
-                     "client with PID %s signaled interest of waiting"
+                     "client with pid %lu signaled interest of waiting"
                        " (min=%d/max=%d)",
-                     pidtxt,
+                     (unsigned long)client->pid,
                      (int)req.mintime,
                      (int)req.maxtime);
-            free(pidtxt);
         }
 
         client->pid          = req.pid;
@@ -669,21 +654,20 @@ static int wakeup_clients_if2(condition_func* should_wake_up, time_t now)
     client_t* client = clients;
     while (client) {
         client_t* next = client->next;
-        char* pidtxt = pid2text(client->pid);
 
         if (!client->wait_started) {
             dsme_log(LOG_DEBUG,
-                     "client with PID %s is active, not to be woken up",
-                     pidtxt);
+                     "client wid PID %lu is active, not to be woken up",
+                     (unsigned long)client->pid);
         } else {
             if (should_wake_up(client, now)) {
                 if (wakeup(client, now)) {
                     ++woken_up_clients;
                 } else {
                     dsme_log(LOG_ERR,
-                             "failed to send to client with PID %s (%s),"
+                             "failed to send to client with PID %lu (%s),"
                                " drop client",
-                             pidtxt,
+                             (unsigned long)client->pid,
                              strerror(errno));
                     remove_client(client, prev);
                     close_and_free_client(client);
@@ -695,7 +679,6 @@ static int wakeup_clients_if2(condition_func* should_wake_up, time_t now)
         prev = client;
 next_client:
         client = next;
-        free(pidtxt);
     }
 
     return woken_up_clients;
@@ -715,16 +698,14 @@ static bool wakeup(client_t* client, time_t now)
 
     if (is_external_client(client)) {
         struct _iphb_wait_resp_t resp = { 0 };
-        char* pidtxt = pid2text(client->pid);
         resp.waited = now - client->wait_started;
 
         dsme_log(LOG_DEBUG,
-                 "waking up client with PID %s who has slept %lu secs"
+                 "waking up client with PID %lu who has slept %lu secs"
                      ", ts=%lli",
-                 pidtxt,
+                 (unsigned long)client->pid,
                  resp.waited,
                  timestamp());
-        free(pidtxt);
         if (send(client->fd, &resp, sizeof(resp), MSG_DONTWAIT|MSG_NOSIGNAL) ==
             sizeof(resp))
         {
