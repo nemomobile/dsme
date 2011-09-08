@@ -1,3 +1,10 @@
+dsme (0.62.1) unstable; urgency=low
+
+  [Simo Piiroinen]
+  * Improve dsmetool error handling (Fixes: NB#269307)
+
+ -- Matias Muhonen <ext-matias.muhonen@nokia.com>  Thu, 08 Sep 2011 13:19:52 +0000
+
 dsme (0.61.59) unstable; urgency=low
 
   [Matias Muhonen]
