@@ -106,46 +106,6 @@ void dsme_log_raw(int level, const char *fmt, ...) {
   }
 }
 
-void dsme_log_wakeup(void) {
-  sem_post(&ring_buffer_sem);
-}
-
-#define DSME_MAX_LOG_CALLBACKS 4
-
-static void (*log_cb[DSME_MAX_LOG_CALLBACKS])(void);
-
-int dsme_log_cb_attach(void (*fn)(void))
-{
-  int i;
-  for( i = 0; i < DSME_MAX_LOG_CALLBACKS; ++i ) {
-    if( log_cb[i] == 0 ) {
-      log_cb[i] = fn;
-      return 1;
-    }
-  }
-  return 0;
-}
-
-int dsme_log_cb_detach(void (*fn)(void))
-{
-  int i;
-  for( i = 0; i < DSME_MAX_LOG_CALLBACKS; ++i ) {
-    if( log_cb[i] == fn ) {
-      log_cb[i] = 0;
-      return 1;
-    }
-  }
-  return 0;
-}
-
-static void dsme_log_cb_execute_all(void)
-{
-  int i;
-  for( i = 0; i < DSME_MAX_LOG_CALLBACKS; ++i ) {
-    if( log_cb[i] != 0 ) log_cb[i]();
-  }
-}
-
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 // SIMO HACKING
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -363,8 +323,6 @@ static void* logging_thread(void* param)
 
 	// ignore return value, semaphore takes care of that.
 	deque_log_buffer(&read_count);
-
-	dsme_log_cb_execute_all();
     }
 
     thread_running = 0;
@@ -428,7 +386,7 @@ bool dsme_log_open(log_method  method,
 out:
                 fprintf(stderr,
                         "STI init failed, will fall back to stderr method\n");
-                dsme_log_routine = log_to_stderr;    
+                dsme_log_routine = log_to_stderr;
             }
         case LOG_METHOD_STDOUT:
             dsme_log_routine = log_to_stdout;
@@ -536,5 +494,40 @@ void dsme_log_stop(void)
     thread_enabled = 0;
 }
 
+char* pid2text(pid_t pid)
+{
+    char* str;
+    int ret = -1;
+    if (pid == 0)
+        return strdup("<internal>");
+    if (logopt.verbosity == LOG_DEBUG)
+    {
+        char* path;
+        if (asprintf(&path, "/proc/%ld/cmdline", (long)pid))
+        {
+            FILE* file = fopen(path, "r");
+            if (file != NULL)
+            {
+                char* proc = NULL;
+                int ret2;
+
+                ret2 = fscanf(file, "%ms", &proc);
+                if (ret2 == 1)
+                {
+                    ret = asprintf(&str, "%ld (%s)", (long)pid, proc);
+                    if (proc)
+                        free(proc);
+                }
+                fclose(file);
+            }
+            free(path);
+        }
+    }
+    else
+    {
+        ret = asprintf(&str, "%ld", (long)pid);
+    }
+    return (ret > -1 ? str : strdup("<error>"));
+}
 
 #endif /* DSME_LOG_ENABLE */
