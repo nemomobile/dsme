@@ -1,11 +1,12 @@
 /**
-   @file testdriver.c
+   @file testmod-state.c
 
    A simple test driver and test cases for DSME
    <p>
-   Copyright (C) 2009-2010 Nokia Corporation
+   Copyright (C) 2009-2011 Nokia Corporation
 
    @author Semi Malinen <semi.malinen@nokia.com>
+   @author Jyrki Hämäläinen <ext-jyrki.hamalainen@nokia.com>
 
    This file is part of Dsme.
 
@@ -45,309 +46,17 @@
 #include <stdlib.h>
 #include <getopt.h>
 
-
-static const char* dsme_module_path = "../modules/.libs/";
-
-static bool message_queue_is_empty(void)
-{
-  int     count = 0;
-  GSList* node;
-
-  count = g_slist_length(message_queue);
-
-  if (count == 1) {
-      fprintf(stderr, "[=> 1 more message queued]\n");
-  } else if (count) {
-      fprintf(stderr, "[=> %d more messages queued]\n", count);
-  } else {
-      fprintf(stderr, "[=> no more messages]\n");
-  }
-
-  if (count != 0) {
-      for (node = message_queue; node; node = node->next) {
-          fprintf(stderr, "[%x]\n", ((queued_msg_t*)(node->data))->data->type_);
-      }
-  }
-
-  return count == 0;
-}
-
-#define queued(T) ((T*)queued_(DSME_MSG_ID_(T), #T))
-static void* queued_(unsigned type, const char* name)
-{
-  dsmemsg_generic_t* msg = 0;
-  GSList*            node;
-  char*              other_messages = 0;
-
-  for (node = message_queue; node; node = node->next)
-  {
-      queued_msg_t* m = node->data;
-
-      if (m->data->type_ == type) {
-          msg = m->data;
-          free(m);
-          message_queue = g_slist_delete_link(message_queue, node);
-          break;
-      } else {
-          if (other_messages == 0) {
-              asprintf(&other_messages, "%x", m->data->type_);
-          } else {
-              char* s = 0;
-              asprintf(&s, "%s, %x", other_messages, m->data->type_);
-              free(other_messages), other_messages = s;
-          }
-      }
-  }
-
-  fprintf(stderr, msg ? "[=> %s was queued]\n" : "[=> %s was not queued\n", name);
-
-  if (other_messages) {
-      fprintf(stderr, "[=> other messages: %s]\n", other_messages);
-      free(other_messages);
-  }
-  return msg;
-}
-
-#define TEST_MSG_INIT(T) DSME_MSG_INIT(T); fprintf(stderr, "\n[%s ", #T)
-
-static void send_message(const module_t* module, const void* msg)
-{
-  endpoint_t endpoint = { module, 0 };
-  fprintf(stderr, " SENT]\n");
-  handle_message(&endpoint, module, msg);
-}
-
-
-/* UTILITY */
-
-static void fatal(const char* format, ...)
-{
-  va_list ap;
-  va_start(ap, format);
-  fprintf(stderr, format, ap);
-  fprintf(stderr, "\n");
-  va_end(ap);
-  exit(EXIT_FAILURE);
-}
-
+/* utils */
+#include "utils_misc.h"
 
 /* STUBS */
+#include "stub_cal.h"
+#include "stub_timers.h"
+#include "stub_dsme_dbus.h"
 
-struct cal;
-
-int cal_read_block(struct cal*    cal,
-                   const char*    name,
-                   void**         ptr,
-                   unsigned long* len,
-                   unsigned long  flags);
-
-#define DEFAULT_RD_MODE "1"
-static const char* rd_mode = DEFAULT_RD_MODE;
-
-int cal_read_block(struct cal*    cal,
-                   const char*    name,
-                   void**         ptr,
-                   unsigned long* len,
-                   unsigned long  flags)
-{
-  int result = -1;
-
-  if (strcmp(name, "r&d_mode") == 0) {
-      if (rd_mode) {
-          *ptr = malloc(2);
-          strcpy(*ptr, rd_mode);
-          *len = strlen(rd_mode);
-          result = 0;
-      }
-  } else {
-      fatal("cal_read_block(\"%s\")", name);
-  }
-
-  return result;
-}
-
-#include "dsme/timers.h"
-
-typedef struct test_timer_t {
-    unsigned               seconds;
-    dsme_timer_callback_t* callback;
-    void*                  data;
-} test_timer_t;
-
-static unsigned      timers = 0;
-static test_timer_t* timer  = 0;
-
-static void reset_timers(void)
-{
-  free(timer);
-  timer  = 0;
-  timers = 0;
-}
-
-static bool timer_exists(void)
-{
-  int count = 0;
-  int i;
-
-  for (i = 0; i < timers; ++i) {
-      if (timer[i].seconds != 0) {
-          ++count;
-      }
-  }
-
-  if (count == 1) {
-      fprintf(stderr, "[=> 1 timer exists]\n");
-  } else if (count) {
-      fprintf(stderr, "[=> %d timers exist]\n", count);
-  } else {
-      fprintf(stderr, "[=> no timers]\n");
-  }
-
-  return count;
-}
-
-static void trigger_timer(void)
-{
-  /* first find the earliest timer... */
-  int earliest = -1;
-  int           i;
-
-  for (i = 0; i < timers; ++i) {
-      if (timer[i].seconds != 0) {
-          if (earliest < 0 || timer[i].seconds < timer[earliest].seconds) {
-              earliest = i;
-          }
-      }
-  }
-
-  /* ...then call it */
-  assert(earliest >= 0);
-  fprintf(stderr, "\n[TRIGGER TIMER %d]\n", earliest + 1);
-  if (!timer[earliest].callback(timer[earliest].data)) {
-      timer[earliest].seconds = 0;
-  }
-}
-
-static int dsme_create_timer_fails = 0;
-
-dsme_timer_t dsme_create_timer(unsigned               seconds,
-                               dsme_timer_callback_t* callback,
-                               void*                  data)
-{
-  if (!dsme_create_timer_fails) {
-      ++timers;
-      timer = realloc(timer, timers * sizeof(*timer));
-      timer[timers - 1].seconds  = seconds;
-      timer[timers - 1].callback = callback;
-      timer[timers - 1].data     = data;
-      fprintf(stderr, "[=> timer %u created for %u s]\n", timers, seconds);
-      return timers;
-  } else {
-      --dsme_create_timer_fails;
-      return 0;
-  }
-}
-
-void dsme_destroy_timer(dsme_timer_t t)
-{
-  fprintf(stderr, "[=> destroying timer %u]\n", t);
-  assert(t > 0 && t <= timers);
-  assert(timer[t - 1].seconds != 0);
-  timer[t - 1].seconds  = 0;
-  timer[t - 1].callback = 0;
-  timer[t - 1].data     = 0;
-}
-
-
-/*
-  STUB for dsme_dbus
-*/
-#include <dbus/dbus.h>
-
-/* storage for message bindings */
-static GSList* dbus_signal_bindings;
-
-struct DsmeDbusMessage {
-  DBusConnection* connection;
-  DBusMessage*    msg;
-  DBusMessageIter iter;
-};
-
-void dsme_dbus_unbind_signals(bool* really_bound,
-                              const dsme_dbus_signal_binding_t* bindings)
-{
-  if (really_bound && *really_bound) {
-      const dsme_dbus_signal_binding_t* binding = bindings;
-
-      while (binding && binding->handler) {
-          GSList* signal;
-
-          for (signal = dbus_signal_bindings; signal; signal = signal->next) {
-              dsme_dbus_signal_binding_t* stored = signal->data;
-
-              if (stored->handler == binding->handler &&
-                  strcmp(stored->interface, binding->interface) &&
-                  strcmp(stored->name, binding->name)) {
-                  dbus_signal_bindings = g_slist_delete_link(dbus_signal_bindings, signal);
-              }
-          }
-          ++binding;
-      }
-      *really_bound = false;
-  }
-}
-
-
-void dsme_dbus_bind_signals(bool*                             bound_already,
-                            const dsme_dbus_signal_binding_t* bindings)
-{
-  if (bound_already && !*bound_already) {
-      const dsme_dbus_signal_binding_t* binding = bindings;
-
-      while (binding && binding->handler) {
-          dbus_signal_bindings = g_slist_prepend(dbus_signal_bindings, (gpointer)binding);
-
-          ++binding;
-      }
-  }
-}
-
-int dsme_dbus_message_get_int(const DsmeDbusMessage* msg)
-{
-  assert(0);
-  return 0;
-}
 
 /* TEST DRIVER */
-
-static module_t* load_module_under_test(const char* path)
-{
-  module_t* module = 0;
-  char*     canonical;
-
-  fprintf(stderr, "\n[LOADING MODULE %s]\n", path);
-
-  canonical = realpath(path, 0);
-  if (!canonical) {
-      perror(path);
-      fatal("realpath() failed");
-  } else {
-      if (!(module = load_module(canonical, 0))) {
-          fatal("load_module() failed");
-      }
-      free(canonical);
-  }
-
-  return module;
-}
-
-static void unload_module_under_test(module_t* module)
-{
-  fprintf(stderr, "\n[UNLOADING MODULE]\n");
-  if (!unload_module(module)) {
-      fatal("unload_module() failed");
-  }
-}
+#include "testdriver.h"
 
 static void initialize(void)
 {
@@ -360,18 +69,6 @@ static void initialize(void)
 static void finalize(void)
 {
 }
-
-typedef void (testcase)(void);
-
-#define run(TC) run_(TC, #TC)
-static void run_(testcase* test, const char* name)
-{
-  fprintf(stderr, "\n[ ******** STARTING TESTCASE '%s' ******** ]\n", name);
-  reset_timers();
-  test();
-  fprintf(stderr, "\n[ ******** DONE TESTCASE '%s' ******** ]\n", name);
-}
-
 
 /* TEST CASE HELPERS */
 
@@ -418,7 +115,8 @@ static module_t* load_state_module(const char*  bootstate,
       free(ind2);
   }
 
-  assert(message_queue_is_empty());
+  // TODO: this assert is not valid in case we MALF when loading the module
+  // assert(message_queue_is_empty());
 
   return module;
 }
@@ -1075,12 +773,9 @@ static void testcase20(void)
   // specify a bad $BOOTSTATE
   state = load_state_module("DIIBADAABA", DSME_STATE_USER);
 
-  assert(timer_exists());
-  trigger_timer();
   DSM_MSGTYPE_ENTER_MALF* msg;
   assert(msg = queued(DSM_MSGTYPE_ENTER_MALF));
   free(msg);
-
   assert(!timer_exists());
   assert(message_queue_is_empty());
   unload_module_under_test(state);
@@ -1125,9 +820,7 @@ static void testcase21(void)
   assert(ind = queued(DSM_MSGTYPE_STATE_CHANGE_IND));
   assert(ind->state == DSME_STATE_USER);
   free(ind);
-  assert(message_queue_is_empty());
-  assert(timer_exists());
-  trigger_timer();
+  assert(!message_queue_is_empty());
   DSM_MSGTYPE_ENTER_MALF* malfmsg;
   assert((malfmsg = queued(DSM_MSGTYPE_ENTER_MALF)));
   //TODO: Should the reason / component be checked?
@@ -1144,9 +837,7 @@ static void testcase21(void)
   assert(ind = queued(DSM_MSGTYPE_STATE_CHANGE_IND));
   assert(ind->state == DSME_STATE_USER);
   free(ind);
-  assert(message_queue_is_empty());
-  assert(timer_exists());
-  trigger_timer();
+  assert(!message_queue_is_empty());
   assert(malfmsg = queued(DSM_MSGTYPE_ENTER_MALF));
   //TODO: Should the reason / component be checked?
   free(malfmsg);

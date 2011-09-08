@@ -9,6 +9,11 @@ dsme (0.62.1) unstable; urgency=low
   [Jyrki Hämäläinen]
   * Remove log callback function support as it is only used in the alarmtracker module.
   * Use IPHB wakeups for saving the alarm queue status file.
+  * Extend the unit tests and the testing framework.
+
+  [Matias Muhonen]
+  * Fix a static analysis tool warning in diskmonitor
+  * No delay when entering MALF (Fixes: NB#272448)
 
  -- Matias Muhonen <ext-matias.muhonen@nokia.com>  Thu, 08 Sep 2011 13:19:52 +0000
 

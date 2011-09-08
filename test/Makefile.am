@@ -2,11 +2,13 @@
 # Generic options
 #
 ACLOCAL_AMFLAGS = -I m4
-AM_CFLAGS = $(C_GENFLAGS) $(C_OPTFLAGS) $(GLIB_CFLAGS) -DDSME_LOG_ENABLE
-AM_LDFLAGS = -pthread
-AM_CPPFLAGS = $(CPP_GENFLAGS)
-LDADD = $(GLIB_LIBS) -ldsme
-TESTS = testdriver
+AM_CFLAGS = $(C_GENFLAGS) $(C_OPTFLAGS) $(DBUS_CFLAGS) $(GLIB_CFLAGS) -DDSME_LOG_ENABLE
+AM_LDFLAGS = -Wl,--as-needed -pthread -rdynamic $(GLIB_LIBS) -ldsme -ldbus-1 -ldbus-glib-1 -lpthread -ldl -ldsme -lcreds
+AM_CPPFLAGS = $(CPP_GENFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS)
+TESTS = testmod_alarmtracker \
+	testmod_emergencycalltracker \
+	testmod_state \
+	testmod_usbtracker
 
 #
 # Build targets
@@ -15,7 +17,10 @@ noinst_PROGRAMS = batttest \
 		dsmetest \
 		dummy_bme \
 		processwdtest \
-		testdriver \
+		testmod_alarmtracker \
+		testmod_emergencycalltracker \
+		testmod_state \
+                testmod_usbtracker \
 		abnormalexitwrapper_tester
 
 pkglib_LTLIBRARIES = libabnormalexitwrapper.la
@@ -28,22 +33,27 @@ dsmetest_SOURCES = dsmetest.c
 
 processwdtest_SOURCES = processwdtest.c
 
-testdriver_SOURCES = testdriver.c
+# FIXME: including .o files is quite hackish
 
-testdriver_CFLAGS = $(C_GENFLAGS) $(C_OPTFLAGS) -DDSME_LOG_ENABLE
-testdriver_LDFLAGS = -pthread -rdynamic
-testdriver_CPPFLAGS = $(CPP_GENFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS)
-# FIXME: including .o files in the following is quite hackish
-testdriver_LDADD = $(GLIB_LIBS) -lpthread -ldl -ldsme -lcreds \
-                   ../dsme/dsme_server-dsmesock.o \
+testmod_alarmtracker_SOURCES = testmod_alarmtracker.c
+testmod_alarmtracker_LDADD = ../dsme/dsme_server-logging.o \
+                   ../dsme/dsme_server-mainloop.o
+
+testmod_emergencycalltracker_SOURCES = testmod_emergencycalltracker.c
+testmod_emergencycalltracker_LDADD = ../dsme/dsme_server-logging.o \
+                                     ../dsme/dsme_server-mainloop.o
+
+testmod_state_SOURCES = testmod_state.c
+testmod_state_LDADD = ../dsme/dsme_server-dsmesock.o \
                    ../dsme/dsme_server-logging.o \
                    ../dsme/dsme_server-mainloop.o \
                    ../dsme/dsme_server-dsme-rd-mode.o
 
+testmod_usbtracker_SOURCES = testmod_usbtracker.c
+testmod_usbtracker_LDADD = ../dsme/dsme_server-logging.o \
+                           ../dsme/dsme_server-mainloop.o
+
 abnormalexitwrapper_tester_SOURCES = abnormalexitwrapper_tester.c
-abnormalexitwrapper_tester_LDFLAGS = -pthread -rdynamic
 
 libabnormalexitwrapper_la_SOURCES = abnormalexitwrapper.c
-libabnormalexitwrapper_la_CFLAGS = $(C_GENFLAGS) $(C_OPTFLAGS) $(DBUS_CFLAGS) -DDSME_LOG_ENABLE
 libabnormalexitwrapper_la_LDFLAGS = -pthread -module -avoid-version -shared -ldl
-
