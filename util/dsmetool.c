@@ -74,6 +74,12 @@ static void usage(const char* name)
 
 static void connect_to_dsme(void)
 {
+    if( conn != 0 ) {
+        /* If we ever get here, there is something
+         * wrong with logic somewhere ... */
+        fprintf(stderr, "Double connect detected\n");
+        exit(EXIT_FAILURE);
+    }
     conn = dsmesock_connect();
     if (conn == 0) {
         perror("dsmesock_connect");
@@ -91,7 +97,7 @@ static void connect_to_dsme(void)
 
 static void disconnect_from_dsme(void)
 {
-    dsmesock_close(conn);
+    dsmesock_close(conn), conn = 0;
 }
 
 static void send_to_dsme(const void* msg)
@@ -115,20 +121,20 @@ static int get_version(bool testmode)
 {
     DSM_MSGTYPE_GET_VERSION   req_msg =
           DSME_MSG_INIT(DSM_MSGTYPE_GET_VERSION);
-    void*                     p;
+    void*                     p = NULL;
     DSM_MSGTYPE_DSME_VERSION* retmsg = NULL;
     fd_set                    rfds;
     int                       ret = -1;
+    int                       err = -1; /* assume failure */
 
     if (!testmode) {
         printf("dsmetool version: %s\n", STRINGIFY(PRG_VERSION));
-
         connect_to_dsme();
     }
 
     send_to_dsme(&req_msg);
 
-    while (true) {
+    while (conn != 0 && conn->fd >= 0) {
         FD_ZERO(&rfds);
         FD_SET(conn->fd, &rfds);
         struct timeval tv;
@@ -139,28 +145,34 @@ static int get_version(bool testmode)
         ret = select(conn->fd+1, &rfds, NULL, NULL, &tv);
         if (ret == -1) {
             fprintf(stderr, "Error in select()\n");
-            return -1;
+            break;
         }
         if (ret == 0) {
             fprintf(stderr, "Timeout when getting the DSME version\n");
-            disconnect_from_dsme();
-            return -1;
+            break;
         }
 
         p = dsmesock_receive(conn);
-
+        if (p == 0) {
+            fprintf(stderr, "Received NULL message\n");
+            break;
+        }
         if ((retmsg = DSMEMSG_CAST(DSM_MSGTYPE_DSME_VERSION, p)) == 0) {
             fprintf(stderr, "Received invalid message\n");
-            free(p);
+            free(p), p = 0;
             continue;
         }
+        /* we got a valid reply message */
+        err = 0;
         break;
     }
 
-    char* version = (char*)DSMEMSG_EXTRA(retmsg);
-    if (version != 0 && !testmode) {
-        version[DSMEMSG_EXTRA_SIZE(retmsg) - 1] = '\0';
-        printf("DSME version: %s\n", version);
+    if (!testmode && retmsg) {
+        char* version = (char*)DSMEMSG_EXTRA(retmsg);
+        if (version != 0) {
+            version[DSMEMSG_EXTRA_SIZE(retmsg) - 1] = '\0';
+            printf("DSME version: %s\n", version);
+        }
     }
 
     free(p);
@@ -168,7 +180,7 @@ static int get_version(bool testmode)
         disconnect_from_dsme();
     }
 
-    return 0;
+    return err;
 }
 
 static int send_dbus_service_start_request()
