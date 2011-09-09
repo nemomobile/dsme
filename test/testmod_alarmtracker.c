@@ -162,8 +162,8 @@ void dsmesock_broadcast(const void* msg)
 #include "testdriver.h"
 
 
-#define ALARM_STATE_FILE     "/var/lib/dsme/alarm_queue_status"
-#define ALARM_STATE_FILE_TMP "/var/lib/dsme/alarm_queue_status.tmp"
+#define ALARM_STATE_DIR      "/var/lib/dsme"
+#define ALARM_STATE_FILE     ALARM_STATE_DIR "/alarm_queue_status"
 /* HELPERS */
 static gchar* original_alarm_queue = NULL;
 static void set_alarm_queue(long int alarmtime)
@@ -177,6 +177,9 @@ static void set_alarm_queue(long int alarmtime)
 
   if (alarmtime != -1) {
       gchar* alarmdata = g_strdup_printf("%ld", alarmtime);
+
+      assert(g_mkdir_with_parents(ALARM_STATE_DIR, 0755) == 0);
+
       gboolean success = g_file_set_contents(ALARM_STATE_FILE,
                           alarmdata,
                           -1,
@@ -192,6 +195,8 @@ static void set_alarm_queue(long int alarmtime)
 static void reset_alarm_queue(void)
 {
   if (original_alarm_queue) {
+      assert(g_mkdir_with_parents(ALARM_STATE_DIR, 0755) == 0);
+
       gboolean success = g_file_set_contents(ALARM_STATE_FILE,
                           original_alarm_queue,
                           -1,
