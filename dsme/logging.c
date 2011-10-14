@@ -502,8 +502,8 @@ char* pid2text(pid_t pid)
         return strdup("<internal>");
     if (logopt.verbosity == LOG_DEBUG)
     {
-        char* path;
-        if (asprintf(&path, "/proc/%ld/cmdline", (long)pid))
+        char* path = 0;
+        if (asprintf(&path, "/proc/%ld/cmdline", (long)pid) != -1)
         {
             FILE* file = fopen(path, "r");
             if (file != NULL)
