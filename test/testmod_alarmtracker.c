@@ -381,8 +381,7 @@ static void test_init_set_alarm_in5min(void)
   free(alarm_setup_msg);
 
   assert(!message_queue_is_empty());
-  DSM_MSGTYPE_WAIT *waitreq;
-  assert(waitreq = queued(DSM_MSGTYPE_WAIT));
+  assert(queued(DSM_MSGTYPE_WAIT));
   assert(message_queue_is_empty());
 
   DSM_MSGTYPE_WAKEUP wakeupmsg =
