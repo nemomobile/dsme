@@ -41,10 +41,119 @@ typedef uint8_t  byte;
 /* these need to be #defined in order to pick up thermal stuff from bme */
 #define TESTSERVER
 
+#ifdef GOT_BMEIPC_HEADERS
+
 #include <bme/bmeipc.h>
 #include <bme/bmemsg.h>
 #include <bme/em_isi.h>
 
+#else /* GOT_BMEIPC_HEADERS */
+
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+
+#define BME_SRV_SOCK_PATH       "/tmp/.bmesrv"
+#define BME_SRV_COOKIE          "BMentity"
+
+#define EM_BATTERY_INFO_REQ                      0x06
+#define EM_BATTERY_TEMP                          0x0004  /* -------------1-- */
+
+struct emsg_battery_info_req {
+    uint16      type, subtype;
+    uint32      flags;
+};
+
+/* Battery info reply */
+struct emsg_battery_info_reply {
+    uint32      a;
+    uint32      flags;
+    uint16      c;
+    uint16      d;
+    uint16      temp;
+    uint16      f;
+    uint16      g;
+    uint16      h;
+    uint16      i;
+    uint16      j;
+    uint16      k;
+    uint16      l;
+};
+
+union emsg_battery_info {
+    struct emsg_battery_info_req   request;
+    struct emsg_battery_info_reply reply;
+};
+
+static int bme_socket = -1;
+
+static int32_t bme_read(void *msg, int32_t bytes);
+static int32_t bme_write(const void *msg, int32_t bytes);
+static void bme_disconnect(void);
+static int32_t bme_connect(void);
+
+int32_t bme_read(void *msg, int32_t bytes)
+{
+  if (bme_socket == -1)
+  {
+    return -1;
+  }
+  return recv(bme_socket, msg, bytes, 0);
+}
+
+int32_t bme_write(const void *msg, int32_t bytes)
+{
+  if (bme_socket == -1)
+  {
+   return -1;
+  }
+  return send(bme_socket, msg, bytes, 0);
+}
+
+void bme_disconnect(void)
+{
+  if (bme_socket >= 0)
+    close(bme_socket);
+  bme_socket = -1;
+}
+
+int32_t bme_connect(void)
+{
+  struct sockaddr_un sa;
+  char ch;
+
+  memset(&sa, 0, sizeof(sa));
+  sa.sun_family = PF_UNIX;
+
+  strcpy(sa.sun_path, BME_SRV_SOCK_PATH);
+  if ((bme_socket = socket(PF_UNIX,SOCK_STREAM, 0)) < 0)
+    return bme_socket;
+
+  if (connect(bme_socket, (struct sockaddr *) &sa, sizeof(struct sockaddr_un)) < 0)
+  {
+    bme_disconnect();
+    return bme_socket;
+  }
+
+  /* Send cookie */
+  if (bme_write(BME_SRV_COOKIE, strlen(BME_SRV_COOKIE)) < strlen(BME_SRV_COOKIE))
+  {
+    bme_disconnect();
+    return bme_socket;
+  }
+
+  if (bme_read(&ch, 1) < 1 || ch != '\n')
+  {
+    bme_disconnect();
+    return bme_socket;
+  }
+  return bme_socket;
+}
+#endif /* GOT_BMEIPC_HEADERS */
 
 static gboolean handle_battery_temperature_response(GIOChannel*  source,
                                                     GIOCondition condition,

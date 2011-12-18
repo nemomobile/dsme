@@ -101,7 +101,7 @@ usbtracker_la_SOURCES = usbtracker.c
 iphb_la_SOURCES = iphb.c
 iphb_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
 iphb_la_CPPFLAGS = $(AM_CPPFLAGS)
-iphb_la_LIBADD = -lbmeipc $(GLIB_LIBS)
+iphb_la_LIBADD = $(GLIB_LIBS)
 
 thermalflagger_la_SOURCES = thermalflagger.c
 
@@ -114,7 +114,7 @@ thermalobject_surface_la_SOURCES = thermalobject_surface.c \
                                       thermalsensor_battery.c \
                                       thermalsensor_battery.h
 thermalobject_surface_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
-thermalobject_surface_la_LIBADD = -lbmeipc $(GLIB_LIBS)
+thermalobject_surface_la_LIBADD = $(GLIB_LIBS)
 endif
 
 if WANT_MEMORY_THERMAL_MGMT
