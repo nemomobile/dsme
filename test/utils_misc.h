@@ -69,13 +69,15 @@ static inline void* queued_(unsigned type, const char* name)
           message_queue = g_slist_delete_link(message_queue, node);
           break;
       } else {
+          int dummy_ret;
           if (other_messages == 0) {
-              asprintf(&other_messages, "%x", m->data->type_);
+              dummy_ret = asprintf(&other_messages, "%x", m->data->type_);
           } else {
               char* s = 0;
-              asprintf(&s, "%s, %x", other_messages, m->data->type_);
+              dummy_ret = asprintf(&s, "%s, %x", other_messages, m->data->type_);
               free(other_messages), other_messages = s;
           }
+          (void)dummy_ret; /* We don't really care about the return value */
       }
   }
 
