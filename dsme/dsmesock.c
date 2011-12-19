@@ -130,13 +130,13 @@ fail:
 static bool check_client_credentials(int socketfd)
 {
   bool          success = true;
-  creds_value_t value;
-  creds_type_t  type    = creds_str2creds("dsme::DeviceStateControl", &value);
+/*  creds_value_t value;
+  creds_type_t  type    = creds_str2creds("dsme::DeviceStateControl", &value);*/
   creds_t       creds   = creds_getpeer(socketfd);
 
-  if (!creds_have_p(creds, type, value)) {
+/*  if (!creds_have_p(creds, type, value)) {
     success = false;
-  }
+  }*/
 
   creds_free(creds);
   return success;
