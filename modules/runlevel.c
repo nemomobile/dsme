@@ -52,7 +52,7 @@ static bool change_runlevel(dsme_runlevel_t runlevel)
 {
   char command[32];
 
-  snprintf(command, sizeof(command), "telinit -t 0 %i", runlevel);
+  snprintf(command, sizeof(command), "telinit %i", runlevel);
   dsme_log(LOG_NOTICE, "Issuing telinit %i", runlevel);
 
   if (system(command) != 0) {
