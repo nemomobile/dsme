@@ -157,37 +157,39 @@ bool dsme_wd_init(void)
 
     /* open enabled watchdog devices */
     for (i = 0; i < WD_COUNT; ++i) {
-        if (wd_enabled[i]) {
-            wd_fd[i] = open(wd[i].file, O_RDWR);
-            if (wd_fd[i] == -1) {
-                fprintf(stderr,
-                        ME "Error opening WD %s: %s\n",
-                        wd[i].file,
-                        strerror(errno));
-            } else {
-                ++opened_wd_count;
+        if (wd_enabled[i] == false)
+            continue;
 
-                if (wd[i].period != 0) {
+        wd_fd[i] = open(wd[i].file, O_RDWR);
+        if (wd_fd[i] == -1) {
+            fprintf(stderr,
+                    ME "Error opening WD %s: %s\n",
+                    wd[i].file,
+                    strerror(errno));
+                    continue;
+        }
+
+        ++opened_wd_count;
+
+        if (wd[i].period != 0) {
 #if 0
-                    fprintf(stderr,
-                             ME "Setting WD period to %d s for %s\n",
-                             wd[i].period,
-                             wd[i].file);
+            fprintf(stderr,
+                     ME "Setting WD period to %d s for %s\n",
+                     wd[i].period,
+                     wd[i].file);
 #endif
-                    /* set the wd period */
-                    /* ioctl() will overwrite tmp with the time left */
-                    int tmp = wd[i].period;
-                    if (ioctl(wd_fd[i], WDIOC_SETTIMEOUT, &tmp) != 0) {
-                        fprintf(stderr,
-                                 ME "Error setting WD period for %s\n",
-                                 wd[i].file);
-                    }
-                } else {
-                    fprintf(stderr,
-                             ME "Keeping default WD period for %s\n",
-                             wd[i].file);
-                }
+            /* set the wd period */
+            /* ioctl() will overwrite tmp with the time left */
+            int tmp = wd[i].period;
+            if (ioctl(wd_fd[i], WDIOC_SETTIMEOUT, &tmp) != 0) {
+                fprintf(stderr,
+                         ME "Error setting WD period for %s\n",
+                         wd[i].file);
             }
+        } else {
+            fprintf(stderr,
+                     ME "Keeping default WD period for %s\n",
+                     wd[i].file);
         }
     }
 
