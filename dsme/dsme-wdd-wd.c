@@ -52,8 +52,8 @@ typedef struct wd_t {
 #define SHORTEST DSME_SHORTEST_WD_PERIOD
 static const wd_t wd[] = {
     /* path,               timeout (s), disabling R&D flag */
+    {  "/dev/watchdog",    SHORTEST,    "no-omap-wd" }, /* omap wd      */
     {  "/dev/twl4030_wdt", 30,          "no-ext-wd"  }, /* twl (ext) wd */
-    {  "/dev/watchdog",    SHORTEST,    "no-omap-wd" }  /* omap wd      */
 };
 
 #define WD_COUNT (sizeof(wd) / sizeof(wd[0]))
