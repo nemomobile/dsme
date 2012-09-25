@@ -146,6 +146,7 @@ bool dsme_wd_init(void)
     int  opened_wd_count = 0;
     bool wd_enabled[WD_COUNT];
     int  i;
+    char          tmp[16];
 
     for (i = 0; i < WD_COUNT; ++i) {
         wd_enabled[i] = true; /* enable all watchdogs by default */
@@ -160,13 +161,19 @@ bool dsme_wd_init(void)
         if (wd_enabled[i] == false)
             continue;
 
-        wd_fd[i] = open(wd[i].file, O_RDWR);
+        /* try to open watchdog core compatible device node */
+        snprintf(tmp, sizeof(tmp), "/dev/watchdog%d", i);
+        wd_fd[i] = open(tmp, O_RDWR);
         if (wd_fd[i] == -1) {
-            fprintf(stderr,
-                    ME "Error opening WD %s: %s\n",
-                    wd[i].file,
-                    strerror(errno));
-                    continue;
+            /* fallback to legacy Nokia specific device nodes */
+            wd_fd[i] = open(wd[i].file, O_RDWR);
+            if (wd_fd[i] == -1) {
+                fprintf(stderr,
+                        ME "Error opening WD %s: %s\n",
+                        wd[i].file,
+                        strerror(errno));
+                continue;
+            }
         }
 
         ++opened_wd_count;
