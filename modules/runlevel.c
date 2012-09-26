@@ -52,8 +52,14 @@ static bool change_runlevel(dsme_runlevel_t runlevel)
 {
   char command[32];
 
-  snprintf(command, sizeof(command), "telinit %i", runlevel);
-  dsme_log(LOG_NOTICE, "Issuing telinit %i", runlevel);
+  if (access("/sbin/telinit", X_OK) == 0) {
+      snprintf(command, sizeof(command), "/sbin/telinit %i", runlevel);
+  } else if (access("/usr/sbin/telinit", X_OK) == 0) {
+      snprintf(command, sizeof(command), "/usr/sbin/telinit %i", runlevel);
+  } else {
+      return false;
+  }
+  dsme_log(LOG_NOTICE, "Issuing %s", command);
 
   if (system(command) != 0) {
       dsme_log(LOG_CRIT, "failed to change runlevel, trying again in 2s");
@@ -87,8 +93,9 @@ static void shutdown(dsme_runlevel_t runlevel)
                                                 "Malf");
 
   /* If runlevel change fails, handle the shutdown/reboot by DSME */
-  if (access("/sbin/telinit", X_OK) != 0 || !change_runlevel(runlevel))
+  if (!change_runlevel(runlevel))
   {
+      char command[32];
       dsme_log(LOG_CRIT, "Doing forced shutdown/reboot");
       sync();
 
@@ -97,22 +104,32 @@ static void shutdown(dsme_runlevel_t runlevel)
       if (runlevel == DSME_RUNLEVEL_SHUTDOWN ||
           runlevel == DSME_RUNLEVEL_MALF)
       {
-          dsme_log(LOG_CRIT, "Issuing poweroff");
-          if (system("/sbin/poweroff") != 0) {
-              dsme_log(LOG_ERR, "/sbin/poweroff failed, trying again in 3s");
+          if (access("/sbin/poweroff", X_OK) == 0) {
+              snprintf(command, sizeof(command), "/sbin/poweroff");
+          } else {
+              snprintf(command, sizeof(command), "/usr/sbin/poweroff");
+          }
+          dsme_log(LOG_CRIT, "Issuing %s", command);
+          if (system(command) != 0) {
+	    dsme_log(LOG_ERR, "%s failed, trying again in 3s", command);
               sleep(3);
-              if (system("/sbin/poweroff") != 0) {
-                  dsme_log(LOG_ERR, "/sbin/poweroff failed again");
+              if (system(command) != 0) {
+		dsme_log(LOG_ERR, "%s failed again", command);
                   goto fail_and_exit;
               }
           }
       } else {
-          dsme_log(LOG_CRIT, "Issuing reboot");
-          if (system("/sbin/reboot") != 0) {
-              dsme_log(LOG_ERR, "/sbin/reboot failed, trying again in 3s");
+          if (access("/sbin/reboot", X_OK) == 0) {
+              snprintf(command, sizeof(command), "/sbin/reboot");
+          } else {
+              snprintf(command, sizeof(command), "/usr/sbin/reboot");
+          }
+          dsme_log(LOG_CRIT, "Issuing %s", command);
+          if (system(command) != 0) {
+	    dsme_log(LOG_ERR, "%s failed, trying again in 3s", command);
               sleep(3);
-              if (system("/sbin/reboot") != 0) {
-                  dsme_log(LOG_ERR, "/sbin/reboot failed again");
+              if (system(command) != 0) {
+		dsme_log(LOG_ERR, "%s failed again", command);
                   goto fail_and_exit;
               }
           }
