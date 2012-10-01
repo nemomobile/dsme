@@ -18,7 +18,6 @@ pkglib_LTLIBRARIES = startup.la              \
                      iphb.la                 \
                      thermalflagger.la       \
                      malf.la                 \
-                     validatorlistener.la    \
                      diskmonitor.la          \
                      tempreaper.la           \
                      dbusautoconnector.la
@@ -56,6 +55,10 @@ if WANT_UPSTART
 pkglib_LTLIBRARIES += upstart.la
 endif
 
+if WANT_VALIDATOR_LISTENER
+pkglib_LTLIBRARIES += validatorlistener.la
+endif
+
 if WANT_PWRKEY_MONITOR
 pkglib_LTLIBRARIES += pwrkeymonitor.la
 endif
@@ -84,6 +87,11 @@ upstart_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS)
 upstart_la_LIBADD = $(DBUS_LIBS)
 endif
 
+if WANT_VALIDATOR_LISTENER
+runlevel_la_SOURCES = validatorlistener.c
+validatorlistener_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
+endif
+
 processwd_la_SOURCES = processwd.c
 processwd_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
 
@@ -110,8 +118,6 @@ iphb_la_LIBADD = $(GLIB_LIBS)
 thermalflagger_la_SOURCES = thermalflagger.c
 
 malf_la_SOURCES = malf.c
-
-validatorlistener_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
 
 if WANT_BMEIPC
 thermalobject_surface_la_SOURCES = thermalobject_surface.c \
