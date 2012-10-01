@@ -1,5 +1,5 @@
 # Package name and version
-AC_INIT(dsme, 0.62.2)
+AC_INIT(dsme, 0.62.3)
 
 AM_INIT_AUTOMAKE
 
@@ -64,6 +64,19 @@ AC_ARG_ENABLE([upstart],
 AS_IF([test "x$enable_upstart" != xno],
   [AC_DEFINE([DSME_WANT_LIBUPSTART], [1])])
 AM_CONDITIONAL([WANT_UPSTART], [test x$enable_upstart != xno])
+
+#
+# validatorlistener
+#
+AC_ARG_ENABLE([validatorlistener],
+  [AS_HELP_STRING([--disable-validatorlistener],
+    [disable validatorlistener plugin (validatorlistener)])],
+  [],
+  [enable_validatorlistener=yes])
+
+AS_IF([test "x$enable_validatorlistener" != xno],
+  [AC_DEFINE([DSME_VALIDATOR_LISTENER], [1])])
+AM_CONDITIONAL([WANT_VALIDATOR_LISTENER], [test x$enable_validatorlistener != xno])
 
 #
 # memory thermal mgmt
