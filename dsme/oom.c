@@ -27,43 +27,82 @@
 
 #include <stdio.h>
 #include <errno.h>
+#include <sys/stat.h>
+#include "dsme/logging.h"
 
-#define OOM_ADJ_PATH            "/proc/self/oom_adj"
-#define OOM_ADJ_PROTECT_VALUE   (-17)
-#define OOM_ADJ_UNPROTECT_VALUE 0
+/* Kernel 2.6.36 and newer are using /proc/<pid>/oom_score_adj
+ * and older kernels /proc/<pid>/oom_adj
+ * We support both and detect it on the fly
+ */
 
-static bool set_oom_adj_value(int i)
+#define OOM_ADJ_PATH_OLD        "/proc/self/oom_adj"
+#define OOM_ADJ_PATH_NEW        "/proc/self/oom_score_adj"
+#define OOM_PROTECT_VALUE_OLD   (-17)
+#define OOM_PROTECT_VALUE_NEW   (-1000)
+#define OOM_UNPROTECT_VALUE     0
+typedef enum {oom_protected, oom_unprotected} oom_mode;
+  
+static bool set_oom_protection_mode(oom_mode mode)
 {
   FILE* file = 0;
+  const char* new_path = OOM_ADJ_PATH_NEW;
+  const char* old_path = OOM_ADJ_PATH_OLD;
+  char* oom_path;
+  int  oom_value;
+  struct stat st;
 
-  file = fopen(OOM_ADJ_PATH, "w");
+  if (stat(OOM_ADJ_PATH_NEW, &st) == 0) {
+    oom_path = (char*)new_path;
+  } else {
+    oom_path = (char*)old_path; 
+  }
+
+  if (mode == oom_protected) {
+      if (oom_path == new_path) {
+          oom_value = OOM_PROTECT_VALUE_NEW;
+      } else {
+          oom_value = OOM_PROTECT_VALUE_OLD;
+      }
+  } else {
+      oom_value = OOM_UNPROTECT_VALUE;
+  }
+
+  file = fopen(oom_path, "w");
   if (!file) {
+      dsme_log(LOG_ERR, "set_oom_protection_mode() can't open %s", oom_path);
       return false;
   }
 
-  if (fprintf(file, "%i", i) < 0) {
+  if (fprintf(file, "%i", oom_value) < 0) {
       (void)fclose(file);
+      dsme_log(LOG_CRIT, "set_oom_protection_mode(%s,%i) failed", oom_path, oom_value);
       return false;
   }
 
   if (fclose(file) < 0) {
       return false;
   }
-
   return true;
 }
 
 bool protect_from_oom(void)
 {
-  return set_oom_adj_value(OOM_ADJ_PROTECT_VALUE);
+  return set_oom_protection_mode(oom_protected);
 }
 
 bool unprotect_from_oom(void)
 {
-  return set_oom_adj_value(OOM_ADJ_UNPROTECT_VALUE);
+  return set_oom_protection_mode(oom_unprotected);
 }
 
 bool adjust_oom(int oom_adj)
 {
-  return set_oom_adj_value(oom_adj);
+  /* This function is not used anywhere, but we keep it anyhow 
+   * Actual value can not be set anymore but only protected/unprotected
+   */
+  if (oom_adj < 0) {
+      return set_oom_protection_mode(oom_protected);
+  } else {
+      return set_oom_protection_mode(oom_unprotected);
+  }
 }
