@@ -40,7 +40,7 @@ dsme_server_SOURCES = dsme-server.c modulebase.c timers.c logging.c oom.c \
                       mainloop.c dsmesock.c dsme-rd-mode.c
 dsme_server_LDFLAGS = $(AM_LDFLAGS) -rdynamic `pkg-config --libs gthread-2.0` -Wl,--as-needed
 dsme_server_CPPFLAGS = $(CPP_GENFLAGS) $(GLIB_CFLAGS) -DDSME_LOG_ENABLE
-dsme_server_LDADD = $(GLIB_LIBS) -ldsme -ldl -lcreds
+dsme_server_LDADD = $(GLIB_LIBS) -ldsme -ldl
 
 #
 # Headers used by all

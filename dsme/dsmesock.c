@@ -38,7 +38,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <fcntl.h>
-#include <sys/creds.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/stat.h>
@@ -127,21 +126,6 @@ fail:
   return -1;
 }
 
-static bool check_client_credentials(int socketfd)
-{
-  bool          success = true;
-/*  creds_value_t value;
-  creds_type_t  type    = creds_str2creds("dsme::DeviceStateControl", &value);*/
-  creds_t       creds   = creds_getpeer(socketfd);
-
-/*  if (!creds_have_p(creds, type, value)) {
-    success = false;
-  }*/
-
-  creds_free(creds);
-  return success;
-}
-
 static gboolean accept_client(GIOChannel*  source,
                               GIOCondition condition,
                               gpointer     p)
@@ -176,15 +160,6 @@ static gboolean accept_client(GIOChannel*  source,
     newconn->ucred.gid = -1;
   }
 
-  if (!check_client_credentials(newfd)) {
-    char* name = endpoint_name_by_pid(newconn->ucred.pid);
-    dsme_log(LOG_CRIT, "DSME: dropping dsmesock client %s, no dsme::DeviceStateControl credential",
-             name);
-    free(name);
-    close_client(newconn);
-    goto out;
-  }
-
   if (!(newconn->channel = g_io_channel_unix_new(newfd)) ||
       !g_io_add_watch(newconn->channel,
                       (G_IO_IN | G_IO_ERR | G_IO_HUP),
@@ -196,7 +171,6 @@ static gboolean accept_client(GIOChannel*  source,
     add_client(newconn);
   }
 
-out:
   return TRUE; /* do not discard the listening channel */
 }
 
