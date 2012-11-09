@@ -1,5 +1,5 @@
 # Package name and version
-AC_INIT(dsme, 0.62.5)
+AC_INIT(dsme, 0.62.6)
 
 AM_INIT_AUTOMAKE
 
@@ -64,6 +64,19 @@ AC_ARG_ENABLE([upstart],
 AS_IF([test "x$enable_upstart" != xno],
   [AC_DEFINE([DSME_WANT_LIBUPSTART], [1])])
 AM_CONDITIONAL([WANT_UPSTART], [test x$enable_upstart != xno])
+
+#
+# systemd
+#
+AC_ARG_ENABLE([systemd],
+  [AS_HELP_STRING([--enable-systemd],
+    [enable systemd start feedback])],
+  [],
+  [enable_systemd=no])
+
+AS_IF([test "x$enable_systemd" != xno],
+  [AC_DEFINE([DSME_SYSTEMD_ENABLE], [1])])
+AM_CONDITIONAL([WANT_SYSTEMD], [test x$enable_systemd != xno])
 
 #
 # validatorlistener
