@@ -77,7 +77,7 @@ int dsmesock_listen(dsmesock_callback* read_and_queue)
 
   dsmesock_filename = getenv("DSME_SOCKFILE");
   if (dsmesock_filename == 0 || *dsmesock_filename == '\0') {
-    dsmesock_filename = "/tmp/dsmesock";
+      dsmesock_filename = dsmesock_default_location;
   }
 
   memset(&laddr, 0, sizeof(laddr));
