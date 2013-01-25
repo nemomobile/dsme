@@ -29,11 +29,11 @@
 
 typedef enum {
   DSME_RUNLEVEL_SHUTDOWN = 0,
-  DSME_RUNLEVEL_LOCAL    = 0, /* MeeGo -> map to 'halt'      */
-  DSME_RUNLEVEL_ACTDEAD  = 0, /* MeeGo -> map to 'halt'      */
-  DSME_RUNLEVEL_MALF     = 0, /* MeeGo -> map to 'halt'      */
-  DSME_RUNLEVEL_TEST     = 3, /* MeeGo -> map to 'multiuser' */
-  DSME_RUNLEVEL_USER     = 5, /* MeeGo -> map to 'X11'       */
+  DSME_RUNLEVEL_MALF     = 2, /* Not used, multiuser.target */
+  DSME_RUNLEVEL_LOCAL    = 3, /* Not used, multiuser.target */
+  DSME_RUNLEVEL_TEST     = 3, /* Not used, multiuser.target */
+  DSME_RUNLEVEL_ACTDEAD  = 4, /* actdead.target  */
+  DSME_RUNLEVEL_USER     = 5, /* graphical.target */
   DSME_RUNLEVEL_REBOOT   = 6,
 } dsme_runlevel_t;
 
