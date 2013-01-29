@@ -70,10 +70,10 @@ static dsme_timer_t pwrkey_timer = 0;
 static int
 pwrkey_trigger(void *data)
 {
-    if( !powerkey_timer )
+    if( !pwrkey_timer )
     {
-	/* Cancelled but got triggered anyway */
-	return FALSE;
+        /* Cancelled but got triggered anyway */
+        return FALSE;
     }
 
     dsme_log(LOG_CRIT, PFIX"Timer triggered, initiating shutdown");
@@ -109,17 +109,17 @@ start_pwrkey_timer(void)
 {
     if( pwrkey_timer )
     {
-	dsme_log(LOG_DEBUG, PFIX"Timer already running");
+        dsme_log(LOG_DEBUG, PFIX"Timer already running");
     }
     else if( !(pwrkey_timer = dsme_create_timer(PWRKEY_TIMER_SECONDS,
-						pwrkey_trigger, NULL)) )
+                                                pwrkey_trigger, NULL)) )
     {
-	dsme_log(LOG_CRIT, PFIX"Timer creation failed!");
+        dsme_log(LOG_CRIT, PFIX"Timer creation failed!");
     }
     else
     {
-	dsme_log(LOG_DEBUG, PFIX"Timer started (%d sec to shutdown)",
-		 PWRKEY_TIMER_SECONDS);
+        dsme_log(LOG_DEBUG, PFIX"Timer started (%d sec to shutdown)",
+                 PWRKEY_TIMER_SECONDS);
     }
 }
 
@@ -163,11 +163,11 @@ emits_powerkey_events(int fd)
 
     if( ioctl(fd, EVIOCGBIT(EV_KEY, KEY_CNT), keys) == -1 )
     {
-	dsme_log(LOG_DEBUG, PFIX"EVIOCGBIT(%d): %m", fd);
+        dsme_log(LOG_DEBUG, PFIX"EVIOCGBIT(%d): %m", fd);
     }
     else if( keys[EVDEVBITS_OFFS(KEY_POWER)] & EVDEVBITS_MASK(KEY_POWER) )
     {
-	res = TRUE;
+        res = TRUE;
     }
 
     return res;
@@ -209,21 +209,20 @@ channel_watch_delete(channel_watch_t *self, bool remove_watch)
 {
     if( self )
     {
-	if( remove_watch && self->watch )
-	{
-	     g_source_remove(self->watch);
-	}
-	if( self->chan )
-	{
-	    g_io_channel_unref(self->chan);
-	}
-	g_free(self);
+        if( remove_watch && self->watch )
+        {
+             g_source_remove(self->watch);
+        }
+        if( self->chan )
+        {
+            g_io_channel_unref(self->chan);
+        }
+        g_free(self);
     }
 }
 
 /** List of io channels and watches tracking power button presses */
 static GSList *watchlist = 0;
-
 
 /** Append an io channel and a watch for it into list of things under tracking
  *
@@ -252,20 +251,20 @@ watchlist_remove(GIOChannel *chan)
 
     while( (now = *pos) )
     {
-	channel_watch_t *cw = now->data;
+        channel_watch_t *cw = now->data;
 
-	if( cw->chan != chan )
-	{
-	    pos = &now->next;
-	    continue;
-	}
+        if( cw->chan != chan )
+        {
+            pos = &now->next;
+            continue;
+        }
 
-	// unlink slot from list and free it
-	*pos = now->next, now->next = 0;
-	g_slist_free(now);
+        // unlink slot from list and free it
+        *pos = now->next, now->next = 0;
+        g_slist_free(now);
 
-	channel_watch_delete(cw, false);
-	break;
+        channel_watch_delete(cw, false);
+        break;
     }
 }
 
@@ -277,7 +276,7 @@ watchlist_clear(void)
 {
     for( GSList *now = watchlist; now; now = now->next )
     {
-	channel_watch_delete(now->data, true);
+        channel_watch_delete(now->data, true);
     }
     g_slist_free(watchlist), watchlist = 0;
 }
@@ -301,8 +300,8 @@ process_kbevent(GIOChannel* chan, GIOCondition condition, gpointer data)
     /* Abandon watch if we get abnorman conditions from glib */
     if (condition & ~(G_IO_IN | G_IO_PRI))
     {
-	dsme_log(LOG_ERR, PFIX"I/O error");
-	keep_going = FALSE;
+        dsme_log(LOG_ERR, PFIX"I/O error");
+        keep_going = FALSE;
     }
 
     /* Do the actual reading with good old read() syscall */
@@ -311,59 +310,59 @@ process_kbevent(GIOChannel* chan, GIOCondition condition, gpointer data)
 
     if( rc < 0 )
     {
-	switch( errno )
-	{
-	case EINTR:
-	case EAGAIN:
-	    break;
-	default:
-	    dsme_log(LOG_ERR, PFIX"read: %m");
-	    keep_going = FALSE;
-	    break;
-	}
+        switch( errno )
+        {
+        case EINTR:
+        case EAGAIN:
+            break;
+        default:
+            dsme_log(LOG_ERR, PFIX"read: %m");
+            keep_going = FALSE;
+            break;
+        }
     }
     else if( rc == 0 )
     {
-	dsme_log(LOG_ERR, PFIX"read: EOF");
-	keep_going = FALSE;
+        dsme_log(LOG_ERR, PFIX"read: EOF");
+        keep_going = FALSE;
     }
     else
     {
-	int n = rc / sizeof *buf;
+        int n = rc / sizeof *buf;
 
-	dsme_log(LOG_DEBUG, PFIX"Processing %d events", n);
+        dsme_log(LOG_DEBUG, PFIX"Processing %d events", n);
 
-	for( int i = 0; i < n; ++i )
-	{
-	    const struct input_event *eve = buf + i;
+        for( int i = 0; i < n; ++i )
+        {
+            const struct input_event *eve = buf + i;
 
-	    dsme_log(LOG_DEBUG, PFIX"Got event, type: %d code: %d value: %d",
-		     eve->type, eve->code, eve->value);
+            dsme_log(LOG_DEBUG, PFIX"Got event, type: %d code: %d value: %d",
+                     eve->type, eve->code, eve->value);
 
-	    if( eve->type == EV_KEY && eve->code == KEY_POWER )
-	    {
-		switch( eve->value )
-		{
-		case 1: // pressed
-		    start_pwrkey_timer();
-		    break;
-		case 0: // released
-		    stop_pwrkey_timer();
-		    break;
-		default: // repeat ignored
-		    break;
-		}
-	    }
-	}
+            if( eve->type == EV_KEY && eve->code == KEY_POWER )
+            {
+                switch( eve->value )
+                {
+                case 1: // pressed
+                    start_pwrkey_timer();
+                    break;
+                case 0: // released
+                    stop_pwrkey_timer();
+                    break;
+                default: // repeat ignored
+                    break;
+                }
+            }
+        }
     }
 
     if( !keep_going )
     {
-	dsme_log(LOG_WARNING, PFIX"disabling io watch");
+        dsme_log(LOG_WARNING, PFIX"disabling io watch");
 
-	/* the watch gets removed as we return FALSE, but
-	 * the channel must be removed from tracking list */
-	watchlist_remove(chan);
+        /* the watch gets removed as we return FALSE, but
+         * the channel must be removed from tracking list */
+        watchlist_remove(chan);
     }
 
     return keep_going;
@@ -389,20 +388,20 @@ probe_evdev_device(const char *path)
 
     if( (file = open(path, O_RDONLY)) == -1 )
     {
-	dsme_log(LOG_ERR, PFIX"%s: open: %m", path);
-	goto EXIT;
+        dsme_log(LOG_ERR, PFIX"%s: open: %m", path);
+        goto EXIT;
     }
 
     if( !emits_powerkey_events(file) )
     {
-	dsme_log(LOG_DEBUG, PFIX"%s: not a powerkey device", path);
-	goto EXIT;
+        dsme_log(LOG_DEBUG, PFIX"%s: not a powerkey device", path);
+        goto EXIT;
     }
 
     if( !(chan = g_io_channel_unix_new(file)) )
     {
-	dsme_log(LOG_ERR, PFIX"%s: io channel setup failed", path);
-	goto EXIT;
+        dsme_log(LOG_ERR, PFIX"%s: io channel setup failed", path);
+        goto EXIT;
     }
 
     /* io watch owns the file  */
@@ -411,20 +410,20 @@ probe_evdev_device(const char *path)
     /* Set to NULL encoding so that we can turn off the buffering */
     if( g_io_channel_set_encoding(chan, NULL, &err) != G_IO_STATUS_NORMAL )
     {
-	dsme_log(LOG_WARNING, PFIX"%s: unable to set io channel encoding",
-		 path);
-	if( err )
-	{
-	     dsme_log(LOG_WARNING, PFIX"%s", err->message);
-	}
-	// continue anyway
+        dsme_log(LOG_WARNING, PFIX"%s: unable to set io channel encoding",
+                 path);
+        if( err )
+        {
+             dsme_log(LOG_WARNING, PFIX"%s", err->message);
+        }
+        // continue anyway
     }
     g_io_channel_set_buffered(chan, false);
 
     if( !(watch = g_io_add_watch(chan, G_IO_IN, process_kbevent, 0)) )
     {
-	dsme_log(LOG_ERR, PFIX"%s: unable to add io channel watch", path);
-	goto EXIT;
+        dsme_log(LOG_ERR, PFIX"%s: unable to add io channel watch", path);
+        goto EXIT;
     }
 
     dsme_log(LOG_DEBUG, PFIX"%s: channel=%p, watch=%u", path, chan, watch);
@@ -459,23 +458,23 @@ start_pwrkey_monitor(void)
 
     if( !(dir = opendir(base)) )
     {
-	dsme_log(LOG_ERR, PFIX"opendir(%s): %m", base);
-	goto EXIT;
+        dsme_log(LOG_ERR, PFIX"opendir(%s): %m", base);
+        goto EXIT;
     }
 
     while( (de = readdir(dir)) )
     {
-	if( strncmp(de->d_name, "event", 5) )
-	{
-	    continue;
-	}
+        if( strncmp(de->d_name, "event", 5) )
+        {
+            continue;
+        }
 
-	snprintf(path, sizeof path, "%s/%s", base, de->d_name);
+        snprintf(path, sizeof path, "%s/%s", base, de->d_name);
 
-	if( probe_evdev_device(path) )
-	{
-	    cnt += 1;
-	}
+        if( probe_evdev_device(path) )
+        {
+            cnt += 1;
+        }
     }
 
 EXIT:
@@ -484,7 +483,7 @@ EXIT:
 
     if( cnt < 1 )
     {
-	dsme_log(LOG_WARNING, PFIX"could not find any powerkey input devices");
+        dsme_log(LOG_WARNING, PFIX"could not find any powerkey input devices");
     }
 
     return cnt > 0;
