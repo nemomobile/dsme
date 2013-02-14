@@ -73,14 +73,14 @@
  * state change from user to acting dead.
  */
 #define ACTDEAD_TIMER_MIN_TIMEOUT 2
-#define ACTDEAD_TIMER_MAX_TIMEOUT 15
+#define ACTDEAD_TIMER_MAX_TIMEOUT 45
 
 /**
  * Timer value for user timer. This is how long we wait before doing a
  * state change from acting dead to user.
  */
 #define USER_TIMER_MIN_TIMEOUT 2
-#define USER_TIMER_MAX_TIMEOUT 15
+#define USER_TIMER_MAX_TIMEOUT 45
 
 /* Seconds from overheating or empty battery to the start of shutdown timer */
 #define DSME_THERMAL_SHUTDOWN_TIMER       8
