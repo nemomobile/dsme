@@ -163,7 +163,7 @@ static void init_done_ind(const DsmeDbusMessage* ind)
 
 static void mce_inactivity_sig(const DsmeDbusMessage* sig)
 {
-    const int inactive                  = dsme_dbus_message_get_int(sig);
+    const bool inactive                 = dsme_dbus_message_get_bool(sig);
     const bool new_device_active_state  = !inactive;
     struct timeval monotime;
     int seconds_from_last_check;
