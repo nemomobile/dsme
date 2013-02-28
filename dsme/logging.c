@@ -279,7 +279,7 @@ void dsme_log_txt(int level, const char* fmt, ...)
         sem_post(&ring_buffer_sem);
     }
 
-#if 1 /* spam the console */
+#if 0 /* spam the console */
     /* always output significant messages to console */
     if (level <= LOG_NOTICE) {
         vfprintf(stderr, fmt, ap);
