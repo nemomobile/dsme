@@ -64,7 +64,7 @@ static struct {
     FILE*       filep;     /* Log file stream */
     int         sock;      /* Netlink socket for STI method */
     int         channel;   /* Channel number for STI method */
-} logopt = { LOG_METHOD_STDERR, LOG_INFO, 0, "DSME", NULL };
+} logopt = { LOG_METHOD_STDERR, LOG_NOTICE, 0, "DSME", NULL };
 
 
 #define DSME_MAX_LOG_MESSAGE_LENGTH 123
