@@ -64,7 +64,7 @@ static struct {
     FILE*       filep;     /* Log file stream */
     int         sock;      /* Netlink socket for STI method */
     int         channel;   /* Channel number for STI method */
-} logopt = { LOG_METHOD_STDERR, LOG_INFO, 0, "DSME", NULL };
+} logopt = { LOG_METHOD_STDERR, LOG_NOTICE, 0, "DSME", NULL };
 
 
 #define DSME_MAX_LOG_MESSAGE_LENGTH 123
@@ -279,7 +279,7 @@ void dsme_log_txt(int level, const char* fmt, ...)
         sem_post(&ring_buffer_sem);
     }
 
-#if 1 /* spam the console */
+#if 0 /* spam the console */
     /* always output significant messages to console */
     if (level <= LOG_NOTICE) {
         vfprintf(stderr, fmt, ap);

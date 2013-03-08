@@ -111,9 +111,9 @@ emergencycalltracker_la_SOURCES = emergencycalltracker.c
 usbtracker_la_SOURCES = usbtracker.c
 
 iphb_la_SOURCES = iphb.c
-iphb_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
+iphb_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS)
 iphb_la_CPPFLAGS = $(AM_CPPFLAGS)
-iphb_la_LIBADD = $(GLIB_LIBS)
+iphb_la_LIBADD = $(GLIB_LIBS) $(DBUS_LIBS)
 
 thermalflagger_la_SOURCES = thermalflagger.c
 

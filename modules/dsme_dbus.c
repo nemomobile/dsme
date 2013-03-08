@@ -42,6 +42,46 @@
 #include <stdio.h>
 
 
+static const char *dsme_dbus_get_type_name(int type)
+{
+    static const char *res = "UNKNOWN";
+    switch( type )
+    {
+    case DBUS_TYPE_INVALID:     res = "INVALID";     break;
+    case DBUS_TYPE_BYTE:        res = "BYTE";        break;
+    case DBUS_TYPE_BOOLEAN:     res = "BOOLEAN";     break;
+    case DBUS_TYPE_INT16:       res = "INT16";       break;
+    case DBUS_TYPE_UINT16:      res = "UINT16";      break;
+    case DBUS_TYPE_INT32:       res = "INT32";       break;
+    case DBUS_TYPE_UINT32:      res = "UINT32";      break;
+    case DBUS_TYPE_INT64:       res = "INT64";       break;
+    case DBUS_TYPE_UINT64:      res = "UINT64";      break;
+    case DBUS_TYPE_DOUBLE:      res = "DOUBLE";      break;
+    case DBUS_TYPE_STRING:      res = "STRING";      break;
+    case DBUS_TYPE_OBJECT_PATH: res = "OBJECT_PATH"; break;
+    case DBUS_TYPE_SIGNATURE:   res = "SIGNATURE";   break;
+    case DBUS_TYPE_UNIX_FD:     res = "UNIX_FD";     break;
+    case DBUS_TYPE_ARRAY:       res = "ARRAY";       break;
+    case DBUS_TYPE_VARIANT:     res = "VARIANT";     break;
+    case DBUS_TYPE_STRUCT:      res = "STRUCT";      break;
+    case DBUS_TYPE_DICT_ENTRY:  res = "DICT_ENTRY";  break;
+    }
+    return res;
+}
+
+static bool dsme_dbus_check_arg_type(DBusMessageIter* iter, int want_type)
+{
+    int have_type = dbus_message_iter_get_arg_type(iter);
+
+    if( have_type == want_type )
+	 return true;
+
+    dsme_log(LOG_WARNING, "dbus message parsing failed: expected %s, got %s",
+	     dsme_dbus_get_type_name(want_type),
+	     dsme_dbus_get_type_name(have_type));
+    return false;
+}
+
 bool dsme_dbus_is_available(void)
 {
     return dbus_bus_get(DBUS_BUS_SYSTEM, 0) != 0;
@@ -93,21 +133,18 @@ void dsme_dbus_message_append_int(DsmeDbusMessage* msg, int i)
   }
 }
 
-static void message_iter_next(DBusMessageIter* iter)
-{
-  if (dbus_message_iter_has_next(iter)) {
-      dbus_message_iter_next(iter);
-  }
-}
-
 int dsme_dbus_message_get_int(const DsmeDbusMessage* msg)
 {
+  // FIXME: caller can't tell apart zero from error
   dbus_int32_t i = 0;
 
   if (msg) {
-      // TODO: check type!
-      dbus_message_iter_get_basic((DBusMessageIter*)&msg->iter, &i);
-      message_iter_next((DBusMessageIter*)&msg->iter);
+      // FIXME: why take const pointer if we're going to modify the content?
+      DBusMessageIter *iter = (DBusMessageIter *)&msg->iter;
+      if( dsme_dbus_check_arg_type(iter, DBUS_TYPE_INT32) ) {
+	  dbus_message_iter_get_basic(iter, &i);
+      }
+      dbus_message_iter_next(iter);
   }
 
   return i;
@@ -115,15 +152,36 @@ int dsme_dbus_message_get_int(const DsmeDbusMessage* msg)
 
 const char* dsme_dbus_message_get_string(const DsmeDbusMessage* msg)
 {
+  // FIXME: caller can't tell apart empty string from error
   const char* s = "";
 
   if (msg) {
-      // TODO: check type!
-      dbus_message_iter_get_basic((DBusMessageIter*)&msg->iter, &s);
-      message_iter_next((DBusMessageIter*)&msg->iter);
+      // FIXME: why take const pointer if we're going to modify the content?
+      DBusMessageIter *iter = (DBusMessageIter *)&msg->iter;
+      if( dsme_dbus_check_arg_type(iter, DBUS_TYPE_STRING) ) {
+	  dbus_message_iter_get_basic(iter, &s);
+      }
+      dbus_message_iter_next(iter);
   }
 
   return s;
+}
+
+bool dsme_dbus_message_get_bool(const DsmeDbusMessage* msg)
+{
+  // FIXME: caller can't tell apart FALSE from error
+  dbus_bool_t b = FALSE;
+
+  if (msg) {
+      // FIXME: why take const pointer if we're going to modify the content?
+      DBusMessageIter *iter = (DBusMessageIter *)&msg->iter;
+      if( dsme_dbus_check_arg_type(iter, DBUS_TYPE_BOOLEAN) ) {
+	  dbus_message_iter_get_basic(iter, &b);
+      }
+      dbus_message_iter_next(iter);
+  }
+
+  return b;
 }
 
 static void message_send_and_delete(DsmeDbusMessage* msg)
