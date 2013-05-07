@@ -37,6 +37,7 @@
 
 #include "dsme/modules.h"
 #include "dsme/logging.h"
+#include <dsme/state.h>
 
 #include <string.h>
 
@@ -53,18 +54,39 @@ static void send_usb_status(bool mounted_to_pc)
     broadcast_internally(&msg);
 }
 
+static void send_charger_status(bool charger_state)
+{
+    DSM_MSGTYPE_SET_CHARGER_STATE msg = DSME_MSG_INIT(DSM_MSGTYPE_SET_CHARGER_STATE);
+
+    msg.connected = charger_state;
+
+    dsme_log(LOG_DEBUG,
+             "broadcasting usb charger state:%s connected",
+             msg.connected ? "" : " not");
+
+    broadcast_internally(&msg);
+}
+
 static void usb_state_ind(const DsmeDbusMessage* ind)
 {
     bool        mounted_to_pc = false;
+    static bool	connected = false;
     const char* state         = dsme_dbus_message_get_string(ind);
 
     if (strcmp(state, "mass_storage") == 0 ||
         strcmp(state, "data_in_use" ) == 0)
     {
         mounted_to_pc = true;
+    	send_usb_status(mounted_to_pc);
+	return;
     }
+    if (strcmp(state, "USB connected") == 0 && !connected)
+	connected = true;
+    else if (strcmp(state, "USB disconnected") == 0 && connected)
+	connected = false;
 
-    send_usb_status(mounted_to_pc);
+    send_charger_status(connected);
+
 }
 
 static const dsme_dbus_signal_binding_t signals[] = {
