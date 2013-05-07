@@ -81,9 +81,9 @@ static void usb_state_ind(const DsmeDbusMessage* ind)
 	return;
     }
     if (strcmp(state, "USB connected") == 0 && !connected)
-	connected = true;
+        connected = true;
     else if (strcmp(state, "USB disconnected") == 0 && connected)
-	connected = false;
+        connected = false;
 
     send_charger_status(connected);
 
