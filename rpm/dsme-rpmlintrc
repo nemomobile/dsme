@@ -1,0 +1,1 @@
+addFilter("dsme.* devel-file-in-non-devel-package")
