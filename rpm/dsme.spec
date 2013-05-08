@@ -41,6 +41,7 @@ Device State Management Entity (with debug symbols). This package contains the D
 # << setup
 
 %build
+./verify_version.sh
 unset LD_AS_NEEDED
 # >> build pre
 chmod a+x autogen.sh
