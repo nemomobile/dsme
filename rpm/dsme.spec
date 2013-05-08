@@ -34,8 +34,6 @@ BuildRequires:  python
 %description
 Device State Management Entity (with debug symbols). This package contains the Device State Management Entity which provides state management features such as service monitoring, process watchdog and inactivity tracking.
 
-
-
 %prep
 %setup -q -n %{name}-%{version}
 
@@ -77,7 +75,6 @@ ln -s ../%{name}.service %{buildroot}/lib/systemd/system/multi-user.target.wants
 install -d %{buildroot}/var/lib/dsme
 [ ! -f %{buildroot}/var/lib/dsme/alarm_queue_status ] && echo 0 > %{buildroot}/var/lib/dsme/alarm_queue_status
 # << install post
-
 
 %preun
 if [ "$1" -eq 0 ]; then
