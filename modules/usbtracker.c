@@ -76,16 +76,14 @@ static void usb_state_ind(const DsmeDbusMessage* ind)
     if (strcmp(state, "mass_storage") == 0 ||
         strcmp(state, "data_in_use" ) == 0)
     {
-        mounted_to_pc = true;
 	mounted_to_pc_new = true;
     }
     if (strcmp(state, "USB connected") == 0 ||
 	strcmp(state, "charger_connected") == 0 )
-        charger_connected = true;
+        charger_connected_new = true;
     else if (strcmp(state, "USB disconnected") == 0 ||
              strcmp(state, "charger_disconnected") == 0 )
     {
-        charger_connected = false;
         charger_connected_new = false;
 	mounted_to_pc_new = false;
     }
