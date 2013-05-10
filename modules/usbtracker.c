@@ -69,23 +69,38 @@ static void send_charger_status(bool charger_state)
 
 static void usb_state_ind(const DsmeDbusMessage* ind)
 {
-    bool        mounted_to_pc = false;
-    static bool	connected = false;
+    static bool mounted_to_pc = false, mounted_to_pc_new = false;
+    static bool	charger_connected = false, charger_connected_new = false;
     const char* state         = dsme_dbus_message_get_string(ind);
 
     if (strcmp(state, "mass_storage") == 0 ||
         strcmp(state, "data_in_use" ) == 0)
     {
         mounted_to_pc = true;
-    	send_usb_status(mounted_to_pc);
-	return;
+	mounted_to_pc_new = true;
     }
-    if (strcmp(state, "USB connected") == 0 && !connected)
-        connected = true;
-    else if (strcmp(state, "USB disconnected") == 0 && connected)
-        connected = false;
+    if (strcmp(state, "USB connected") == 0 ||
+	strcmp(state, "charger_connected") == 0 )
+        charger_connected = true;
+    else if (strcmp(state, "USB disconnected") == 0 ||
+             strcmp(state, "charger_disconnected") == 0 )
+    {
+        charger_connected = false;
+        charger_connected_now = false;
+	mounted_to_pc_new = false;
+    }
 
-    send_charger_status(connected);
+    if (mounted_to_pc != mounted_to_pc_new)
+    {
+        mounted_to_pc = mounted_to_pc_new;
+        send_usb_status(mounted_to_pc);
+    }
+    
+    if (charger_connected != charger_connected_new)
+    {
+        charger_connected = charger_connected_new;
+        send_charger_status(charger_connected);
+    }
 
 }
 
@@ -100,6 +115,8 @@ DSME_HANDLER(DSM_MSGTYPE_DBUS_CONNECT, client, msg)
 {
   dsme_log(LOG_DEBUG, "usbtracker: DBUS_CONNECT");
   dsme_dbus_bind_signals(&bound, signals);
+  /* we are connected on dbus, now we can query 
+     charger/usb connection details */
 }
 
 DSME_HANDLER(DSM_MSGTYPE_DBUS_DISCONNECT, client, msg)
