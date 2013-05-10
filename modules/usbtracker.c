@@ -86,7 +86,7 @@ static void usb_state_ind(const DsmeDbusMessage* ind)
              strcmp(state, "charger_disconnected") == 0 )
     {
         charger_connected = false;
-        charger_connected_now = false;
+        charger_connected_new = false;
 	mounted_to_pc_new = false;
     }
 
