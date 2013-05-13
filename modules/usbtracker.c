@@ -40,6 +40,7 @@
 #include <dsme/state.h>
 
 #include <string.h>
+#include <dbus/dbus.h>
 
 
 static void send_usb_status(bool mounted_to_pc)
@@ -115,6 +116,39 @@ DSME_HANDLER(DSM_MSGTYPE_DBUS_CONNECT, client, msg)
   dsme_dbus_bind_signals(&bound, signals);
   /* we are connected on dbus, now we can query 
      charger/usb connection details */
+
+  DBusError       error;
+  DBusConnection *conn = 0;
+  DBusMessage *req = NULL, *reply = NULL;
+  char *ret = 0;
+
+  dbus_error_init(&error);
+
+  conn = dbus_bus_get(DBUS_BUS_SYSTEM, &error);
+  if (!conn)
+  {
+     if (dbus_error_is_set(&error))
+     	return;
+  }
+
+  if ((req = dbus_message_new_method_call("com.meego.usb_moded", "/com/meego/usb_moded", "com.meego.usb_moded", "mode_request")) != NULL)
+  {
+        if ((reply = dbus_connection_send_with_reply_and_block(conn, req, -1, NULL)) != NULL)
+        {
+            dbus_message_get_args(reply, NULL, DBUS_TYPE_OBJECT_PATH, &ret, DBUS_TYPE_INVALID);
+            dbus_message_unref(reply);
+        }
+        dbus_message_unref(req);
+  }
+  dbus_connection_close(conn);
+
+  if(ret)
+  {
+    if(!strcmp(ret, "dedicated_charger"))
+      send_charger_status(TRUE);
+    else
+      send_charger_status(FALSE);
+  }
 }
 
 DSME_HANDLER(DSM_MSGTYPE_DBUS_DISCONNECT, client, msg)
