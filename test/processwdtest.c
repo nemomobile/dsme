@@ -170,12 +170,6 @@ int dsmeprocesswdtest(int testnum)
 	return retval;
 }
 
-#if 0
-test_cases_begin
-  test_case_noauto(4241, "DSME Process watchdog test", "dsmeprocesswdtest", 0)
-test_cases_end
-#endif
-
 int main(void)
 {
   dsmeprocesswdtest(0);

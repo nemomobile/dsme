@@ -62,9 +62,6 @@ static void usage(const char* name)
     printf(
 "Note that the <cmd> should include absolute path.\n"
 "  -d --start-dbus                 Start DSME's D-Bus services\n"
-#if 0 // TODO
-"  -s --stop-dbus                  Stop DSME's D-Bus services\n"
-#endif
 "  -b --reboot                     Reboot the device\n"
 "  -v --version                    Print the versions of DSME and dsmetool\n"
 "  -t --telinit <runlevel name>    Change runlevel\n"

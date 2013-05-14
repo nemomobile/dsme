@@ -91,31 +91,6 @@ typedef pot_cal_data_v1 pot_cal_data;
  * ========================================================================= */
 
 /* ------------------------------------------------------------------------- *
- * prettytime  --  #seconds -> "#d #h #m #s"
- * ------------------------------------------------------------------------- */
-
-#if 0
-static const char *prettytime(int32_t t)
-{
-  static char buf[8][32];
-  static int i = 0;
-
-  uint32_t u = (uint32_t)((t<0) ? -t : t);
-
-  unsigned s,m,h,d;
-
-  s = u % 60, u /= 60;
-  m = u % 60, u /= 60;
-  h = u % 24, u /= 24;
-  d = u;
-  i = (i+1)&7;
-
-  snprintf(buf[i], sizeof *buf, "%s%ud %uh %um %us",(t<0) ? "-" : "", d,h,m,s);
-  return buf[i];
-}
-#endif
-
-/* ------------------------------------------------------------------------- *
  * monotime_get  --  CLOCK_MONOTONIC -> struct timeval
  * ------------------------------------------------------------------------- */
 
@@ -319,8 +294,6 @@ static int pot_write_cal(const pot_cal_data *pot)
     goto cleanup;
   }
 
-  // dsme_log(LOG_INFO, LOGPFIX"cal write OK");
-
   err = 0;
 
 cleanup:
@@ -380,11 +353,6 @@ void pot_update_cal(bool user_mode, bool force_save)
 {
   static bool pending_save  = false;
 
-  /* dsme_log(LOG_DEBUG, LOGPFIX"%s(user:%d->%d, force:%d, pending:%d)",
-   *        "update",
-   *        pot_in_user_mode, user_mode, force_save, pending_save);
-   */
-
   int32_t uptime_now  = 0;
   int32_t poweron_dif = 0;
   int32_t poweron_lim = 0;
@@ -393,13 +361,6 @@ void pot_update_cal(bool user_mode, bool force_save)
   {
     pot_cal_read_done = true;
     pot_read_cal(&cal);
-
-    /* dsme_log(LOG_INFO, LOGPFIX"read cal: on = %s, up = %s, rb = %"PRId32", wr = %"PRId32"",
-     *        prettytime(cal.poweron),
-     *        prettytime(cal.uptime),
-     *        cal.reboots,
-     *        cal.updates);
-     */
   }
 
   uptime_now  = uptime_get();
@@ -428,10 +389,6 @@ void pot_update_cal(bool user_mode, bool force_save)
   // update frequency depends on power on time stored at cal
   poweron_lim = pot_update_lim(cal.poweron);
 
-  // dsme_log(LOG_DEBUG, LOGPFIX"tot = %s", prettytime(cal.poweron + poweron_dif));
-  // dsme_log(LOG_DEBUG, LOGPFIX"lim = %s", prettytime(poweron_lim));
-  // dsme_log(LOG_DEBUG, LOGPFIX"dif = %s", prettytime(poweron_dif));
-
   // When to save ... the logic is ugly, but boils down to:
   // 1. when forced
   // 2. in user mode & update is large enough
@@ -447,17 +404,9 @@ void pot_update_cal(bool user_mode, bool force_save)
       cal.poweron += poweron_dif;
       pot_write_cal(&cal);
       pending_save = false;
-
-      /* dsme_log(LOG_INFO, LOGPFIX"write cal: on = %s, up = %s, rb = %"PRId32", wr = %"PRId32"",
-       *        prettytime(cal.poweron),
-       *        prettytime(cal.uptime),
-       *        cal.reboots,
-       *        cal.updates);
-       */
     }
     else
     {
-      // dsme_log(LOG_DEBUG, LOGPFIX"write cal: (skipped)");
       pending_save = true;
     }
   }
