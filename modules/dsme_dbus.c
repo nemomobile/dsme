@@ -491,15 +491,10 @@ static bool filter_handle_message(Filter* filter, DBusMessage* msg)
   switch (dbus_message_get_type(msg)) {
 
   case DBUS_MESSAGE_TYPE_METHOD_CALL:
-    //dsme_log(LOG_DEBUG, "D-Bus: unknown method call");
     // TODO: add logging
   break;
 
   case DBUS_MESSAGE_TYPE_SIGNAL:
-    //dsme_log(LOG_DEBUG, "D-Bus: unknown signal:");
-    //dsme_log(LOG_DEBUG, "path:   '%s'", dbus_message_get_path(msg));
-    //dsme_log(LOG_DEBUG, "if:     '%s'", dbus_message_get_interface(msg));
-    //dsme_log(LOG_DEBUG, "member: '%s'", dbus_message_get_member(msg));
   break;
 
   case DBUS_MESSAGE_TYPE_ERROR:
@@ -602,7 +597,6 @@ static bool service_handle_message(gpointer        servicep,
   bool      handled = false;
 
   if (dbus_message_get_type(msg) == DBUS_MESSAGE_TYPE_METHOD_CALL) {
-    //dsme_log(LOG_DEBUG, "D-Bus: method call");
     handled = dispatcher_list_dispatch(service->methods, connection, msg);
   }
 
@@ -720,7 +714,6 @@ static bool client_handle_message(gpointer        clientp,
   bool    handled = false;
 
   if (dbus_message_get_type(msg) == DBUS_MESSAGE_TYPE_SIGNAL) {
-    //dsme_log(LOG_DEBUG, "D-Bus: signal");
     handled = dispatcher_list_dispatch(client->handlers, connection, msg);
   }
 

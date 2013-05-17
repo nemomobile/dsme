@@ -473,11 +473,6 @@ int main(int argc, char *argv[])
     }
 
     unsigned sleep_interval = DSME_HEARTBEAT_INTERVAL;
-#if 0
-    fprintf(stderr,
-            ME "Entering main loop, with %u s interval\n",
-            sleep_interval);
-#endif
     mainloop(sleep_interval, to_child[1], from_child[0]);
     fprintf(stderr, ME "Exited main loop, quitting\n");
 

@@ -70,13 +70,6 @@ DsmeDbusMessage* dsme_dbus_signal_new(const char* path,
                                       const char* interface,
                                       const char* name);
 
-#if 0
-DsmeDbusMessage* dsme_dbus_call_new(const char* destination,
-                                    const char* path,
-                                    const char* interface,
-                                    const char* method);
-#endif
-
 void dsme_dbus_message_append_string(DsmeDbusMessage* msg, const char* s);
 void dsme_dbus_message_append_int(DsmeDbusMessage* msg, int i);
 
@@ -86,10 +79,6 @@ bool        dsme_dbus_message_get_bool(const DsmeDbusMessage* msg);
 
 // NOTE: frees the signal; hence not const
 void dsme_dbus_signal_emit(DsmeDbusMessage* sig);
-
-#if 0
-void dsme_dbus_call(DsmeDbusMessage* call, DsmeDbusHandler* handler);
-#endif
 
 char* dsme_dbus_endpoint_name(const DsmeDbusMessage* request);
 

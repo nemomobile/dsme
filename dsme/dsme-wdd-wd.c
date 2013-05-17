@@ -93,25 +93,6 @@ void dsme_wd_kick(void)
           }
       }
   }
-
-#if 0 /* for debugging only */
-  static struct timespec previous_timestamp = { 0, 0 };
-  struct timespec timestamp;
-
-  if (clock_gettime(CLOCK_MONOTONIC, &timestamp) != -1) {
-      if (previous_timestamp.tv_sec != 0) {
-          long ms;
-
-          ms = (timestamp.tv_sec - previous_timestamp.tv_sec) * 1000;
-          ms += (timestamp.tv_nsec - previous_timestamp.tv_nsec) / 1000000;
-
-          if (ms > DSME_HEARTBEAT_INTERVAL * 1000 + 100) {
-              fprintf(stderr, ME "took %ld ms between WD kicks\n", ms);
-          }
-      }
-      previous_timestamp = timestamp;
-  }
-#endif
 }
 
 static void check_for_wd_flags(bool wd_enabled[])
@@ -122,8 +103,6 @@ static void check_for_wd_flags(bool wd_enabled[])
 
     p = dsme_rd_mode_get_flags();
     if (p) {
-        //fprintf(stderr, ME "R&D mode enabled\n");
-
         len = strlen(p);
         if (len > 1) {
             for (i = 0; i < WD_COUNT; ++i) {
@@ -139,7 +118,6 @@ static void check_for_wd_flags(bool wd_enabled[])
 
     return;
 }
-
 
 bool dsme_wd_init(void)
 {
@@ -179,12 +157,6 @@ bool dsme_wd_init(void)
         ++opened_wd_count;
 
         if (wd[i].period != 0) {
-#if 0
-            fprintf(stderr,
-                     ME "Setting WD period to %d s for %s\n",
-                     wd[i].period,
-                     wd[i].file);
-#endif
             /* set the wd period */
             /* ioctl() will overwrite tmp with the time left */
             int tmp = wd[i].period;
