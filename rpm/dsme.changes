@@ -1,0 +1,166 @@
+* Fri Mar 08 2013 Simo Piiroinen <simo.piiroinen@jollamobile.com> - 0.62.10
+- Remove the libcreds dependency
+- Fix automatic detection of powerkey input devices. Fixes NEMO#600 :
+  dsme: pwrkeymonitor: Unable to find device that matches "pwrbutton"
+- The iphb module uses rtc alarms to wakeup from suspend
+
+* Fri Feb 15 2013 Pekka Lundstrom <pekka.lundstrom@jollamobile.com> - 0.62.9
+- Made timeouts longer when changing between ACTDEAD and USER states
+
+* Fri Jan 25 2013 Pekka Lundstrom <pekka.lundstrom@jollamobile.com> - 0.62.8
+- Enabled runlevels Fixes NEMO#608 : dsme should support ACTDEAD runlevel
+
+* Fri Nov 16 2012 Pekka Lundstrom <pekka.lundstrom@jollamobile.com> - 0.62.7
+- Default location for dsme socket is taken from libdsme
+  Fixes NEMO#575 : dsme should use same default location for its socket as libdsme
+
+* Fri Nov 9 2012 Pekka Lundstrom <pekka.lundstrom@jollamobile.com> - 0.62.6
+- Added systemd feedback to dsme start. Now daemons that need dsme to
+  be started and running don't need to use waitfordsme binary but
+  those can use "After=dsme.service"
+  Fixes NEMO#566 :  waitfordsme should be removed
+
+* Thu Oct 18 2012 Pekka Lundstrom <pekka.lundstrom@jollamobile.com> - 0.62.5
+- File /var/lib/dsme/alarm_queue_status is created if it doesn't exist
+  Fixes NEMO#495: dsme reports fail to restore alarm gueue during bootup
+
+* Fri Oct 05 2012 Pekka Lundstrom <pekka.lundstrom@jollamobile.com> - 0.62.5
+- Added creation of /var/lib/dsme into dsme.spec file
+  Fixes NEMO#495: dsme reports fail to restore alarm gueue during bootup
+
+* Thu Oct 04 2012 Pekka Lundstrom <pekka.lundstrom@jollamobile.com> - 0.62.5
+- Changed oom.c so that it supports oom value change both on new and old kernel
+  Fixes NEMO#475: dsme gives warning about deprecated use of oom_adj
+
+* Tue Oct 02 2012 Pekka Lundstrom <pekka.lundstrom@jollamobile.com> - 0.62.4
+-  Added exception to dsme dbus rules to allow at_console daemons to
+   send shutdown/reboot requests
+   Fixes: NEMO#433, JB#2628 : power off option does not work
+
+* Mon Oct 01 2012 Pekka Lundstrom <pekka.lundstrom@jollamobile.com> - 0.62.3
+- validatorlistener module loading can be omitted with --disable-validatorlistener
+  Fixes NEMO#471, JB#2600: dsme gives warning on start about missing /etc/init.conf 
+
+* Thu Sep 27 2012 Pekka Lundstrom <pekka.lundstrom@jollamobile.com> - 0.62.2.2
+- Fixes JB#2624, NEMO#470: Get rid of dsme-start.sh script 
+
+* Thu Sep 27 2012 Jarkko Nikula <jarkko.nikula@jollamobile.com> - 0.62.2.1
+- New git release with partial fix to power off and support for
+  watchdog core drivers
+- Version bump to 0.62.2.1
+
+* Wed Sep 26 2012  Jarkko Nikula <jarkko.nikula@jollamobile.com> - 0.62.2
+- Sync with a new DMSE repository that is cloned from previous one and
+  integrates 9 patches from here
+- Version bump to 0.62.2
+
+* Wed Aug 23 2012 Simonas Leleiva <simonas.leleiva@gmail.com> - 0.62.1.1
+- Fixes NEMO#334: device does not poweroff
+  
+* Sat Dec 17 2011 Markus Lehtone <markus.lehtonen@iki.fi> - 0.62.1.1
+- Fixes NEMO#36: Version bump, patches rebased and somewhat renamed, 
+  unneeded patches dropped
+- Security: checking of client credentials disabled
+- DSME package upgrade now works better with hand-edite pre-un script
+
+* Thu Nov 17 2011 Marko Saukko <marko.saukko@cybercom.com> - 0.61.28
+- Changed systemd service to multi-user.target.
+
+* Thu Sep 15 2011 Marko Saukko <marko.saukko@cybercom.com> - 0.61.28
+- Moved dsme socket location, because tmp is cleaned up at times.
+
+* Mon Sep 12 2011 Carsten Munk <carsten@maemo.org> - 0.61.28
+- DSME stays up, exec instead, no need for a 'sh' stuck in memory
+
+* Wed Sep 07 2011 Kalle Lampila <kalle.lampila@cybercom.com> - 0.61.28
+- systemd support
+
+* Wed Mar 23 2011 Markus Lehtonen <markus.lehtonen@nokia.com> - 0.61.28
+- Add dbus-autoconnector.patch (fixes BMC#13368)
+
+* Tue Feb 15 2011 Markus Lehtonen <markus.lehtonen@nokia.com> - dsme-0.61.28
+- Update pwrkeymonitor.patch (BMC#13105)
+- Remove SysV init script of DSME as it was merged into fastinit
+
+* Tue Dec 21 2010 Markus Lehtonen <markus.lehtonen@nokia.com> - dsme-0.61.28
+- Change RPM group tag in .spec according to MeeGo Domain/Subsystem view
+
+* Sat Oct 30 2010 Markus Lehtonen <markus.lehtonen@nokia.com> - dsme-0.61.28
+- rename libiphb.so in order to avoid conflict with libiphb package
+
+* Fri Oct 29 2010 Markus Lehtonen <markus.lehtonen@nokia.com> - dsme-0.61.28
+- Version bump (bug fixes, MeeGo path fix patch upstreamed)
+
+* Tue Oct 26 2010 Markus Lehtonen <markus.lehtonen@nokia.com> - dsme-0.61.27
+- Version bump. Biggest change is that libiphb is now removed from dsme
+  (separated in upstream to its own source package)
+- Fixed pwrkeymonitor plugin
+- Updated URL
+
+* Wed Oct 20 2010 Markus Lehtonen <markus.lehtonen@nokia.com> - dsme-0.61.25.git267e8257
+- Version bump to upstream HEAD: DSME now uses autotools, most of the MeeGo
+  patches upstreamed/unnecessary.
+
+* Wed Oct 13 2010 Markus Lehtonen <markus.lehtonen@nokia.com> - 0.61.25
+- Fix BMC#8330 by modifying dbus.conf
+
+* Fri Oct 01 2010 Markus Lehtonen <markus.lehtonen@nokia.com> - 0.61.25
+- Version bump to 0.61.25
+- Bugfixes plus some of the previous MeeGo-patches now merged upstream
+
+* Thu Sep 23 2010 Markus Lehtonen <markus.lehtonen@nokia.com> - 0.61.21
+- Introduce pwrkeymonitor plugin (for N900), partial solution
+  to  BMC#4048
+- Mapping of DSME states to MeeGo runlevels (BMC#4048)
+
+* Wed Sep 01 2010 Markus Lehtonen <markus.lehtonen@nokia.com> - 0.61.21
+- Increase DSME's startup priority (chkconfig in init script) to make sure that   DSME start early on.
+
+* Tue Aug 31 2010 Markus Lehtonen <markus.lehtonen@nokia.com> - 0.61.21
+- Use librunlevel plugin instead of libupstart - plays more nicely with SysV
+
+* Thu Aug 26 2010 Markus Lehtonen <markus.lehtonen@nokia.com> - 0.61.21
+- Version bump to 0.61.21
+- Packaging fixes and changed to use spectacle
+- Startup script updated to more MeeGo/LSB compatible
+
+* Sun Jul 11 2010 Anas Nashif <anas.nashif@intel.com> - 0.61.15
+- Fixed build with new compiler/glibc
+
+* Tue Jun 15 2010 Markus Lehtonen <markus.lehtonen@nokia.com> - 0.61.15
+- init script made more lsb/fastinit compatible
+- bootstate default added to init script
+- init script now checks if '/etc/resource_limits.conf' is found
+
+* Mon May 31 2010 Markus Lehtonen <markus.lehtonen@nokia.com> - 0.61.15
+- Incorporates a patch (originally by Carsten Munk) that removes BME build-time dependency
+- bme_ipc is enabled (and used if bme is installed)
+
+* Sat May 29 2010 Markus Lehtonen <markus.lehtonen@nokia.com> - 0.61.15
+- Version bump to 0.61.15
+
+* Sat May 29 2010 Markus Lehtonen <markus.lehtonen@nokia.com> - 0.61.13
+- Init script fixed to read R&D flags from caltool or conf file
+- Minor packaging fixes
+
+* Thu May 20 2010 Markus Lehtonen <markus.lehtonen@nokia.com> - 0.61.13
+- enable utils
+
+* Wed May 19 2010 Markus Lehtonen <markus.lehtonen@nokia.com> - 0.61.13
+- post and postun added to iphb packages
+- patches fixed
+
+* Wed May 19 2010 Markus Lehtonen <markus.lehtonen@nokia.com> - 0.61.13
+- rpmlintrc removed
+
+* Wed May 19 2010 Markus Lehtonen <markus.lehtonen@nokia.com> - 0.61.13
+- Enable compilation without Nokia closed parts
+
+* Wed May 19 2010 Markus Lehtonen <markus.lehtonen@nokia.com> - 0.61.13
+- Buildrequirements fixed
+
+* Tue May 18 2010 Markus Lehtonen <markus.lehtonen@nokia.com> - 0.61.13
+- Version bump to 0.61.13
+
+* Tue Mar 30 2010 Marko Saukko <marko.saukko@gmail.com> - 0.61.13
+- Initial spec file for dsme version 0.60.39.

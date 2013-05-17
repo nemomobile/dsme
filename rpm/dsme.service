@@ -1,0 +1,17 @@
+[Unit]
+Description=DSME
+After=syslog.target
+
+[Service]
+Type=notify
+# When starting dsme gets initial runlevel from the bootstate file
+# If it doesn't exist, we default to USER
+# This works because EnvironmentFile overrides Environment
+Environment=BOOTSTATE=USER
+EnvironmentFile=-/run/systemd/boot-status/bootstate
+ExecStart=/usr/sbin/dsme -p /usr/lib/dsme/libstartup.so --systemd
+# No restart, we want WD to bite
+Restart=no
+
+[Install]
+WantedBy=multi-user.target
