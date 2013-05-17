@@ -5,12 +5,8 @@
 AC_PATH=configure.ac
 AC_VERS=$(sed '/AC_INIT/!d; s/AC_INIT(dsme, \(.*\))/\1/' $AC_PATH)
 
-echo >&2 "$AC_VERS <-- $AC_PATH"
-
 RPM_PATH=rpm/dsme.spec
 RPM_VERS=$(grep '^Version:' $RPM_PATH |sed -e 's/^.*:[[:space:]]*//')
-
-echo >&2 "$RPM_VERS <-- $RPM_PATH"
 
 RES=0
 
