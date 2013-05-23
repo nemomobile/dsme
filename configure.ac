@@ -201,6 +201,7 @@ AC_CONFIG_FILES([Makefile
                  util/Makefile
                  getbootstate/Makefile
                  test/Makefile
+                 tests/Makefile
                  dsme.init])
 
 AC_OUTPUT
