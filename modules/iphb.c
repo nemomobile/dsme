@@ -1393,12 +1393,12 @@ static void client_close_and_free(client_t *self)
 static int client_adjust_period(int period)
 {
     enum {
-	PERIOD_SLOTSIZE = 60,
+	PERIOD_SLOTSIZE = 30,
 	PERIOD_MINIMUM  = PERIOD_SLOTSIZE * 1,
     };
 
     /* round to multiple of PERIOD_SLOTSIZE */
-    period += PERIOD_SLOTSIZE / 2;
+    period += (PERIOD_SLOTSIZE + 1) / 2;
     period -= (period % PERIOD_SLOTSIZE);
 
     /* not less than PERIOD_MINIMUM */
