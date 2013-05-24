@@ -1439,6 +1439,7 @@ static int client_adjust_mintime(int mintime, int maxtime)
 	{  3*M, 20*S },
 	{  1*M, 15*S }, // if maxtime >= 60s, then mintime >= maxtime - 15s
 	{ 10*S,  5*S }, // if maxtime >= 10s, then mintime >= maxtime - 5s
+	{  1*S,  0*S }, // if maxtime >=  1s, then mintime == maxtime
 	{ 0 , 0}
     };
 
