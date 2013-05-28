@@ -709,7 +709,7 @@ static bool rtc_get_time_raw(struct rtc_time *tod)
 	goto cleanup;
     }
 
-    rtc_log_time(LOG_DEBUG, PFIX"rtc time read: ", tod);
+    rtc_log_time(LOG_DEBUG, PFIX"rtc time is: ", tod);
 
     result = true;
 
@@ -758,7 +758,7 @@ static bool rtc_set_time_raw(struct rtc_time *tod)
 	goto cleanup;
     }
 
-    rtc_log_time(LOG_INFO, PFIX"rtc time set to: ", tod);
+    rtc_log_time(LOG_INFO, PFIX"set rtc time to: ", tod);
 
     result = true;
 
@@ -873,7 +873,7 @@ enum
 
 static guint rtc_finetune_id = 0;
 
-static void rtc_start_finetune(const struct timeval *tv_sys);
+static bool rtc_start_finetune(const struct timeval *tv_sys);
 
 static gboolean rtc_finetune_cb(gpointer aptr)
 {
@@ -895,23 +895,28 @@ static void rtc_cancel_finetune(void)
 	g_source_remove(rtc_finetune_id), rtc_finetune_id = 0;
 }
 
-static void rtc_start_finetune(const struct timeval *tv_sys)
+static bool rtc_start_finetune(const struct timeval *tv_sys)
 {
+    bool synchronized = false;
+
     if( rtc_finetune_id )
-	return;
+	goto cleanup;
 
     int ms = tv_sys->tv_usec / 1000;
 
     if( ms < ms_low || ms > ms_high ) {
 	if( (ms = ms_middle - ms) < 0 )
 	    ms += 1000;
-	dsme_log(LOG_INFO, PFIX"finetune wakeup in %d ms", ms);
+	dsme_log(LOG_INFO, PFIX"rtc finetune wakeup in %d ms", ms);
 	rtc_finetune_id = g_timeout_add(ms, rtc_finetune_cb, 0);
     }
     else {
-	dsme_log(LOG_INFO, PFIX"sync usecs, finetune finished");
+	dsme_log(LOG_INFO, PFIX"sync rtc time with system time");
 	rtc_set_time_tv(tv_sys);
+	synchronized = true;
     }
+cleanup:
+    return synchronized;
 }
 
 /** Synchronize rtc time to system time
@@ -940,15 +945,15 @@ static bool rtc_sync_to_system_time(void)
 
     diff = tv_diff_ms(&tv_sys, &tv_rtc);
 
-    dsme_log(LOG_DEBUG, PFIX"SYS - RTC = %d ms", diff);
+    dsme_log(LOG_DEBUG, PFIX"system time - rtc time = %d ms", diff);
 
     if( diff < 0 || diff > 1000 ) {
-	/* sync immediately */
-	dsme_log(LOG_DEBUG, PFIX"sync seconds");
-	rtc_set_time_tv(&tv_sys);
-
 	/* start finetuning timer if needed */
-	rtc_start_finetune(&tv_sys);
+	if( !rtc_start_finetune(&tv_sys) ) {
+	    /* or sync immediately within one second accuracy */
+	    dsme_log(LOG_DEBUG, PFIX"coarse rtc time sync");
+	    rtc_set_time_tv(&tv_sys);
+	}
     }
     success = true;
 
@@ -984,15 +989,15 @@ static bool rtc_set_alarm_raw(const struct rtc_time *tod, bool enabled)
 	goto cleanup;
     }
 
+    if( enabled )
+	rtc_log_time(LOG_INFO, PFIX"set rtc wakeup alarm at ", tod);
+    else if( prev.enabled )
+	dsme_log(LOG_INFO, PFIX"disable rtc wakeup alarm");
+
     if( ioctl(rtc_fd, RTC_WKALM_SET, &alrm) == -1 ) {
 	dsme_log(LOG_ERR, PFIX"%s: %s: %m", rtc_path, "RTC_WKALM_SET");
 	goto cleanup;
     }
-
-    if( enabled )
-	rtc_log_time(LOG_INFO, PFIX"rtc alarm enabled @ ", tod);
-    else if( prev.enabled )
-	dsme_log(LOG_INFO, PFIX"rtc alarm disabled");
 
     prev = alrm;
     result = true;
@@ -1099,6 +1104,8 @@ static bool rtc_handle_input(void)
 
     wakelock_lock(rtc_input, -1);
 
+    dsme_log(LOG_INFO, PFIX"woke up to handle rtc wakeup alarm");
+
     if( rtc_fd == -1 ) {
 	dsme_log(LOG_WARNING, PFIX"failed to read %s: %s",  rtc_path,
 		"the device node is not opened");
@@ -1114,10 +1121,9 @@ static bool rtc_handle_input(void)
 	goto cleanup;
     }
 
+    /* acquire wakelock that is passed to mce via ipc */
     wakelock_lock(rtc_wakeup, -1);
 
-    dsme_log(LOG_INFO, PFIX"read %s: type=0x%02lx, count=%ld", rtc_path,
-	     status & 0xff, status >> 8);
     result = true;
 
 cleanup:
