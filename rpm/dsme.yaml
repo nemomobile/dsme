@@ -1,6 +1,6 @@
 Name: dsme
 Summary: Device State Management Entity
-Version: 0.62.10
+Version: 0.62.11
 Release: 0
 Group: System/System Control
 License: LGPLv2+
@@ -22,7 +22,6 @@ Sources:
     - "%{name}-%{version}.tar.gz"
     - "dsme.service"
     - "dsme-rpmlintrc"
-Patches:
 
 PkgConfigBR:
     - glib-2.0
@@ -48,3 +47,14 @@ Files:
     - "/lib/systemd/system/multi-user.target.wants/%{name}.service"
     - "/var/lib/dsme"
     - "%config(noreplace) /var/lib/dsme/alarm_queue_status"
+
+SubPackages:
+    - Name: tests
+      Summary: DSME test cases
+      Group: Development/System
+      Description: Test cases and xml test description for DSME
+      BuildArch: noarch
+      Requires:
+          - dbus
+      Files:
+          - "/opt/tests/dsme-tests/*"
