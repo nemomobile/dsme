@@ -88,114 +88,32 @@
  * Custom types
  * ------------------------------------------------------------------------- */
 
-/**
- * @brief  Allocated structure of one client in the linked client list in iphbd
+/** @brief  Allocated structure of one client in the linked client list in iphbd
  */
 typedef struct _client_t {
-    int               fd;           /*!< IPC (Unix domain) socket or -1 */
-    endpoint_t*       conn;         /*!< internal client endpoint (if fd == -1) */
-    void*             data;         /*!< internal client cookie (if fd == -1) */
-    time_t            wait_started; /*!< 0 if client has not subscribed to wake-up call */
-    unsigned short    mintime;      /*!< min time to sleep in secs */
-    unsigned short    maxtime;      /*!< max time to sleep in secs */
-    pid_t             pid;          /*!< client process ID */
-    struct _client_t* next;         /*!< pointer to the next client in the list (NULL if none) */
+    int               fd;      /*!< IPC (Unix domain) socket or -1 */
+    endpoint_t       *conn;    /*!< internal client endpoint (if fd == -1) */
+    void             *data;    /*!< internal client cookie (if fd == -1) */
+    char             *pidtxt;  /*!< Client description, for debugging */
+    struct timeval    reqtime; /*!< {0,0} if client has not subscribed to wake-up call */
+    struct timeval    mintime; /*!< min end of sleep period */
+    struct timeval    maxtime; /*!< max end of sleep period */
+    pid_t             pid;     /*!< client process ID */
+    struct _client_t *next;    /*!< pointer to the next client in the list (NULL if none) */
 } client_t;
-
-/** Wakeup clients predicate callback function type  */
-typedef bool (condition_func)(client_t* client, time_t now);
 
 /* ------------------------------------------------------------------------- *
  * Function prototypes
  * ------------------------------------------------------------------------- */
 
-static time_t monotime(void);
+static void clientlist_wakeup_clients_if(const struct timeval *now);
 
-static bool wakelock_supported(void);
-static void wakelock_write(const char *path, const char *data);
-static void wakelock_lock(const char *name, int ms);
-static void wakelock_unlock(const char *name);
-
-static DBusMessage *xdbus_create_name_owner_req(const char *name);
-static gchar       *xdbus_parse_name_owner_rsp(DBusMessage *rsp);
-
-static void xmce_set_runstate(bool running);
-static void xmce_verify_name_cb(DBusPendingCall *pending, void *user_data);
-static bool xmce_verify_name(void);
-static bool xmce_cpu_keepalive_wakeup(void);
-static void xmce_handle_dbus_connect(void);
-static void xmce_handle_dbus_disconnect(void);
-static DBusHandlerResult xmce_dbus_filter_cb(DBusConnection *con, DBusMessage *msg, void *user_data);
-
-static void   rtc_log_time(int lev, const char *msg, const struct rtc_time *tod);
-static time_t rtc_time_from_tm(struct rtc_time *tod, const struct tm *tm);
-static time_t rtc_time_to_tm(const struct rtc_time *tod, struct tm *tm);
-static bool   rtc_get_time_raw(struct rtc_time *tod);
-static time_t rtc_get_time_tm(struct tm *tm);
-static bool   rtc_set_time_raw(struct rtc_time *tod);
-static bool   rtc_set_time_tm(struct tm *tm);
-static bool   rtc_set_time_t(time_t t);
-static bool   rtc_sync_to_system_time(void);
-static bool   rtc_set_alarm_raw(const struct rtc_time *tod, bool enabled);
-static bool   rtc_set_alarm_tm(const struct tm *tm, bool enabled);
-static void   rtc_detach(void);
-static bool   rtc_attach(void);
-static bool   rtc_handle_input(void);
-static bool   rtc_set_wakeup(time_t delay);
-static void   rtc_rethink_wakeup(time_t now);
-
-static time_t xtimed_alarm_time(time_t now);
-static void   xtimed_alarm_status_cb(const DsmeDbusMessage *ind);
-static void   xtimed_config_status_cb(const DsmeDbusMessage *ind);
-static void   xtimed_apply_powerup_alarm_time(void);
-
-static void      open_kernel_fd(void);
-static void      close_kernel_fd(void);
-static bool      start_service(void);
-static client_t *new_client(int fd);
-static client_t *new_internal_client(endpoint_t *conn, void *data);
-static bool      is_external_client(const client_t *client);
-static void      list_add_client(client_t *newclient);
-static client_t *list_find_internal_client(endpoint_t *conn, void *data);
-static int       external_clients(void);
-static void      send_stats(client_t *client);
-static bool      epoll_add(int fd, void *ptr);
-static gboolean  read_epoll(GIOChannel *source, GIOCondition condition, gpointer data);
-static int       handle_wakeup_timeout(void *unused);
-static bool      is_timer_needed(int *optimal_sleep_time);
-static bool      handle_client_req(struct epoll_event *event, time_t now);
-static bool      handle_wait_req(const struct _iphb_wait_req_t *req_const, client_t *client, time_t now);
-static void      wakeup_clients_if(condition_func *should_wake_up, time_t now);
-static bool      mintime_passed(client_t *client, time_t now);
-static bool      maxtime_passed(client_t *client, time_t now);
-static int       wakeup_clients_if2(condition_func *should_wake_up, time_t now);
-static long long timestamp(void);
-static bool      wakeup(client_t *client, time_t now);
-static void      delete_clients(void);
-static void      delete_client(client_t *client);
-static void      remove_client(client_t *client, client_t *prev);
-static void      close_and_free_client(client_t *client);
-static void      sync_hwwd_feeder(void);
-static void      stop_wakeup_timer(void);
-
-static void      systembus_connect(void);
-static void      systembus_disconnect(void);
-
-void module_init(module_t *handle);
-void module_fini(void);
+static bool epollfd_add_fd(int fd, void *ptr);
+static void epollfd_remove_fd(int fd);
 
 /* ------------------------------------------------------------------------- *
  * Variables
  * ------------------------------------------------------------------------- */
-
-/** Linked lits of connected clients */
-static client_t* clients = NULL;
-
-/** IPC client listen/accept handle */
-static int listenfd = -1;
-
-/** Handle to the kernel */
-static int kernelfd = -1;
 
 /** Handle to the epoll instance */
 static int epollfd  = -1;
@@ -203,20 +121,26 @@ static int epollfd  = -1;
 /** I/O watch for epollfd */
 static guint epoll_watch = 0;
 
-/** TODO: what is this??? */
-static dsme_timer_t wakeup_timer = 0;
+/** IPC client listen/accept handle */
+static int listenfd = -1;
 
-/** Monotonic timestamp for iphb start time */
-static struct timespec ts_started = {0, 0};
-
-/** System bus connection (for IPC with mce) */
-static DBusConnection *systembus = 0;
+/** Handle to the kernel */
+static int kernelfd = -1;
 
 /** Path to RTC device node */
 static const char rtc_path[] = "/dev/rtc0";
 
 /** File descriptor for RTC device node */
 static int rtc_fd = -1;
+
+/** Linked lits of connected clients */
+static client_t *clients = NULL;
+
+/** Timer for serving wakeups with shorter than heartbeat range */
+static guint wakeup_timer = 0;
+
+/** System bus connection (for IPC with mce) */
+static DBusConnection *systembus = 0;
 
 /** Status of com.nokia.mce on systembus */
 static bool mce_is_running = false;
@@ -233,22 +157,117 @@ static const char rtc_wakeup[] = "mce_rtc_wakeup";
 /** RTC input wakelock - acquired / released by dsme */
 static const char rtc_input[] = "dsme_rtc_input";
 
+/** When the next alarm that should powerup/resume the device is due [systime] */
+static time_t alarm_powerup = 0;
+
+/** When the next alarm that should resume the device is due [systime] */
+static time_t alarm_resume  = 0;
+
 /* ------------------------------------------------------------------------- *
  * Generic utility functions
  * ------------------------------------------------------------------------- */
 
-/** Get monotonic time stamp
+/** Helper for testing if tv1 < tv2
  *
- * Similar to time(), but returns monotonically increasing
- * second count unaffected by system time changes.
+ * @param tv1 time value
+ * @param tv2 time value
  *
- * @return seconds since unspecified reference point in time
+ * @return true if tv1 < tv2, false otherwise
  */
-static time_t monotime(void)
+static inline bool tv_lt(const struct timeval *tv1, const struct timeval *tv2)
 {
-    struct timespec ts_now;
-    clock_gettime(CLOCK_MONOTONIC, &ts_now);
-    return ts_now.tv_sec;
+    return timercmp(tv1, tv2, <);
+}
+
+/** Helper for testing if tv1 > tv2
+ *
+ * @param tv1 time value
+ * @param tv2 time value
+ *
+ * @return true if tv1 > tv2, false otherwise
+ */
+static inline bool tv_gt(const struct timeval *tv1, const struct timeval *tv2)
+{
+    return timercmp(tv1, tv2, >);
+}
+
+/** Helper for testing if tv1 >= tv2
+ *
+ * @param tv1 time value
+ * @param tv2 time value
+ *
+ * @return true if tv1 >= tv2, false otherwise
+ */
+static inline bool tv_ge(const struct timeval *tv1, const struct timeval *tv2)
+{
+    return !tv_lt(tv1, tv2);
+}
+
+/** Helper for getting monotonic time as struct timeval
+ *
+ * @param tv place to store the monotonic time
+ *
+ * @return true on success, or false on failure
+ */
+static bool monotime_get_tv(struct timeval *tv)
+{
+    bool res = false;
+
+    struct timespec ts;
+
+    if( clock_gettime(CLOCK_MONOTONIC, &ts) < 0 )
+	timerclear(tv);
+    else {
+	TIMESPEC_TO_TIMEVAL(tv, &ts);
+	res = true;
+    }
+    return res;
+}
+
+/** Helper for getting system time as struct timeval
+ *
+ * @param tv place to store the system time
+ *
+ * @return true on success, or false on failure
+ */
+static bool realtime_get_tv(struct timeval *tv)
+{
+    bool res = false;
+
+    if( gettimeofday(tv, 0) < 0 )
+	timerclear(tv);
+    else
+	res = true;
+
+    return res;
+}
+
+/** Helper for calculating the difference between two time values in msecs
+ *
+ * @note No attempt is made to detect numeric overflows
+ *
+ * @param tv1 time value
+ * @param tv2 time value
+ *
+ * @return tv1 - tv2 in milliseconds
+ */
+static int tv_diff_ms(const struct timeval *tv1, const struct timeval *tv2)
+{
+    struct timeval tv;
+    timersub(tv1, tv2, &tv);
+    return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+}
+
+/* ------------------------------------------------------------------------- *
+ * ipc with hwwd kicker process
+ * ------------------------------------------------------------------------- */
+
+/** Tell hwwd kicker process that we're still alive */
+static void hwwd_feeder_sync(void)
+{
+    /* The parent process is hwwd kicker, and the SIGHUP will interrupt
+     * the nanosleep() it is most likely at */
+    kill(getppid(), SIGHUP);
 }
 
 /* ------------------------------------------------------------------------- *
@@ -278,7 +297,7 @@ static bool wakelock_supported(void)
  * @param path file to write to
  * @param data string to write
  */
-static void wakelock_write(const char *path, const char *data)
+static void wakelock_write(const char *path, const char *data, int ignore)
 {
     int file;
 
@@ -289,7 +308,8 @@ static void wakelock_write(const char *path, const char *data)
 	int size = strlen(data);
 	errno = 0;
 	if( TEMP_FAILURE_RETRY(write(file, data, size)) != size ) {
-	    dsme_log(LOG_WARNING, PFIX"%s: write: %m", path);
+	    if( errno != ignore )
+		dsme_log(LOG_WARNING, PFIX"%s: write: %m", path);
 	}
 	if( TEMP_FAILURE_RETRY(close(file)) == -1 ) {
 	    dsme_log(LOG_WARNING, PFIX"%s: close: %m", path);
@@ -315,7 +335,7 @@ static void wakelock_lock(const char *name, int ms)
 	    long long ns = ms * 1000000LL;
 	    snprintf(tmp, sizeof tmp, "%s %lld\n", name, ns);
 	}
-	wakelock_write(lock_path, tmp);
+	wakelock_write(lock_path, tmp, -1);
     }
 }
 
@@ -331,7 +351,8 @@ static void wakelock_unlock(const char *name)
     if( wakelock_supported() ) {
 	char tmp[256];
 	snprintf(tmp, sizeof tmp, "%s\n", name);
-	wakelock_write(unlock_path, tmp);
+	/* assume EINVAL == the wakelock did not exist */
+	wakelock_write(unlock_path, tmp, EINVAL);
     }
 }
 
@@ -405,7 +426,8 @@ static void xmce_set_runstate(bool running)
 {
     if( mce_is_running != running ) {
 	mce_is_running = running;
-	dsme_log(LOG_NOTICE, PFIX"mce state -> %s", running ? "started" : "terminated");
+	dsme_log(LOG_NOTICE, PFIX"mce state -> %s",
+		 running ? "running" : "terminated");
     }
 }
 
@@ -460,15 +482,11 @@ xmce_verify_name(void)
     if( !dbus_pending_call_set_notify(pc, xmce_verify_name_cb, 0, 0) )
 	goto cleanup;
 
-    // pending call should not be cancelled
-    pc = 0;
-
-    // success
     res = true;
 
 cleanup:
 
-    if( pc  ) dbus_pending_call_cancel(pc);
+    if( pc  ) dbus_pending_call_unref(pc);
     if( req ) dbus_message_unref(req);
 
     return res;
@@ -691,7 +709,7 @@ static bool rtc_get_time_raw(struct rtc_time *tod)
 	goto cleanup;
     }
 
-    rtc_log_time(LOG_DEBUG, PFIX"rtc time read: ", tod);
+    rtc_log_time(LOG_DEBUG, PFIX"rtc time is: ", tod);
 
     result = true;
 
@@ -740,7 +758,7 @@ static bool rtc_set_time_raw(struct rtc_time *tod)
 	goto cleanup;
     }
 
-    rtc_log_time(LOG_NOTICE, PFIX"rtc time set to: ", tod);
+    rtc_log_time(LOG_INFO, PFIX"set rtc time to: ", tod);
 
     result = true;
 
@@ -801,6 +819,106 @@ cleanup:
     return result;
 }
 
+static struct timeval monodiff;
+
+static bool rtc_set_time_tv(const struct timeval *rtc)
+{
+    bool result = false;
+    struct timeval mono;
+
+    monotime_get_tv(&mono);
+
+    if( !rtc_set_time_t(rtc->tv_sec) )
+	goto cleanup;
+
+    timersub(rtc, &mono, &monodiff);
+
+cleanup:
+
+    return result;
+}
+
+static bool rtc_get_time_tv(struct timeval *rtc)
+{
+    bool result = false;
+
+#if 0
+    struct timeval mono;
+    monotime_get_tv(&mono);
+    timeradd(&mono, &monodiff, rtc);
+    result = true;
+#else
+    struct tm tm;
+    time_t t;
+
+    if( (t = rtc_get_time_tm(&tm)) == -1 )
+	goto cleanup;
+
+    rtc->tv_sec  = t;
+    rtc->tv_usec = 0;
+    result = true;
+cleanup:
+#endif
+
+    return result;
+}
+
+enum
+{
+    ms_low    = 400,
+    ms_high   = 600,
+    ms_middle = (ms_low + ms_high) / 2,
+
+};
+
+static guint rtc_finetune_id = 0;
+
+static bool rtc_start_finetune(const struct timeval *tv_sys);
+
+static gboolean rtc_finetune_cb(gpointer aptr)
+{
+    struct timeval tv_sys;
+
+    if( !rtc_finetune_id )
+	return FALSE;
+
+    rtc_finetune_id = 0;
+
+    realtime_get_tv(&tv_sys);
+    rtc_start_finetune(&tv_sys);
+    return FALSE;
+}
+
+static void rtc_cancel_finetune(void)
+{
+    if( rtc_finetune_id )
+	g_source_remove(rtc_finetune_id), rtc_finetune_id = 0;
+}
+
+static bool rtc_start_finetune(const struct timeval *tv_sys)
+{
+    bool synchronized = false;
+
+    if( rtc_finetune_id )
+	goto cleanup;
+
+    int ms = tv_sys->tv_usec / 1000;
+
+    if( ms < ms_low || ms > ms_high ) {
+	if( (ms = ms_middle - ms) < 0 )
+	    ms += 1000;
+	dsme_log(LOG_INFO, PFIX"rtc finetune wakeup in %d ms", ms);
+	rtc_finetune_id = g_timeout_add(ms, rtc_finetune_cb, 0);
+    }
+    else {
+	dsme_log(LOG_INFO, PFIX"sync rtc time with system time");
+	rtc_set_time_tv(tv_sys);
+	synchronized = true;
+    }
+cleanup:
+    return synchronized;
+}
+
 /** Synchronize rtc time to system time
  *
  * Adjust rtc time if disagrees from system time by more
@@ -810,22 +928,36 @@ cleanup:
  */
 static bool rtc_sync_to_system_time(void)
 {
-    static time_t delta_old = 0;
+    bool success = false;
 
-    bool success = true;
+    int diff;
 
-    time_t time_wall = time(0);
-    time_t time_mono = monotime();
-    time_t delta_new = time_mono - time_wall;
+    struct timeval tv_rtc, tv_sys;
 
-    time_t dd = delta_new - delta_old;
+    memset(&tv_sys, 0, sizeof tv_sys);
+    memset(&tv_rtc, 0, sizeof tv_rtc);
 
-    if( dd < -1 || dd > 1 ) {
-	if( rtc_set_time_t(time_wall) )
-	    delta_old = delta_new;
-	else
-	    success = false;
+    if( !rtc_get_time_tv(&tv_rtc) )
+	goto cleanup;
+
+    if( !realtime_get_tv(&tv_sys) )
+	goto cleanup;
+
+    diff = tv_diff_ms(&tv_sys, &tv_rtc);
+
+    dsme_log(LOG_DEBUG, PFIX"system time - rtc time = %d ms", diff);
+
+    if( diff < 0 || diff > 1000 ) {
+	/* start finetuning timer if needed */
+	if( !rtc_start_finetune(&tv_sys) ) {
+	    /* or sync immediately within one second accuracy */
+	    dsme_log(LOG_DEBUG, PFIX"coarse rtc time sync");
+	    rtc_set_time_tv(&tv_sys);
+	}
     }
+    success = true;
+
+cleanup:
 
     return success;
 }
@@ -857,15 +989,15 @@ static bool rtc_set_alarm_raw(const struct rtc_time *tod, bool enabled)
 	goto cleanup;
     }
 
+    if( enabled )
+	rtc_log_time(LOG_INFO, PFIX"set rtc wakeup alarm at ", tod);
+    else if( prev.enabled )
+	dsme_log(LOG_INFO, PFIX"disable rtc wakeup alarm");
+
     if( ioctl(rtc_fd, RTC_WKALM_SET, &alrm) == -1 ) {
 	dsme_log(LOG_ERR, PFIX"%s: %s: %m", rtc_path, "RTC_WKALM_SET");
 	goto cleanup;
     }
-
-    if( enabled )
-	rtc_log_time(LOG_INFO, PFIX"rtc alarm @ ", tod);
-    else if( prev.enabled )
-	dsme_log(LOG_INFO, PFIX"rtc alarm disabled");
 
     prev = alrm;
     result = true;
@@ -901,102 +1033,13 @@ cleanup:
     return result;
 }
 
-/** Remove rtc fd from epoll set and close the file descriptor
- */
-static void rtc_detach(void)
-{
-    if( rtc_fd != -1 ) {
-        if( epoll_ctl(epollfd, EPOLL_CTL_DEL, rtc_fd, 0) == -1)
-	    dsme_log(LOG_WARNING, PFIX"remove rtc fd from epoll set failed");
-
-	close(rtc_fd), rtc_fd = -1;
-
-	dsme_log(LOG_INFO, PFIX"closed %s", rtc_path);
-    }
-}
-
-/** Open rtc and and add the file descriptor to the epoll set
- *
- * @return true on success, or false in case of errors
- */
-static bool rtc_attach(void)
-{
-    int fd = -1;
-
-    if( rtc_fd != -1 )
-	goto cleanup;
-
-    if( (fd = open(rtc_path, O_RDONLY)) == -1 ) {
-	dsme_log(LOG_WARNING, PFIX"failed to open %s: %s",
-		 rtc_path, strerror(errno));
-	goto cleanup;
-    }
-
-    if( !epoll_add(fd, &rtc_fd)) {
-	dsme_log(LOG_WARNING, PFIX"failed to add rtc fd to epoll set");
-	goto cleanup;
-    }
-
-    /* N.B. rtc_xxx utilities can be called after rtc_fd is set */
-    rtc_fd = fd, fd = -1;
-    dsme_log(LOG_INFO, PFIX"opened %s", rtc_path);
-
-    /* synchronize rtc time with system time */
-    rtc_sync_to_system_time();
-
-cleanup:
-
-    if( fd != -1 ) close(fd);
-
-    return rtc_fd != -1;
-}
-
-/** Handle input from /dev/rtc
- *
- * @return true on success, or false in case of errors
- */
-static bool rtc_handle_input(void)
-{
-    bool result = false;
-    long status = 0;
-
-    wakelock_lock(rtc_input, -1);
-
-    if( rtc_fd == -1 ) {
-	dsme_log(LOG_WARNING, PFIX"failed to read %s: %s",  rtc_path,
-		"the device node is not opened");
-	goto cleanup;
-    }
-
-    // clear errno so that we do not report stale "errors"
-    // on succesful but partial reads
-    errno = 0;
-
-    if( read(rtc_fd, &status, sizeof status) != sizeof status ) {
-	dsme_log(LOG_WARNING, PFIX"failed to read %s: %m",  rtc_path);
-	goto cleanup;
-    }
-
-    wakelock_lock(rtc_wakeup, -1);
-
-    dsme_log(LOG_INFO, PFIX"read %s: type=0x%02lx, count=%ld", rtc_path,
-	     status & 0xff, status >> 8);
-    result = true;
-
-cleanup:
-
-    wakelock_unlock(rtc_input);
-
-    return result;
-}
-
 /** Program wakeup alarm to /dev/rtc after specified delay
  *
  * @param delay seconds from now to alarm time
  *
  * @return true on success, or false in case of errors
  */
-static bool rtc_set_wakeup(time_t delay)
+static bool rtc_set_alarm_after(time_t delay)
 {
     bool result = false;
     bool enabled = false;
@@ -1024,77 +1067,839 @@ cleanup:
     return result;
 }
 
-/** Reprogram the rtc alarm based on wakeup ranges requested by clients
+/** Set rtc wakeup to happen at the next power up alarm time
+ *
+ * To be called at module unload time so that wakeup alarm
+ * is left to the state timed wants it to be.
  */
-static void rtc_rethink_wakeup(time_t now)
+static void rtc_set_alarm_powerup(void)
 {
-    /* start with no alarm */
-    time_t wakeup = INT_MAX;
+    time_t sys = time(0);
+    time_t rtc = alarm_powerup;
 
-    time_t t;
+    /* how far in the future the next poweup alarm is */
+    if( rtc > sys )
+	rtc -= sys;
+    else
+	rtc = 0;
 
-    /* update to closest external client wakeup time */
-    for( client_t *client = clients; client; client = client->next ) {
-	if( !is_external_client(client) )
-	    continue;
+    /* adjust down by estimate of boot time to act dead mode */
+    rtc -= STARTUP_TIME_ESTIMATE_SECS;
 
-        if( client->wait_started ) {
-	    t = client->wait_started + client->maxtime;
-	    if( t > now && wakeup > t )
-		wakeup = t;
-        }
+    /* do not program alarms that we cant serve */
+    if( rtc < SHUTDOWN_TIME_ESTIMATE_SECS )
+	rtc = 0;
+
+    rtc_set_alarm_after(rtc);
+}
+
+/** Handle input from /dev/rtc
+ *
+ * @return true on success, or false in case of errors
+ */
+static bool rtc_handle_input(void)
+{
+    bool result = false;
+    long status = 0;
+
+    wakelock_lock(rtc_input, -1);
+
+    dsme_log(LOG_INFO, PFIX"woke up to handle rtc wakeup alarm");
+
+    if( rtc_fd == -1 ) {
+	dsme_log(LOG_WARNING, PFIX"failed to read %s: %s",  rtc_path,
+		"the device node is not opened");
+	goto cleanup;
     }
 
-    /* consider alarm time too */
-    t = xtimed_alarm_time(now);
-    if( t > now && wakeup > t )
-	wakeup = t;
+    /* clear errno so that we do not report stale "errors"
+     * on succesful but partial reads */
+    errno = 0;
+
+    if( read(rtc_fd, &status, sizeof status) != sizeof status ) {
+	dsme_log(LOG_WARNING, PFIX"failed to read %s: %m",  rtc_path);
+	goto cleanup;
+    }
+
+    /* acquire wakelock that is passed to mce via ipc */
+    wakelock_lock(rtc_wakeup, -1);
+
+    result = true;
+
+cleanup:
+
+    wakelock_unlock(rtc_input);
+
+    return result;
+}
+
+/** Remove rtc fd from epoll set and close the file descriptor
+ */
+static void rtc_detach(void)
+{
+    if( rtc_fd != -1 ) {
+	epollfd_remove_fd(rtc_fd);
+	close(rtc_fd), rtc_fd = -1;
+
+	dsme_log(LOG_INFO, PFIX"closed %s", rtc_path);
+    }
+}
+
+/** Open rtc and and add the file descriptor to the epoll set
+ *
+ * @return true on success, or false in case of errors
+ */
+static bool rtc_attach(void)
+{
+    int fd = -1;
+
+    if( rtc_fd != -1 )
+	goto cleanup;
+
+    if( (fd = open(rtc_path, O_RDONLY)) == -1 ) {
+	dsme_log(LOG_WARNING, PFIX"failed to open %s: %m", rtc_path);
+	goto cleanup;
+    }
+
+    if( !epollfd_add_fd(fd, &rtc_fd)) {
+	dsme_log(LOG_WARNING, PFIX"failed to add rtc fd to epoll set");
+	goto cleanup;
+    }
+
+    /* N.B. rtc_xxx utilities can be called after rtc_fd is set */
+    rtc_fd = fd, fd = -1;
+    dsme_log(LOG_INFO, PFIX"opened %s", rtc_path);
 
     /* synchronize rtc time with system time */
     rtc_sync_to_system_time();
 
-    /* enable/disable wakeup alarm */
-    if( wakeup > now && wakeup < INT_MAX )
-	wakeup -= now;
-    else
-	wakeup = 0;
-    rtc_set_wakeup(wakeup);
+cleanup:
+
+    if( fd != -1 ) close(fd);
+
+    return rtc_fd != -1;
 }
 
 /* ------------------------------------------------------------------------- *
- * IPC with TIMED
+ * kernelfd
  * ------------------------------------------------------------------------- */
 
-/** When the next alarm that should powerup/resume the device is due */
-static time_t xtimed_next_powerup = 0;
-
-/** When the next alarm that should resume the device is due */
-static time_t xtimed_next_resume  = 0;
-
-/** Evaluate the next timed alarm time in relation to monotonic clock
- *
- * @param now current time from monotonic clock source
- *
- * @return seconds to the next timed alarm, or 0 if no alarms
+/** Handle iphb event from kernel side
  */
-static time_t xtimed_alarm_time(time_t now)
+static void kernelfd_handle_event(void)
+{
+    /* tell the driver that we have dealt with the event */
+    while (read(kernelfd, 0, 0) == -1 && errno == EINTR);
+}
+
+/** Open kernel module handle if not already open
+ *
+ * Can retry later if fails (meaning LKM is not loaded)
+ */
+static void kernelfd_open(void)
+{
+    static const char msg[] = HB_LKM_KICK_ME_PERIOD;
+
+    static bool kernel_module_load_error_logged = false;
+
+    int saved_errno;
+
+    if( kernelfd != -1 )
+	return;
+
+    if( (kernelfd = open(HB_KERNEL_DEVICE, O_RDWR)) != -1 )
+	goto initialize;
+
+    saved_errno = errno; /* log with errno from HB_KERNEL_DEVICE */
+
+    if( (kernelfd = open(HB_KERNEL_DEVICE_TEST, O_RDWR)) != -1 )
+	goto initialize;
+
+    if( !kernel_module_load_error_logged ) {
+	kernel_module_load_error_logged = true;
+	errno = saved_errno;
+	dsme_log(LOG_ERR, PFIX"failed to open kernel connection '%s' (%m)",
+		 HB_KERNEL_DEVICE);
+    }
+
+    return;
+
+initialize:
+    dsme_log(LOG_DEBUG, PFIX"opened kernel socket %d to %s, "
+	     "wakeup from kernel=%s",
+	     kernelfd,
+	     HB_KERNEL_DEVICE,
+	     msg);
+
+    if( write(kernelfd, msg, sizeof msg) == -1 ) {
+	dsme_log(LOG_ERR, PFIX"failed to write kernel message (%m)");
+	// TODO: do something clever?
+    }
+    else if( !epollfd_add_fd(kernelfd, &kernelfd) ) {
+	dsme_log(LOG_ERR, PFIX"failed to add kernel fd to epoll set");
+	// TODO: do something clever?
+    }
+}
+
+/** Close kernel module handle */
+static void kernelfd_close(void)
+{
+    if( kernelfd != -1 ) {
+	epollfd_remove_fd(kernelfd);
+        close(kernelfd);
+        dsme_log(LOG_DEBUG, PFIX"closed kernel socket %d", kernelfd);
+        kernelfd = -1;
+    }
+}
+
+/* ------------------------------------------------------------------------- *
+ * libiphb clients
+ * ------------------------------------------------------------------------- */
+
+/** Create a new external client instance
+ *
+ * @param fd	Socket descriptor
+ *
+ * @return pointer to client object
+ */
+static client_t *client_new_external(int fd)
+{
+    client_t *self = calloc(1, sizeof *self);
+
+    if( !self )
+	abort();
+
+    self->fd = fd;
+
+    /* Have something valid as description. Overrides are
+     * in client_new_internal() and client_handle_wait_req() */
+    self->pidtxt = strdup("unknown");
+
+    return self;
+}
+
+/** Create a new internal client instance
+ *
+ * @param conn endpoint to wake up when triggered
+ * @param data message data to be send on trigger
+ *
+ * @return pointer to client object
+ */
+static client_t *client_new_internal(endpoint_t *conn, void* data)
+{
+    client_t *self = client_new_external(-1);
+
+    self->conn   = endpoint_copy(conn);
+    self->data   = data;
+
+    free(self->pidtxt);
+    self->pidtxt = strdup("internal");
+
+    return self;
+}
+
+/** Test if client has started a wait period
+ *
+ * @param self pointer to client object
+ *
+ * @return true if wait period is active, false otherwise
+ */
+static bool client_wait_started(const client_t *self)
+{
+    return timerisset(&self->reqtime);
+}
+
+/** Test if client is external
+ *
+ * @param self pointer to client object
+ *
+ * @return true if client is external, false otherwise
+ */
+static bool client_is_external(const client_t *self)
+{
+    return self->fd != -1;
+}
+
+/** Wake up a client
+ *
+ * @param self pointer to client object
+ * @param now  current monotonic time
+ *
+ * @return true if client was woken, or false in case of errors
+ */
+static bool client_wakeup(client_t *self, const struct timeval *now)
+{
+    bool woken_up = false;
+
+    struct timeval tv;
+
+    timersub(now, &self->reqtime, &tv);
+
+    dsme_log(LOG_DEBUG, PFIX"waking up client %s who has slept %ld secs",
+	     self->pidtxt, (long)tv.tv_sec);
+
+    if( client_is_external(self) ) {
+        struct _iphb_wait_resp_t resp = { 0 };
+
+        resp.waited = tv.tv_sec;
+
+        if( send(self->fd, &resp, sizeof resp, MSG_DONTWAIT|MSG_NOSIGNAL) == sizeof resp)
+            woken_up = true;
+    }
+    else {
+        DSM_MSGTYPE_WAKEUP msg = DSME_MSG_INIT(DSM_MSGTYPE_WAKEUP);
+
+        msg.resp.waited = tv.tv_sec;
+        msg.data        = self->data;
+
+        endpoint_send(self->conn, &msg);
+        woken_up = true;
+    }
+
+    timerclear(&self->reqtime);
+
+    return woken_up;
+}
+
+/** Delete a client instance
+ *
+ * Release all dynamically allocated resources associated with
+ * the client object.
+ *
+ * @note The client must be already removed from the clientlist
+ *       with clientlist_remove_client().
+ *
+ * @param self pointer to client object
+ */
+static void client_close_and_free(client_t *self)
+{
+    free(self->pidtxt);
+
+    if (client_is_external(self)) {
+	epollfd_remove_fd(self->fd);
+        close(self->fd);
+    }
+    else {
+        endpoint_free(self->conn);
+    }
+
+    free(self);
+}
+
+/** Adjust periodic wake up time
+ *
+ * Make sure the period is
+ * - multiple of PERIOD_SLOTSIZE seconds
+ * - but at least PERIOD_MINIMUM seconds
+ *
+ * @param period wakeup period [seconds] requested by the client
+ *
+ * @return adjusted wakeup period [seconds]
+ */
+static int client_adjust_period(int period)
+{
+    enum {
+	PERIOD_SLOTSIZE = 30,
+	PERIOD_MINIMUM  = PERIOD_SLOTSIZE * 1,
+    };
+
+    /* round to multiple of PERIOD_SLOTSIZE */
+    period += (PERIOD_SLOTSIZE + 1) / 2;
+    period -= (period % PERIOD_SLOTSIZE);
+
+    /* not less than PERIOD_MINIMUM */
+    if( period < PERIOD_MINIMUM )
+	period = PERIOD_MINIMUM;
+
+    return period;
+}
+
+/** Adjust minimum value of wakeup range
+ *
+ * Make sure the minimum wakeup value is not too short in
+ * comparison to the maximum value.
+ *
+ * For example requesting a range of [60s, 24h] does not make
+ * too much sense from scheduling point of view and is thus changed
+ * to [23h, 24h].
+ *
+ * @param mintime requested minimum wakeup delay [seconds]
+ * @param mintime requested maximum wakeup delay [seconds]
+ *
+ * @return adjusted minimum wakeup delay [seconds]
+ */
+static int client_adjust_mintime(int mintime, int maxtime)
+{
+    enum { S = 1, M = 60*S, H = 60*M, D=24*H };
+
+    static const struct {
+	int maxtime;
+	int maxdiff;
+    } lut[] = {
+	{ 24*H, 60*M }, // if maxtime >= 24h, then mintime >= maxtime - 1h
+	{ 12*H, 30*M },
+	{  6*H,  9*M },
+	{ 90*M,  3*M },
+	{ 30*M,  1*M },
+	{ 10*M, 30*S },
+	{  3*M, 20*S },
+	{  1*M, 15*S }, // if maxtime >= 60s, then mintime >= maxtime - 15s
+	{ 10*S,  5*S }, // if maxtime >= 10s, then mintime >= maxtime - 5s
+	{  1*S,  0*S }, // if maxtime >=  1s, then mintime == maxtime
+	{ 0 , 0}
+    };
+
+    for( int i = 0; lut[i].maxtime; ++i ) {
+	if( maxtime < lut[i].maxtime )
+	    continue;
+	if( mintime + lut[i].maxdiff < maxtime )
+	    mintime = maxtime - lut[i].maxdiff;
+	break;
+    }
+
+    if( mintime > maxtime )
+	mintime = maxtime;
+
+    return mintime;
+}
+
+/** Set/cancel wait period for the client
+ *
+ * @param self pointer to client object
+ * @param req  wait request data
+ * @param now  current monotonic time
+ *
+ * @return true if client canceled wait, false otherwise
+ */
+static bool client_handle_wait_req(client_t                      *self,
+				   const struct _iphb_wait_req_t *req,
+				   const struct timeval          *now)
+{
+    bool client_woken = false;
+
+    int mintime = req->mintime;
+    int maxtime = req->maxtime;
+
+    if( self->pid != req->pid ) {
+	free(self->pidtxt);
+	self->pidtxt = pid2text(req->pid);
+    }
+
+    /* reset mintime & maxtime to time-of-request */
+    self->reqtime = self->mintime = self->maxtime = *now;
+
+    if( mintime == 0 && maxtime == 0 ) {
+	/* connect/cancel */
+        if (!self->pid) {
+            dsme_log(LOG_DEBUG, PFIX"client %s connected", self->pidtxt);
+        }
+	else {
+            dsme_log(LOG_DEBUG, PFIX"client %s canceled wait", self->pidtxt);
+            client_woken = true;
+        }
+	/* mark as not-started */
+	timerclear(&self->reqtime);
+    }
+    else if( mintime == maxtime ) {
+	/* wakeup in aligned slot */
+	mintime = client_adjust_period(mintime);
+
+	if( mintime != req->mintime )
+	    dsme_log(LOG_DEBUG, PFIX"client %s, adjusted slot: %d -> %d",
+		     self->pidtxt, req->mintime, mintime);
+
+	dsme_log(LOG_DEBUG, PFIX"client %s, wakeup at %d slot",
+		 self->pidtxt, mintime);
+
+	mintime = maxtime = mintime - (mintime + now->tv_sec) % mintime;
+
+	/* slots triggering happens at full seconds */
+	self->mintime.tv_usec = 0;
+	self->maxtime.tv_usec = 0;
+    }
+    else  {
+	/* wakeup in [min, max] range */
+	mintime = client_adjust_mintime(mintime, maxtime);
+
+	if( mintime != req->mintime )
+	    dsme_log(LOG_DEBUG, PFIX"client %s, adjusted mintime: %d -> %d",
+		     self->pidtxt, req->mintime, mintime);
+
+	dsme_log(LOG_DEBUG, PFIX"client %s, wakeup at %d-%d range",
+		 self->pidtxt, mintime, maxtime);
+    }
+
+    /* adjust wakeup range by filtered mintime & maxtime */
+    self->mintime.tv_sec += mintime;
+    self->maxtime.tv_sec += maxtime;
+
+    self->pid = req->pid;
+
+    return client_woken;
+}
+
+/** Send status report to external client
+ *
+ * The status data includes
+ * - number of clients
+ * - number of clients with active wakeup request
+ * - seconds to the next client to be woken up
+ *
+ * @param self pointer to client object
+ */
+static void client_handle_stat_req(client_t *self)
+{
+    struct iphb_stats stats   = { 0 };
+    int               next_hb = INT_MAX;
+    int               flags   = MSG_DONTWAIT | MSG_NOSIGNAL;
+
+    struct timeval    tv_now;
+
+    monotime_get_tv(&tv_now);
+
+    for( client_t *c = clients; c; c = c->next ) {
+        stats.clients++;
+
+	if( !client_wait_started(c) )
+	    continue;
+
+	stats.waiting++;
+
+	if( next_hb > c->maxtime.tv_sec )
+	    next_hb = c->maxtime.tv_sec;
+    }
+
+    if( next_hb < INT_MAX )
+	stats.next_hb = next_hb - tv_now.tv_sec;
+
+    if( send(self->fd, &stats, sizeof stats, flags) != sizeof stats )
+    {
+        dsme_log(LOG_ERR, PFIX"failed to send to client %s (%m)",
+		 self->pidtxt);
+	// do not drop yet
+    }
+}
+
+/* ------------------------------------------------------------------------- *
+ * list of IPHB clients
+ * ------------------------------------------------------------------------- */
+
+/** Find internal client based on endpoint and data to be sent
+ *
+ * @param conn endpoint to wake up when triggered
+ * @param data message data to be send on trigger
+ *
+ * @return pointer to client object, or NULL if not found
+ */
+static client_t *clientlist_find_internal_client(endpoint_t *conn, void* data)
+{
+    for( client_t *client = clients; client; client = client->next ) {
+        if( client_is_external(client) )
+	    continue;
+
+	if( client->data == data && endpoint_same(client->conn, conn) )
+	    return client;
+    }
+    return 0;
+}
+
+/** Add client instance to list of clients
+ *
+ * @param newclient client instance to add
+ */
+static void clientlist_add_client(client_t *newclient)
+{
+    client_t *client;
+
+    if( (client = clients) != 0 ) {
+	/* add to end */
+	while (client->next)
+	    client = client->next;
+	client->next = newclient;
+    }
+    else {
+	/* first one */
+	clients = newclient;
+    }
+}
+
+/** Remove client instance from list of clients
+ *
+ * @param client client instance to remove
+ */
+static void clientlist_remove_client(client_t *client)
+{
+    for( client_t **pos = &clients; *pos; pos = &(*pos)->next ) {
+	if( *pos == client ) {
+	    *pos = client->next;
+	    client->next = 0;
+	    break;
+	}
+    }
+}
+
+/** Remove client instance from list of clients and then delete it
+ *
+ * @param client client instance to remove and delete
+ */
+static void clientlist_delete_client(client_t *client)
+{
+    /* remove the client from the list */
+    clientlist_remove_client(client);
+
+    /* release dynamic resources */
+    client_close_and_free(client);
+}
+
+/** Delete all clients included in the list of clients
+ */
+static void clientlist_delete_clients(void)
+{
+    client_t *client;
+
+    while( (client = clients) != 0 ) {
+	/* detach head from list*/
+	clients = client->next;
+	client->next = 0;
+
+	/* release dynamic resources */
+	client_close_and_free(client);
+    }
+}
+
+/** Calculate seconds to the next alarm
+ *
+ * Based on time stamps cached from signals sent by timed
+ * calculate the seconds left to the next normal / powerup
+ * alarm.
+ *
+ * @note Timed sends timestamps in system time, thus it must
+ *       be used here too instead of the monotonic clock.
+ *
+ * @return seconds to next timed alarm, or 0 in case of no alarms
+ */
+static time_t clientlist_get_alarm_time(void)
 {
     time_t sys = time(0);
     time_t res = INT_MAX;
 
-    if( xtimed_next_powerup > sys && xtimed_next_powerup < res )
-	res = xtimed_next_powerup;
+    if( alarm_powerup > sys && alarm_powerup < res )
+	res = alarm_powerup;
 
-    if( xtimed_next_resume > sys && xtimed_next_resume < res )
-	res = xtimed_next_resume;
+    if( alarm_resume > sys && alarm_resume < res )
+	res = alarm_resume;
 
     if( res > sys && res < INT_MAX )
-	res = res - sys + now;
+	res -= sys;
     else
 	res = 0;
 
     return res;
 }
+
+/** "infinity" value for struct timeval data */
+static const struct timeval tv_invalid = { INT_MAX, 0 };
+
+/** Reprogram the rtc wakeup alarm
+ *
+ * Calculate the time when the next client needs to be woken up.
+ *
+ * Adjust down if there are alarms before that.
+ *
+ * Synchronize rtc clock with system time and enable/disable
+ * the rtc wakeup alarm.
+ */
+static void clientlist_rethink_rtc_wakeup(const struct timeval *now)
+{
+    /* start with no wakeup */
+    struct timeval wakeup = tv_invalid;
+    time_t         sleeptime = 0;
+    time_t         alarmtime = 0;
+
+    /* scan closest external client wakeup time */
+    for( client_t *client = clients; client; client = client->next ) {
+	if( !client_is_external(client) )
+	    continue;
+
+	if( !client_wait_started(client) )
+	    continue;
+
+	if( tv_gt(&client->maxtime, now) && tv_gt(&wakeup, &client->maxtime) )
+	    wakeup = client->maxtime;
+    }
+
+    /* convert from monotonic time stamp to delay */
+    if( tv_gt(&wakeup, now) && tv_lt(&wakeup, &tv_invalid) )
+	sleeptime = wakeup.tv_sec - now->tv_sec;
+
+    /* check time to next timed alarm, adjust delay if sooner */
+    alarmtime = clientlist_get_alarm_time();
+    if( alarmtime > 0 && sleeptime > alarmtime )
+	sleeptime = alarmtime;
+
+    /* synchronize rtc time with system time */
+    rtc_sync_to_system_time();
+
+    /* program rtc wakeup alarm (or disable it) */
+    rtc_set_alarm_after(sleeptime);
+}
+
+/** Timer callback function for waking up clients between heartbeats
+ *
+ * @param userdata (not used)
+ *
+ * @return FALSE (to stop the timer from repeating)
+ */
+static gboolean clientlist_handle_wakeup_timeout(gpointer userdata)
+{
+    (void)userdata;
+
+    /* Already canceled? */
+    if( !wakeup_timer )
+	return FALSE;
+
+    wakeup_timer = 0;
+
+    dsme_log(LOG_DEBUG, PFIX"*** TIMEOUT ***");
+
+    struct timeval   tv_now;
+    monotime_get_tv(&tv_now);
+
+    clientlist_wakeup_clients_if(&tv_now);
+
+    return FALSE; /* stop the interval */
+}
+
+/** Start timer for waking up clients before the next heartbeat
+ *
+ * @param sleep_time timeout delay
+ */
+static void clientlist_start_wakeup_timeout(const struct timeval *sleep_time)
+{
+    /* already have a timer? */
+    if( wakeup_timer )
+	return;
+
+    int ms = sleep_time->tv_sec * 1000 + sleep_time->tv_usec / 1000;
+
+    dsme_log(LOG_DEBUG, PFIX"setting a wakeup in %d ms", ms);
+    wakeup_timer = g_timeout_add(ms, clientlist_handle_wakeup_timeout, 0);
+}
+
+/** Cancel timer for waking up clients before the next heartbeat
+ */
+static void clientlist_cancel_wakeup_timeout(void)
+{
+    if( wakeup_timer )
+	g_source_remove(wakeup_timer), wakeup_timer = 0;
+}
+
+/** Wakeup clients if conditions are met
+ *
+ * We should arrive here if:
+ * - new clients connect via libiphb
+ * - old clients make requests via libiphb
+ * - we get iphb events from kernelfd
+ * - we get heartbeat message (from hwwd kicker)
+ * - intra heartbeat timer triggers (clients with short min-max range)
+ */
+static void clientlist_wakeup_clients_if(const struct timeval *now)
+{
+    struct timeval sleep_time = { INT_MAX, 0 };
+
+    int externals_left = 0;
+
+    struct timeval tv;
+
+    clientlist_cancel_wakeup_timeout();
+
+    bool must_wake = false;
+
+    /* 1st pass: are there external clients that we *must* wake up */
+    for( client_t *client = clients; client; client = client->next ) {
+        if( !client_wait_started(client) )
+	    continue;
+
+	if( !client_is_external(client) )
+	    continue;
+
+	if( tv_lt(now, &client->mintime) )
+	    continue;
+
+	timersub(&client->maxtime, now, &tv);
+	if( tv.tv_sec >= DSME_HEARTBEAT_INTERVAL )
+	    continue;
+
+	/* mintime passed and maxtime is less than heartbeat away */
+	dsme_log(LOG_DEBUG, PFIX"client %s must be woken up", client->pidtxt);
+	must_wake = true;
+	break;
+    }
+
+    /* 2nd pass: actually wake up clients */
+    for( client_t *client = clients, *next; client; client = next ) {
+	/* get next before possible clientlist_delete_client() call */
+	next = client->next;
+
+        if( !client_wait_started(client) ) {
+            dsme_log(LOG_DEBUG, PFIX"client %s is active, not to be woken up", client->pidtxt);
+	    continue;
+        }
+
+	timersub(&client->maxtime, now, &tv);
+
+	if( tv_lt(now, &client->mintime) ) {
+	    /* mintime not reached yet */
+	    if( tv.tv_sec >= DSME_HEARTBEAT_INTERVAL || !client_is_external(client) ) {
+		/* timer is not used for internal clients */
+		dsme_log(LOG_DEBUG, PFIX"client %s is not yet due", client->pidtxt);
+	    }
+	    else {
+		dsme_log(LOG_DEBUG, PFIX"client %s is due in %ld seconds", client->pidtxt, (long)tv.tv_sec);
+		/* we need timer if maxtime is before the next heartbeat */
+		if( tv_gt(&sleep_time, &tv) )
+		    sleep_time = tv;
+	    }
+	}
+	else if( !must_wake && tv.tv_sec >= DSME_HEARTBEAT_INTERVAL ) {
+	    /* maxtime is at least one heartbeat away */
+            dsme_log(LOG_DEBUG, PFIX"client %s can still wait", client->pidtxt);
+	}
+	else {
+	    /* due now, wakeup */
+	    if( !client_wakeup(client, now) ) {
+		dsme_log(LOG_ERR, PFIX"failed to send to client %s (%m),"
+			 " drop client", client->pidtxt);
+		clientlist_delete_client(client), client = 0;
+	    }
+	    continue;
+	}
+
+	/* count active, but untriggered external clients */
+	if( client_is_external(client) )
+	    externals_left += 1;
+    }
+
+    if( sleep_time.tv_sec < INT_MAX ) {
+	clientlist_start_wakeup_timeout(&sleep_time);
+    }
+
+    /* open or close the kernel fd as needed */
+    if( !externals_left )
+        kernelfd_close();
+    else
+        kernelfd_open();
+
+    /* reprogram the rtc wakeup */
+    clientlist_rethink_rtc_wakeup(now);
+
+    /* and tell hwwd kicker we are alive */
+    hwwd_feeder_sync();
+}
+
+/* ------------------------------------------------------------------------- *
+ * IPC with TIMED
+ * ------------------------------------------------------------------------- */
 
 /** Handler for timed next_bootup_event signal
  *
@@ -1111,429 +1916,306 @@ static time_t xtimed_alarm_time(time_t now)
  */
 static void xtimed_alarm_status_cb(const DsmeDbusMessage* ind)
 {
-    time_t next_powerup = dsme_dbus_message_get_int(ind);
+    time_t new_powerup = dsme_dbus_message_get_int(ind);
 
     /* NOTE: Does not matter in this case, but ... Old timed
      *       versions broadcast only the powerup time and
      *       dsme_dbus_message_get_int() function returns zero
      *       if the dbus message does not have INT32 type data
      *       to parse. */
-    time_t next_resume  = dsme_dbus_message_get_int(ind);
+    time_t new_resume  = dsme_dbus_message_get_int(ind);
     time_t sys = time(0);
 
     dsme_log(LOG_NOTICE, PFIX"alarm state from timed: powerup=%ld, resume=%ld",
-	     (long)next_powerup, (long)next_resume);
+	     (long)new_powerup, (long)new_resume);
 
-    if( next_powerup < sys || next_powerup >= INT_MAX )
-	next_powerup = 0;
+    if( new_powerup < sys || new_powerup >= INT_MAX )
+	new_powerup = 0;
 
-    if( next_resume < sys || next_resume >= INT_MAX )
-	next_resume = 0;
+    if( new_resume < sys || new_resume >= INT_MAX )
+	new_resume = 0;
 
-    if( xtimed_next_powerup != next_powerup ||
-	xtimed_next_resume  != next_resume ) {
-	xtimed_next_powerup = next_powerup;
-	xtimed_next_resume  = next_resume;
-	rtc_rethink_wakeup(monotime());
+    if( alarm_powerup != new_powerup || alarm_resume  != new_resume ) {
+	alarm_powerup = new_powerup;
+	alarm_resume  = new_resume;
+	struct timeval now;
+	monotime_get_tv(&now);
+	clientlist_rethink_rtc_wakeup(&now);
     }
 }
 
 /** Handler for timed settings_changed signal
  *
  * In theory we should parse the signal content and check if the
- * system time changed flag is set, but as rtc_rethink_wakeup()
+ * system time changed flag is set, but as clientlist_rethink_rtc_wakeup()
  * checks system time vs rtc time diff this is not necessary.
  *
  * @param ind dbus signal (not used)
  */
 static void xtimed_config_status_cb(const DsmeDbusMessage* ind)
 {
-    dsme_log(LOG_NOTICE, PFIX"settings change from timed");
+    dsme_log(LOG_INFO, PFIX"settings change from timed");
 
     /* rethink will sync rtc time with system time */
-    rtc_rethink_wakeup(monotime());
-}
-
-/** Set rtc wakeup to happen at the next power up alarm time
- *
- * To be called at module unload time so that wakeup alarm
- * is left to the state timed wants it to be.
- */
-static void xtimed_apply_powerup_alarm_time(void)
-{
-    time_t sys = time(0);
-    time_t rtc = xtimed_next_powerup;
-
-    /* how far in the future the next poweup alarm is */
-    if( rtc > sys )
-	rtc -= sys;
-    else
-	rtc = 0;
-
-    /* adjust down by estimate of boot time to act dead mode */
-    rtc -= STARTUP_TIME_ESTIMATE_SECS;
-
-    /* do not program alarms that we cant serve */
-    if( rtc < SHUTDOWN_TIME_ESTIMATE_SECS )
-	rtc = 0;
-
-    rtc_set_wakeup(rtc);
+    struct timeval now;
+    monotime_get_tv(&now);
+    clientlist_rethink_rtc_wakeup(&now);
 }
 
 /* ------------------------------------------------------------------------- *
- * IPHB functionality
+ * listenfd
  * ------------------------------------------------------------------------- */
 
-/**
- * Open kernel module handle - retry later if fails (meaning LKM is not loaded)
+/** Handle new client connecting via libiphb
  */
-static void open_kernel_fd(void)
+static void listenfd_handle_connect(void)
 {
-    static bool kernel_module_load_error_logged = false;
+    int newfd = accept(listenfd, 0, 0);
 
-    kernelfd = open(HB_KERNEL_DEVICE, O_RDWR, 0644);
-    if (kernelfd == -1) {
-        kernelfd = open(HB_KERNEL_DEVICE_TEST, O_RDWR, 0644);
-    }
-    if (kernelfd == -1) {
-        if (!kernel_module_load_error_logged) {
-            kernel_module_load_error_logged = true;
-            dsme_log(LOG_ERR,
-                     PFIX"failed to open kernel connection '%s' (%s)",
-                     HB_KERNEL_DEVICE,
-                     strerror(errno));
-        }
-    } else {
-        const char *msg;
-
-        msg = HB_LKM_KICK_ME_PERIOD;
-
-        dsme_log(LOG_DEBUG,
-                 PFIX"opened kernel socket %d to %s, wakeup from kernel=%s",
-                 kernelfd,
-                 HB_KERNEL_DEVICE,
-                 msg);
-
-        if (write(kernelfd, msg, strlen(msg) + 1) == -1) {
-            dsme_log(LOG_ERR,
-                     PFIX"failed to write kernel message (%s)",
-                     strerror(errno));
-            // TODO: do something clever?
-        } else if (!epoll_add(kernelfd, &kernelfd)) {
-            dsme_log(LOG_ERR, PFIX"failed to add kernel fd to epoll set");
-            // TODO: do something clever?
-        }
-    }
-}
-
-static void close_kernel_fd(void)
-{
-    if (kernelfd != -1) {
-        if (epoll_ctl(epollfd, EPOLL_CTL_DEL, kernelfd, 0) == -1) {
-            dsme_log(LOG_ERR, PFIX"failed to remove kernel fd from epoll set");
-            // TODO: do something clever?
-        }
-        (void)close(kernelfd);
-        dsme_log(LOG_DEBUG, PFIX"closed kernel socket %d", kernelfd);
-        kernelfd = -1;
-    }
-}
-
-/**
- * Start up daemon. Does not fail if kernel module is not loaded
- *
- * @todo clean up in error cases
- */
-static bool start_service(void)
-{
-    struct sockaddr_un addr;
-
-    (void)clock_gettime(CLOCK_MONOTONIC, &ts_started);
-
-    listenfd = socket(PF_UNIX, SOCK_STREAM, 0);
-    if (listenfd < 0) {
-        dsme_log(LOG_ERR,
-                 PFIX"failed to open client listen socket (%s)",
-                 strerror(errno));
-        goto fail;
-    }
-    unlink(HB_SOCKET_PATH);
-    addr.sun_family = AF_UNIX;
-    strcpy(addr.sun_path, HB_SOCKET_PATH);
-    if (bind(listenfd, (struct sockaddr *) &addr, sizeof(addr))) {
-        dsme_log(LOG_ERR,
-                 PFIX"failed to bind client listen socket to %s, (%s)",
-                 HB_SOCKET_PATH,
-                 strerror(errno));
-        goto fail;
-    }
-    if (chmod(HB_SOCKET_PATH, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH) !=
-        0)
-    {
-        dsme_log(LOG_ERR,
-                 PFIX"failed to chmod '%s' (%s)",
-                 HB_SOCKET_PATH,
-                 strerror(errno));
-        goto fail;
-    }
-    if (listen(listenfd, 5) != 0) {
-        dsme_log(LOG_ERR, PFIX"failed to listen client socket (%s)", strerror(errno));
-        goto fail;
+    if( newfd == -1 ) {
+	dsme_log(LOG_ERR, PFIX"failed to accept client (%m)");
     }
     else {
-        dsme_log(LOG_DEBUG,
-                 PFIX"opened client socket %d to %s",
-                 listenfd,
-                 HB_SOCKET_PATH);
+	client_t *client = client_new_external(newfd);
+	if (epollfd_add_fd(newfd, client)) {
+	    clientlist_add_client(client);
+	    dsme_log(LOG_DEBUG, PFIX"new client added to list");
+	}
+	else {
+	    clientlist_delete_client(client);
+	}
+    }
+}
+
+/** Stop accepting new libiphb clients
+ */
+static void listenfd_quit(void)
+{
+    if( listenfd != -1 ) {
+	epollfd_remove_fd(listenfd);
+	close(listenfd);
+	listenfd = -1;
     }
 
-    epollfd = epoll_create(10);
-    if (epollfd == -1) {
-        dsme_log(LOG_ERR, PFIX"failed to open epoll fd (%s)", strerror(errno));
-	goto fail;
+    if( unlink(HB_SOCKET_PATH) == -1 && errno != ENOENT ) {
+        dsme_log(LOG_WARNING, PFIX"failed to remove client listen socket %s: %m",
+		 HB_SOCKET_PATH);
     }
+}
+
+/** Start accepting new libiphb clients
+ *
+ * @return true on success, or false on failure
+ */
+static bool listenfd_init(void)
+{
+    bool result = false;
+    mode_t mode = S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH;
+
+    struct sockaddr_un addr;
+
+    if( unlink(HB_SOCKET_PATH) == -1 && errno != ENOENT ) {
+        dsme_log(LOG_WARNING, PFIX"failed to remove client listen socket %s: %m",
+		 HB_SOCKET_PATH);
+	// try to continue anyway
+    }
+
+    if( (listenfd = socket(PF_UNIX, SOCK_STREAM, 0)) < 0 ) {
+        dsme_log(LOG_ERR, PFIX"failed to open client listen socket: %m");
+        goto cleanup;
+    }
+
+    addr.sun_family = AF_UNIX;
+    strcpy(addr.sun_path, HB_SOCKET_PATH);
+
+    if( bind(listenfd, (struct sockaddr *) &addr, sizeof(addr)) == -1 ) {
+        dsme_log(LOG_ERR, PFIX"failed to bind client listen socket to %s: %m",
+                 HB_SOCKET_PATH);
+        goto cleanup;
+    }
+
+    if( chmod(HB_SOCKET_PATH, mode) == -1 ) {
+        dsme_log(LOG_ERR, PFIX"failed to chmod %o '%s': %m", (int)mode, HB_SOCKET_PATH);
+        goto cleanup;
+    }
+
+    if( listen(listenfd, 5) == -1 ) {
+        dsme_log(LOG_ERR, PFIX"failed to listen client socket: %m");
+        goto cleanup;
+    }
+
+    dsme_log(LOG_DEBUG, PFIX"opened client socket %d to %s",
+	     listenfd,
+	     HB_SOCKET_PATH);
 
     // add the listening socket to the epoll set
-    if (!epoll_add(listenfd, &listenfd)) {
-        goto fail;
+    if (!epollfd_add_fd(listenfd, &listenfd)) {
+        goto cleanup;
     }
 
-    // set up an I/O watch for the epoll set
-    GIOChannel* chan = 0;
-    if (!(chan = g_io_channel_unix_new(epollfd))) {
-        goto fail;
-    }
-    epoll_watch = g_io_add_watch(chan, G_IO_IN, read_epoll, 0);
-    g_io_channel_unref(chan);
-    if (!epoll_watch) {
-        goto fail;
-    }
+    result = true;
 
-    // if possible, add rtc fd to the epoll set
-    rtc_attach();
+cleanup:
+
+    // all or nothing
+    if( !result )
+	listenfd_quit();
+
+    return result;
+}
+
+/* ------------------------------------------------------------------------- *
+ * epollfd
+ * ------------------------------------------------------------------------- */
+
+/** Add filedescriptor to the epoll set
+ *
+ * @param fd   file descriptor to add
+ * @param ptr  data to associate with the file descriptor
+ *
+ * @return true on success, or false on failure
+ */
+static bool epollfd_add_fd(int fd, void* ptr)
+{
+    struct epoll_event ev = { 0, { 0 } };
+    ev.events   = EPOLLIN;
+    ev.data.ptr = ptr;
+
+    if( epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &ev) == -1 ) {
+	dsme_log(LOG_ERR, PFIX"failed to add fd=%d to epoll set: %m", fd);
+	return false;
+    }
 
     return true;
+}
 
-fail:
-    if( epollfd != -1 )
-	close(epollfd), epollfd = -1;
+/** Remove filedescriptor from the epoll set
+ *
+ * @param fd   file descriptor to remove
+ */
+static void epollfd_remove_fd(int fd)
+{
+    if( epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, 0) == -1 ) {
+	dsme_log(LOG_ERR, PFIX"failed to remove fd=%d from epoll set: %m", fd);
+    }
+}
 
-    if( listenfd != -1 )
-	close(listenfd), listenfd = -1;
+/** Handle epoll event associated with libiphb client
+ *
+ * @param event epoll event to handle
+ * @param now   current monotonic time
+ *
+ * @return true if client canceled wait, false otherwise
+ */
+static bool epollfd_handle_client_req(struct epoll_event* event,
+				      const struct timeval *now)
+{
+    bool      client_woken = false;
+    client_t *client       = event->data.ptr;
 
+    if( event->events & (EPOLLERR | EPOLLRDHUP | EPOLLHUP) ) {
+        dsme_log(LOG_DEBUG, PFIX"client %s disappeared",
+                 client->pidtxt);
+        goto drop_client_and_fail;
+    }
+
+    dsme_log(LOG_DEBUG, PFIX"client with PID %lu is active",
+             (unsigned long)client->pid);
+
+    struct _iphb_req_t req = { 0 };
+
+    if( recv(client->fd, &req, sizeof req, MSG_WAITALL) <= 0 ) {
+        dsme_log(LOG_ERR, PFIX"failed to read from client %s: %m",
+                 client->pidtxt);
+        goto drop_client_and_fail;
+    }
+
+    switch (req.cmd) {
+        case IPHB_WAIT:
+            client_woken = client_handle_wait_req(client, &req.u.wait, now);
+            break;
+
+        case IPHB_STAT:
+            client_handle_stat_req(client);
+            break;
+
+        default:
+            dsme_log(LOG_ERR, PFIX"client %s gave invalid command 0x%x, drop it",
+                     client->pidtxt,
+                     (unsigned int)req.cmd);
+            goto drop_client_and_fail;
+    }
+
+    return client_woken;
+
+drop_client_and_fail:
+    clientlist_delete_client(client);
     return false;
 }
 
-/**
- * Add new client to list.
+/** I/O watch callback for the epoll set
  *
- * @param fd	Socket descriptor
+ * The epoll set handles
+ * - new clients connecting via libiphb
+ * - old clients making requests via libiphb
+ * - rtc wakeup alarms from /dev/rtc
+ * - iphb events from kernel
  *
- * @todo	Is abort OK if malloc fails?
+ * @param source     glib io channel associated with epollfd
+ * @param condition  (unused)
+ * @param data       (unused)
+ *
+ * @return TRUE to keep the iowatch alive, or FALSE to stop it on errors
  */
-static client_t* new_client(int fd)
+static gboolean epollfd_iowatch_cb(GIOChannel*  source,
+				   GIOCondition condition,
+				   gpointer     data)
 {
-    client_t* client;
+    bool               wakeup_mce = false;
 
-    client = (client_t*)calloc(1, sizeof(client_t));
-    if (client == 0) {
-        errno = ENOMEM;
-        dsme_log(LOG_ERR, PFIX"malloc(new_client) failed");
-        abort(); // TODO
-    }
-    client->fd = fd;
-
-    return client;
-}
-
-static client_t* new_internal_client(endpoint_t* conn, void* data)
-{
-    client_t* client = new_client(-1);
-    client->conn = endpoint_copy(conn);
-    client->data = data;
-
-    return client;
-}
-
-static bool is_external_client(const client_t* client)
-{
-    return client->fd != -1;
-}
-
-static void list_add_client(client_t* newclient)
-{
-  client_t *client;
-
-  if (NULL == clients) {
-      /* first one */
-      clients = newclient;
-      return;
-  } else {
-      /* add to end */
-      client = clients;
-      while (client->next)
-          client = client->next;
-      client->next = newclient;
-  }
-}
-
-static client_t* list_find_internal_client(endpoint_t* conn, void* data)
-{
-    client_t* client = clients;
-
-    while (client) {
-        if (!is_external_client(client)       &&
-            endpoint_same(client->conn, conn) &&
-            client->data == data)
-        {
-            break;
-        }
-
-        client = client->next;
-    }
-
-    return client;
-}
-
-static int external_clients()
-{
-    int       count  = 0;
-    client_t* client = clients;
-
-    while (client) {
-        if (is_external_client(client)) {
-            ++count;
-        }
-        client = client->next;
-    }
-
-    return count;
-}
-
-static void send_stats(client_t *client)
-{
-    struct iphb_stats stats   = { 0 };
-    client_t*         c       = clients;
-    unsigned int      next_hb = 0;
-    struct timespec   ts_now;
-
-    (void)clock_gettime(CLOCK_MONOTONIC, &ts_now);
-
-    while (c) {
-        stats.clients++;
-        if (c->wait_started) {
-            stats.waiting++;
-        }
-
-        if (c->wait_started) {
-            unsigned int wait_time = c->wait_started + c->maxtime - ts_now.tv_sec;
-            if (!next_hb) {
-                next_hb = wait_time;
-            } else {
-                if (wait_time < next_hb) {
-                    next_hb = wait_time;
-                }
-            }
-        }
-
-        c = c->next;
-    }
-
-    stats.next_hb = next_hb;
-    if (send(client->fd, &stats, sizeof(stats), MSG_DONTWAIT|MSG_NOSIGNAL) !=
-        sizeof(stats))
-    {
-        char* pidtxt = pid2text(client->pid);
-        dsme_log(LOG_ERR,
-                 PFIX"failed to send to client with PID %s (%s)",
-                 pidtxt,
-                 strerror(errno));  // do not drop yet
-        free(pidtxt);
-    }
-}
-
-static bool epoll_add(int fd, void* ptr)
-{
-  struct epoll_event ev = { 0, { 0 } };
-  ev.events   = EPOLLIN;
-  ev.data.ptr = ptr;
-  if (epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &ev) == -1) {
-      dsme_log(LOG_ERR,
-               PFIX"failed to add fd %d to epoll set (%s)",
-               fd,
-               strerror(errno));
-      return false;
-  }
-
-  return true;
-}
-
-static gboolean read_epoll(GIOChannel*  source,
-                           GIOCondition condition,
-                           gpointer     data)
-{
-    dsme_log(LOG_DEBUG, PFIX"epollfd readable");
-
-    stop_wakeup_timer();
-
+    struct timeval     tv_now;
     struct epoll_event events[DSME_MAX_EPOLL_EVENTS];
     int                nfds;
-    int                i;
-    condition_func*    wakeup_condition = maxtime_passed;
-    bool               wakeup_mce = false;
-    while ((nfds = epoll_wait(epollfd, events, DSME_MAX_EPOLL_EVENTS, 0)) == -1
-        && errno == EINTR)
-    {
-        /* EMPTY LOOP */
+
+    dsme_log(LOG_DEBUG, PFIX"epollfd readable");
+
+    nfds = epoll_wait(epollfd, events, DSME_MAX_EPOLL_EVENTS, 0);
+
+    if( nfds == -1 ) {
+	if( errno == EINTR || errno == EAGAIN )
+	    return TRUE;
+
+        dsme_log(LOG_ERR, PFIX"epoll waiting failed (%m)");
+        dsme_log(LOG_CRIT, PFIX"epoll waiting disabled");
+	return FALSE;
     }
-    if (nfds == -1) {
-        dsme_log(LOG_ERR, PFIX"epoll waiting failed (%s)", strerror(errno));
-        // TODO: what to do? return false?
-    }
+
     dsme_log(LOG_DEBUG, PFIX"epollfd_wait => %d events", nfds);
 
-    struct timespec   ts_now;
-
-    (void)clock_gettime(CLOCK_MONOTONIC, &ts_now);
+    monotime_get_tv(&tv_now);
 
     /* go through new events */
-    for (i = 0; i < nfds; ++i) {
+    for( int i = 0; i < nfds; ++i ) {
         if (events[i].data.ptr == &listenfd) {
             /* accept new clients */
-            dsme_log(LOG_DEBUG, PFIX"accept() a new client");
-            int newfd = accept(listenfd, 0, 0);
-            if (newfd != -1) {
-                client_t* client = new_client(newfd);
-                if (epoll_add(newfd, client)) {
-                    list_add_client(client);
-                    dsme_log(LOG_DEBUG, PFIX"new client added to list");
-                } else {
-                    delete_client(client);
-                }
-            } else {
-                dsme_log(LOG_ERR,
-                         PFIX"failed to accept client (%s)",
-                         strerror(errno));
-            }
-        } else if (events[i].data.ptr == &kernelfd) {
-            wakeup_condition = mintime_passed;
-            // tell the driver that we have dealt with the event
-            while (read(kernelfd, 0, 0) == -1 && errno == EINTR);
-        } else if (events[i].data.ptr == &rtc_fd) {
+	    listenfd_handle_connect();
+        }
+	else if (events[i].data.ptr == &kernelfd) {
+	    /* iphb event from kernel */
+	    kernelfd_handle_event();
+        }
+	else if (events[i].data.ptr == &rtc_fd) {
+	    /* rtc wakeup (and possibly resume from suspend) */
 	    if( !(wakeup_mce = rtc_handle_input()) )
 		rtc_detach();
-	    wakeup_condition = mintime_passed;
-        } else {
+        }
+	else {
             /* deal with old clients */
-            if (handle_client_req(&events[i], ts_now.tv_sec)) {
-                wakeup_condition = mintime_passed;
-            }
+            epollfd_handle_client_req(&events[i], &tv_now);
         }
     }
 
-    wakeup_clients_if(wakeup_condition, ts_now.tv_sec);
-
-    sync_hwwd_feeder();
+    clientlist_wakeup_clients_if(&tv_now);
 
     if( wakeup_mce ) {
 	/* Allow mce some time to take over the wakeup, but ... */
@@ -1548,430 +2230,50 @@ static gboolean read_epoll(GIOChannel*  source,
     if( rtc_fd == -1 )
 	rtc_attach();
 
-    // TODO: should we ever stop?
     return TRUE;
 }
 
-static int handle_wakeup_timeout(void* unused)
+/** Stop the epoll io watch */
+static void epollfd_quit(void)
 {
-    dsme_log(LOG_DEBUG, PFIX"*** TIMEOUT ***");
+    if( epoll_watch )
+	g_source_remove(epoll_watch), epoll_watch = 0;
 
-    struct timespec   ts_now;
-    (void)clock_gettime(CLOCK_MONOTONIC, &ts_now);
+    if( epollfd != -1 )
+	close(epollfd), epollfd = -1;
 
-    wakeup_clients_if(maxtime_passed, ts_now.tv_sec);
-
-    sync_hwwd_feeder();
-
-    return 0; /* stop the interval */
 }
 
-static bool is_timer_needed(int* optimal_sleep_time)
+/** Start the epoll io watch
+ *
+ * @return true on success, or false on failure
+ */
+static bool epollfd_init(void)
 {
-    bool   client_found = false;
+    bool        result = false;
+    GIOChannel *chan = 0;
 
-    struct timespec   ts_now;
-    (void)clock_gettime(CLOCK_MONOTONIC, &ts_now);
-
-    int    sleep_time   = 0;
-
-    client_t* client = clients;
-    while (client) {
-        // only set up timers for external clients that are waiting
-        if (is_external_client(client) && client->wait_started) {
-            // does this client need to wake up before previous ones?
-            if (!client_found ||
-                client->wait_started + client->maxtime < ts_now.tv_sec + sleep_time)
-            {
-                client_found = true;
-                // make sure to keep sleep_time >= 0
-                if (client->wait_started + client->maxtime <= ts_now.tv_sec) {
-                    // this client should have been woken up already!
-                    sleep_time = 0;
-                    break;
-                } else {
-                    // we have a new shortest sleep time
-                    sleep_time = client->wait_started + client->maxtime - ts_now.tv_sec;
-                }
-            }
-        }
-
-        client = client->next;
+    if( (epollfd = epoll_create(10)) == -1 ) {
+        dsme_log(LOG_ERR, PFIX"failed to open epoll fd (%m)");
+	goto cleanup;
     }
 
-    if (!client_found || sleep_time >= DSME_HEARTBEAT_INTERVAL) {
-        // either no client or we will wake up before the timer anyway
-        return false;
-    } else {
-        // a (short) timer has to be set up to guarantee a wakeup
-        *optimal_sleep_time = sleep_time;
-        return true;
-    }
-}
-
-static bool handle_client_req(struct epoll_event* event, time_t now)
-{
-    client_t* client       = event->data.ptr;
-    bool      client_woken = false;
-
-    if (event->events & EPOLLERR ||
-        event->events & EPOLLRDHUP ||
-        event->events & EPOLLHUP)
-    {
-        char* pidtxt = pid2text(client->pid);
-        dsme_log(LOG_DEBUG,
-                 PFIX"client with PID %s disappeared",
-                 pidtxt);
-        free(pidtxt);
-        goto drop_client_and_fail;
+    if (!(chan = g_io_channel_unix_new(epollfd))) {
+        goto cleanup;
     }
 
-    dsme_log(LOG_DEBUG,
-             PFIX"client with PID %lu is active",
-             (unsigned long)client->pid);
-
-    struct _iphb_req_t req = { 0 };
-
-    if (recv(client->fd, &req, sizeof(req), MSG_WAITALL) <= 0) {
-        char* pidtxt = pid2text(client->pid);
-        dsme_log(LOG_ERR,
-                 PFIX"failed to read from client with PID %s (%s)",
-                 pidtxt,
-                 strerror(errno));
-        free(pidtxt);
-        goto drop_client_and_fail;
+    if( !(epoll_watch = g_io_add_watch(chan, G_IO_IN, epollfd_iowatch_cb, 0)) ) {
+	goto cleanup;
     }
 
-    char* pidtxt;
-    switch (req.cmd) {
-        case IPHB_WAIT:
-            client_woken = handle_wait_req(&req.u.wait, client, now);
-            break;
+    result = true;
 
-        case IPHB_STAT:
-            send_stats(client);
-            break;
+cleanup:
 
-        default:
-            pidtxt = pid2text(client->pid);
-            dsme_log(LOG_ERR,
-                     PFIX"client with PID %s gave invalid command 0x%x, drop it",
-                     pidtxt,
-                     (unsigned int)req.cmd);
-            free(pidtxt);
-            goto drop_client_and_fail;
-    }
+    if( chan )
+	g_io_channel_unref(chan);
 
-    return client_woken;
-
-drop_client_and_fail:
-    delete_client(client);
-    return false;
-}
-
-static bool handle_wait_req(const struct _iphb_wait_req_t* req_const,
-                            client_t*                      client,
-                            time_t                         now)
-{
-    bool client_woken = false;
-    struct _iphb_wait_req_t req = *req_const;
-
-    if (req.maxtime == 0 && req.mintime == 0) {
-        char* pidtxt = pid2text(client->pid);
-        if (!client->pid) {
-            client->pid = req.pid;
-            dsme_log(LOG_DEBUG,
-                     PFIX"client with PID %s connected",
-                     pidtxt);
-        } else {
-            dsme_log(LOG_DEBUG,
-                     PFIX"client with PID %s canceled wait",
-                     pidtxt);
-            client_woken = true;
-        }
-        free(pidtxt);
-        client->wait_started = 0;
-        client->mintime      = req.mintime;
-        client->maxtime      = req.maxtime;
-    } else {
-        if (req.mintime && req.maxtime == req.mintime) {
-            struct timespec ts_now;
-            int             slots_passed;
-            char* pidtxt = pid2text(req.pid);
-
-            dsme_log(LOG_DEBUG,
-                     PFIX"client with PID %s signaled interest of waiting with"
-                       " fixed time %d",
-                     pidtxt,
-                     (int)req.mintime);
-
-            (void)clock_gettime(CLOCK_MONOTONIC, &ts_now);
-
-            slots_passed = (ts_now.tv_sec - ts_started.tv_sec) / req_const->mintime;
-            req.mintime = ts_started.tv_sec + (slots_passed + 1) * req_const->mintime - ts_now.tv_sec;
-            if (req.mintime <= 1)
-                req.mintime = ts_started.tv_sec + (slots_passed + 2) * req_const->mintime - ts_now.tv_sec;
-            req.maxtime = req.mintime + 1; /* allow tolerance because of math above */
-
-            dsme_log(LOG_DEBUG,
-                     PFIX"fixed reqtimes for client with PID %s"
-                       " (min=%d/max=%d)",
-                     pidtxt,
-                     (int)req.mintime,
-                     (int)req.maxtime);
-            free(pidtxt);
-        } else {
-            char* pidtxt = pid2text(req.pid);
-            dsme_log(LOG_DEBUG,
-                     PFIX"client with PID %s signaled interest of waiting"
-                       " (min=%d/max=%d)",
-                     pidtxt,
-                     (int)req.mintime,
-                     (int)req.maxtime);
-            free(pidtxt);
-        }
-
-        client->pid          = req.pid;
-        client->wait_started = now;
-        client->mintime      = req.mintime;
-        client->maxtime      = req.maxtime;
-    }
-
-    return client_woken;
-}
-
-static void wakeup_clients_if(condition_func* should_wake_up, time_t now)
-{
-    // wake up clients in two passes,
-    // giving priority to those whose maxtime has passed
-    if (wakeup_clients_if2(maxtime_passed, now) ||
-        should_wake_up == mintime_passed)
-    {
-        dsme_log(LOG_DEBUG, PFIX"waking up clients because somebody was woken up");
-        wakeup_clients_if2(mintime_passed, now);
-    }
-
-    // open or close the kernel fd as needed
-    if (!external_clients()) {
-        close_kernel_fd();
-    } else if (kernelfd == -1) {
-        open_kernel_fd();
-    }
-
-    /* reprogram the rtc wakeup */
-    rtc_rethink_wakeup(now);
-}
-
-static bool mintime_passed(client_t* client, time_t now)
-{
-    return now >= client->wait_started + client->mintime;
-}
-
-static bool maxtime_passed(client_t* client, time_t now)
-{
-    return now >= client->wait_started + client->maxtime;
-}
-
-static int wakeup_clients_if2(condition_func* should_wake_up, time_t now)
-{
-    int woken_up_clients = 0;
-
-    client_t* prev   = 0;
-    client_t* client = clients;
-    while (client) {
-        client_t* next = client->next;
-        char* pidtxt = pid2text(client->pid);
-
-        if (!client->wait_started) {
-            dsme_log(LOG_DEBUG,
-                     PFIX"client with PID %s is active, not to be woken up",
-                     pidtxt);
-        } else {
-            if (should_wake_up(client, now)) {
-                if (wakeup(client, now)) {
-                    ++woken_up_clients;
-                } else {
-                    dsme_log(LOG_ERR,
-                             PFIX"failed to send to client with PID %s (%s),"
-                               " drop client",
-                             pidtxt,
-                             strerror(errno));
-                    remove_client(client, prev);
-                    close_and_free_client(client);
-                    goto next_client;
-                }
-            }
-        }
-
-        prev = client;
-next_client:
-        client = next;
-        free(pidtxt);
-    }
-
-    return woken_up_clients;
-}
-
-static long long timestamp(void)
-{
-    struct timeval tv;
-
-    gettimeofday(&tv, 0);
-    return tv.tv_sec * 1000000ll + tv.tv_usec;
-}
-
-static bool wakeup(client_t* client, time_t now)
-{
-    bool woken_up = false;
-
-    if (is_external_client(client)) {
-        struct _iphb_wait_resp_t resp = { 0 };
-        char* pidtxt = pid2text(client->pid);
-        resp.waited = now - client->wait_started;
-
-        dsme_log(LOG_DEBUG,
-                 PFIX"waking up client with PID %s who has slept %lu secs"
-                     ", ts=%lli",
-                 pidtxt,
-                 resp.waited,
-                 timestamp());
-        free(pidtxt);
-        if (send(client->fd, &resp, sizeof(resp), MSG_DONTWAIT|MSG_NOSIGNAL) ==
-            sizeof(resp))
-        {
-            woken_up = true;
-        }
-    } else {
-        DSM_MSGTYPE_WAKEUP msg = DSME_MSG_INIT(DSM_MSGTYPE_WAKEUP);
-        msg.resp.waited = now - client->wait_started;
-        msg.data        = client->data;
-
-        dsme_log(LOG_DEBUG,
-                 PFIX"waking up internal client who has slept %lu secs",
-                 msg.resp.waited);
-        endpoint_send(client->conn, &msg);
-        woken_up = true;
-    }
-
-    client->wait_started = 0;
-
-    return woken_up;
-}
-
-static void delete_clients(void)
-{
-    while (clients) {
-        delete_client(clients);
-    }
-}
-
-static void delete_client(client_t* client)
-{
-    /* remove the client from the list */
-    client_t* prev = 0;
-    client_t* c    = clients;
-    while (c) {
-        if (client == c) {
-            remove_client(client, prev);
-            break;
-        }
-
-        prev = c;
-        c = c->next;
-    }
-
-    close_and_free_client(client);
-}
-
-static void remove_client(client_t* client, client_t* prev)
-{
-    if (prev) {
-        prev->next = client->next;
-    }
-    if (client == clients) {
-        clients = client->next;
-    }
-}
-
-static void close_and_free_client(client_t* client)
-{
-    if (is_external_client(client)) {
-        (void)epoll_ctl(epollfd, EPOLL_CTL_DEL, client->fd, 0);
-        (void)close(client->fd);
-    } else {
-        endpoint_free(client->conn);
-    }
-
-    free(client);
-}
-
-// synchronice to HW WD feeding process by listening to its heartbeat
-DSME_HANDLER(DSM_MSGTYPE_HEARTBEAT, conn, msg)
-{
-    dsme_log(LOG_DEBUG, PFIX"HEARTBEAT from HWWD");
-
-    stop_wakeup_timer();
-
-    struct timespec   ts_now;
-    (void)clock_gettime(CLOCK_MONOTONIC, &ts_now);
-
-    // TODO: should we wake up mintime sleepers to sync on hwwd?
-    wakeup_clients_if(maxtime_passed, ts_now.tv_sec);
-}
-
-static void sync_hwwd_feeder(void)
-{
-    kill(getppid(), SIGHUP);
-}
-
-DSME_HANDLER(DSM_MSGTYPE_WAIT, conn, msg)
-{
-    dsme_log(LOG_DEBUG, PFIX"WAIT req from an internal client");
-
-    stop_wakeup_timer();
-
-    struct timespec   ts_now;
-    (void)clock_gettime(CLOCK_MONOTONIC, &ts_now);
-
-    client_t* client = list_find_internal_client(conn, msg->data);
-    if (!client) {
-        client = new_internal_client(conn, msg->data);
-        list_add_client(client);
-    }
-
-    handle_wait_req(&msg->req, client, ts_now.tv_sec);
-
-    /* reprogram the rtc wakeup */
-    rtc_rethink_wakeup(ts_now.tv_sec);
-
-    // we don't want to wake anyone else up for internal clients showing up
-    // TODO: or do we?
-
-    sync_hwwd_feeder();
-}
-
-DSME_HANDLER(DSM_MSGTYPE_IDLE, conn, msg)
-{
-    // the internal msg queue is empty so we will probably sleep for a while;
-    // see if we need to set up a timer to guarantee a timely wakeup
-    if (!wakeup_timer) {
-        int sleep_time;
-        if (is_timer_needed(&sleep_time)) {
-            dsme_log(LOG_DEBUG, PFIX"setting a wakeup in %d s", sleep_time);
-            wakeup_timer =
-                dsme_create_timer_high_priority(sleep_time,
-                                                handle_wakeup_timeout,
-                                                0);
-        }
-    }
-}
-
-static void stop_wakeup_timer(void)
-{
-    if (wakeup_timer) {
-        dsme_destroy_timer(wakeup_timer);
-        wakeup_timer = 0;
-    }
+    return result;
 }
 
 /* ------------------------------------------------------------------------- *
@@ -2033,24 +2335,58 @@ static const dsme_dbus_signal_binding_t signals[] =
  * Handlers for internal messages
  * ------------------------------------------------------------------------- */
 
+/** Handle heartbeat from hwwd kicking activity */
+DSME_HANDLER(DSM_MSGTYPE_HEARTBEAT, conn, msg)
+{
+    struct timeval   tv_now;
+
+    dsme_log(LOG_DEBUG, PFIX"HEARTBEAT from HWWD");
+    monotime_get_tv(&tv_now);
+    clientlist_wakeup_clients_if(&tv_now);
+}
+
+/** Handle WAIT requests from internal clients */
+DSME_HANDLER(DSM_MSGTYPE_WAIT, conn, msg)
+{
+    dsme_log(LOG_DEBUG, PFIX"WAIT req from an internal client");
+
+    struct timeval   tv_now;
+    monotime_get_tv(&tv_now);
+
+    client_t *client = clientlist_find_internal_client(conn, msg->data);
+    if (!client) {
+        client = client_new_internal(conn, msg->data);
+        clientlist_add_client(client);
+    }
+
+    client_handle_wait_req(client, &msg->req, &tv_now);
+
+    /* We don't want to wake anyone else up for internal clients showing up.
+     * And internal clients do not use timers or rtc interrupts.
+     * -> skip wakeup scanning and just feed the hwwd kicker */
+    hwwd_feeder_sync();
+}
+
+/** Handle connected to system bus */
 DSME_HANDLER(DSM_MSGTYPE_DBUS_CONNECT, client, msg)
 {
-    dsme_log(LOG_NOTICE, PFIX"DBUS_CONNECT");
+    dsme_log(LOG_INFO, PFIX"DBUS_CONNECT");
     dsme_dbus_bind_signals(&bound, signals);
     systembus_connect();
 }
 
+/** Handle disconnected from system bus */
 DSME_HANDLER(DSM_MSGTYPE_DBUS_DISCONNECT, client, msg)
 {
-    dsme_log(LOG_NOTICE, PFIX"DBUS_DISCONNECT");
+    dsme_log(LOG_INFO, PFIX"DBUS_DISCONNECT");
     dsme_dbus_unbind_signals(&bound, signals);
     systembus_disconnect();
 }
 
-module_fn_info_t message_handlers[] = {
+module_fn_info_t message_handlers[] =
+{
     DSME_HANDLER_BINDING(DSM_MSGTYPE_HEARTBEAT),
     DSME_HANDLER_BINDING(DSM_MSGTYPE_WAIT),
-    DSME_HANDLER_BINDING(DSM_MSGTYPE_IDLE),
 
     DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_CONNECT),
     DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_DISCONNECT),
@@ -2061,51 +2397,63 @@ module_fn_info_t message_handlers[] = {
  * Module loading & unloading
  * ------------------------------------------------------------------------- */
 
-void module_init(module_t* handle)
+/** Startup */
+void module_init(module_t *handle)
 {
+    bool success = false;
+
     dsme_log(LOG_INFO, PFIX"iphb.so loaded");
 
-    /* Clear stale wakelocks that we might have left due to restarting dsme
-     * after crash etc. If this happens to be the 1st dsme startup the
-     * wakelocks do not exist yet -> lock 1st, then unlock to avoid EINVAL */
-    wakelock_lock(rtc_wakeup, -1);
-    wakelock_lock(rtc_input, -1);
+    /* Clear stale wakelocks that we might have left due to dsme crash etc */
     wakelock_unlock(rtc_wakeup);
     wakelock_unlock(rtc_input);
 
-    if (!start_service()) {
-	dsme_log(LOG_ERR, PFIX"iphb not started");
-    }
-    else {
+    /* Initialize epoll set before services that need it */
+    if( !epollfd_init() )
+	goto cleanup;
+
+    /* Create connect socket and add it to epoll set */
+    if( !listenfd_init() )
+	goto cleanup;
+
+    /* if possible, add rtc fd to the epoll set */
+    rtc_attach();
+
+    success = true;
+
+cleanup:
+
+    if( success )
         dsme_log(LOG_INFO, PFIX"iphb started");
-    }
+    else
+	dsme_log(LOG_ERR, PFIX"iphb not started");
+
+    return;
 }
 
+/** Shutdown */
 void module_fini(void)
 {
+    /* cancel timers */
+    rtc_cancel_finetune();
+    clientlist_cancel_wakeup_timeout();
+
+    /* detach dbus handlers */
     dsme_dbus_unbind_signals(&bound, signals);
 
-    xtimed_apply_powerup_alarm_time();
+    /* set wakeup alarm before closing the rtc */
+    rtc_set_alarm_powerup();
     rtc_detach();
 
-    delete_clients();
+    /* cleanup rest of what is in the epoll set */
+    listenfd_quit();
+    kernelfd_close();
+    clientlist_delete_clients();
 
-    if( epoll_watch != 0 ) {
-	g_source_remove(epoll_watch);
-    }
+    /* remove the epoll set itself */
+    epollfd_quit();
 
-    if( epollfd == -1 ) {
-	close(epollfd);
-    }
-
-    if (listenfd != -1) {
-        close(listenfd);
-    }
-
-    if (kernelfd != -1) {
-        close(kernelfd);
-    }
-
+    /* disconnect from system bus */
     systembus_disconnect();
 
     /* Release wakelocks before exiting */

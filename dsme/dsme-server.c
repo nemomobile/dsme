@@ -105,7 +105,7 @@ void signal_handler(int sig)
 }
 
 #ifdef DSME_LOG_ENABLE
-static int        logging_verbosity = LOG_INFO;
+static int        logging_verbosity = LOG_NOTICE;
 static log_method logging_method    = LOG_METHOD_SYSLOG;
 #endif
 #ifdef DSME_SYSTEMD_ENABLE
