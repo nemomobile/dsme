@@ -9,7 +9,6 @@ RPM_PATH=${RPM_SOURCE_DIR:-rpm}/${RPM_PACKAGE_NAME:-dsme}.spec
 RPM_VERS=$(grep '^Version:' $RPM_PATH |sed -e 's/^.*:[[:space:]]*//')
 
 YAML_PATH=rpm/dsme.yaml
-YAML_VERS=$(grep '^Version:' $YAML_PATH |sed -e 's/^.*:[[:space:]]*//')
 
 RES=0
 
@@ -18,9 +17,14 @@ if [ "$RPM_VERS" != "$AC_VERS" ]; then
   RES=1
 fi
 
-if [ "$RPM_VERS" != "$YAML_VERS" ]; then
-  echo >&2 "$YAML_PATH $YAML_VERS vs $RPM_PATH $RPM_VERS"
-  RES=1
+# The yaml file is included in the git tree, but not in the tarball
+# that is used during the OBS package build ...
+if [ -f $YAML_PATH ]; then
+  YAML_VERS=$(grep '^Version:' $YAML_PATH |sed -e 's/^.*:[[:space:]]*//')
+  if [ "$RPM_VERS" != "$YAML_VERS" ]; then
+    echo >&2 "$YAML_PATH $YAML_VERS vs $RPM_PATH $RPM_VERS"
+    RES=1
+  fi
 fi
 
 if [ $RES != 0 ]; then
