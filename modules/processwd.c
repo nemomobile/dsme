@@ -113,13 +113,20 @@ static void swwd_entry_delete(dsme_swwd_entry_t * proc)
   }
 }
 
-static gint compare_pids(gconstpointer proc, gconstpointer pid)
+static gint compare_pids(gconstpointer a, gconstpointer b)
 {
-  return (((dsme_swwd_entry_t*)proc)->pid - (pid_t)pid);
+  const dsme_swwd_entry_t *proc = (dsme_swwd_entry_t *)a;
+  pid_t                    pid  = GPOINTER_TO_INT(b);
+
+  /* Should not overflow, and for use with g_slist_find_custom()
+   * it is enough if we get zero vs non-zero correctly */
+  return proc->pid - pid;
 }
 
 static gint compare_endpoints(gconstpointer proc, gconstpointer client)
 {
+  /* Note: returns 0/1 instead of -1/0/+1, but this should be
+   *       enough for use with g_slist_find_custom() */
   return !endpoint_same(((dsme_swwd_entry_t*)proc)->client, client);
 }
 
@@ -131,7 +138,7 @@ static int abort_timeout_func(void* data)
   node = g_slist_find_custom(processes, data, compare_pids);
   if (node != NULL) {
       /* the process has not been removed yet; kill it */
-      pid_t              pid  = (pid_t)data;
+      pid_t              pid  = GPOINTER_TO_INT(data);
       dsme_swwd_entry_t* proc = (dsme_swwd_entry_t*)(node->data);
 
       proc->kill_timer = 0; /* the timer has expired */
@@ -178,7 +185,7 @@ static void ping_all(void)
                 /* ...but make sure to kill it after a grace period */
                 proc->kill_timer = dsme_create_timer(ABORT_GRACE_PERIOD_SECONDS,
                                                      abort_timeout_func,
-                                                     (void*)(proc->pid));
+                                                     GINT_TO_POINTER(proc->pid));
                 if (proc->kill_timer == 0) {
                     /* timer creation failed; kill the process immediately */
                     dsme_log(LOG_ERR, "...kill due to timer failure: %s", strerror(errno));
@@ -217,7 +224,7 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESSWD_CREATE, client, msg)
 {
   dsme_swwd_entry_t* proc;
 
-  if (g_slist_find_custom(processes, (void *)msg->pid, compare_pids)) {
+  if (g_slist_find_custom(processes, GINT_TO_POINTER(msg->pid), compare_pids)) {
       /* Already there - just ignore and return */
       dsme_log(LOG_DEBUG, "Process WD requested for existing pid\n");
       return;
@@ -241,7 +248,7 @@ DSME_HANDLER(DSM_MSGTYPE_PROCESSWD_PONG, conn, msg)
   GSList*            node;
   dsme_swwd_entry_t* proc;
 
-  node = g_slist_find_custom(processes, (void*)msg->pid, compare_pids);
+  node = g_slist_find_custom(processes, GINT_TO_POINTER(msg->pid), compare_pids);
   if (!node) {
       /* Already there - just ignore and return */
       dsme_log(LOG_WARNING, "ProcessWD PONG for non-existing pid %i", msg->pid);
@@ -266,7 +273,7 @@ static void swwd_del(pid_t pid)
   GSList*            node;
   dsme_swwd_entry_t* proc;
 
-  node = g_slist_find_custom(processes, (void*)pid, compare_pids);
+  node = g_slist_find_custom(processes, GINT_TO_POINTER(pid), compare_pids);
   if (!node) {
       dsme_log(LOG_DEBUG,
                "no process registered to use processwd with pid %i",
