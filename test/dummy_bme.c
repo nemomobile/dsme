@@ -232,7 +232,7 @@ int bme_extmsg_handler(int client)
     tBMEmsgGeneric *gm = msgp;
 
     if ((n = read(client, buf, sizeof(buf))) < sizeof(*gm)) {
-	bme_log(LOG_DEBUG, "got %d bytes instead of %d from client's fd %d (possible disconnect)\n",
+	bme_log(LOG_DEBUG, "got %d bytes instead of %zd from client's fd %d (possible disconnect)\n",
 				n, sizeof(*gm), client);
 	return -1;
     }
