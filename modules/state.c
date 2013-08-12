@@ -233,7 +233,7 @@ static dsme_state_t select_state(void)
       } else if (shutdown_requested || reboot_requested) {
           /* favor normal shutdown over reboot over actdead */
           if (shutdown_requested &&
-              charger_state == CHARGER_DISCONNECTED &&
+              (charger_state == CHARGER_DISCONNECTED || charger_state == CHARGER_STATE_UNKNOWN) &&
               !alarm_set)
           {
               dsme_log(LOG_NOTICE, "Normal shutdown");
