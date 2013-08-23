@@ -110,45 +110,86 @@ static const dsme_dbus_signal_binding_t signals[] = {
 
 static bool bound = false;
 
+static bool is_charging_mode(const char *mode)
+{
+    return strcmp(mode, "undefined") ? true : false;
+}
+
+static void mode_request_cb(DBusPendingCall *pending,
+                            void *user_data)
+{
+    (void)user_data; // not used
+
+    dsme_log(LOG_DEBUG, "usbtracker: mode_request reply");
+
+    DBusMessage *rsp = 0;
+    DBusError    err = DBUS_ERROR_INIT;
+    const char  *dta = 0;
+
+    if( !(rsp = dbus_pending_call_steal_reply(pending)) )
+        goto cleanup;
+
+    if( dbus_set_error_from_message(&err, rsp) ||
+        !dbus_message_get_args(rsp, &err,
+                               DBUS_TYPE_STRING, &dta,
+                               DBUS_TYPE_INVALID) )
+    {
+        dsme_log(LOG_ERR, "usbtracker: mode_request: %s: %s",
+                 err.name, err.message);
+        goto cleanup;
+    }
+
+    dsme_log(LOG_DEBUG, "usbtracker: mode = '%s'", dta ?: "???");
+
+    if( dta )
+        send_charger_status(is_charging_mode(dta));
+
+cleanup:
+    if( rsp ) dbus_message_unref(rsp);
+    dbus_error_free(&err);
+}
+
 DSME_HANDLER(DSM_MSGTYPE_DBUS_CONNECT, client, msg)
 {
-  dsme_log(LOG_DEBUG, "usbtracker: DBUS_CONNECT");
-  dsme_dbus_bind_signals(&bound, signals);
-  /* we are connected on dbus, now we can query 
-     charger/usb connection details */
+    dsme_log(LOG_DEBUG, "usbtracker: DBUS_CONNECT");
+    dsme_dbus_bind_signals(&bound, signals);
 
-  DBusError       error;
-  DBusConnection *conn = 0;
-  DBusMessage *req = NULL, *reply = NULL;
-  char *ret = 0;
+    /* we are connected on dbus, now we can query
+     * charger/usb connection details */
 
-  dbus_error_init(&error);
+    DBusError        err  = DBUS_ERROR_INIT;
+    DBusPendingCall *pc   = 0;
+    DBusConnection  *conn = 0;
+    DBusMessage     *req  = NULL;
 
-  conn = dbus_bus_get(DBUS_BUS_SYSTEM, &error);
-  if (!conn)
-  {
-     if (dbus_error_is_set(&error))
-     	return;
-  }
+    if( !(conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err)) )
+    {
+        dsme_log(LOG_ERR, "DBUS_BUS_SYSTEM: %s: %s",
+                 err.name, err.message);
+        goto cleanup;
+    }
 
-  if ((req = dbus_message_new_method_call("com.meego.usb_moded", "/com/meego/usb_moded", "com.meego.usb_moded", "mode_request")) != NULL)
-  {
-        if ((reply = dbus_connection_send_with_reply_and_block(conn, req, -1, NULL)) != NULL)
-        {
-            dbus_message_get_args(reply, NULL, DBUS_TYPE_OBJECT_PATH, &ret, DBUS_TYPE_INVALID);
-            dbus_message_unref(reply);
-        }
-        dbus_message_unref(req);
-  }
-  dbus_connection_close(conn);
+    req = dbus_message_new_method_call("com.meego.usb_moded",
+                                       "/com/meego/usb_moded",
+                                       "com.meego.usb_moded",
+                                       "mode_request");
+    if( !req )
+        goto cleanup;
 
-  if(ret)
-  {
-    if(!strcmp(ret, "dedicated_charger"))
-      send_charger_status(TRUE);
-    else
-      send_charger_status(FALSE);
-  }
+    if( !dbus_connection_send_with_reply(conn, req, &pc, -1) )
+        goto cleanup;
+
+    if( !dbus_pending_call_set_notify(pc, mode_request_cb, 0, 0) )
+        goto cleanup;
+
+    dsme_log(LOG_DEBUG, "usbtracker: mode_request sent");
+
+cleanup:
+
+    if( pc ) dbus_pending_call_unref(pc);
+    if( req ) dbus_message_unref(req);
+    if( conn ) dbus_connection_unref(conn);
+    dbus_error_free(&err);
 }
 
 DSME_HANDLER(DSM_MSGTYPE_DBUS_DISCONNECT, client, msg)
