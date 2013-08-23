@@ -37,8 +37,10 @@
 
 #include "dsme/modules.h"
 #include "dsme/logging.h"
+#include <dsme/state.h>
 
 #include <string.h>
+#include <dbus/dbus.h>
 
 
 static void send_usb_status(bool mounted_to_pc)
@@ -53,18 +55,52 @@ static void send_usb_status(bool mounted_to_pc)
     broadcast_internally(&msg);
 }
 
+static void send_charger_status(bool charger_state)
+{
+    DSM_MSGTYPE_SET_CHARGER_STATE msg = DSME_MSG_INIT(DSM_MSGTYPE_SET_CHARGER_STATE);
+
+    msg.connected = charger_state;
+
+    dsme_log(LOG_DEBUG,
+             "broadcasting usb charger state:%s connected",
+             msg.connected ? "" : " not");
+
+    broadcast_internally(&msg);
+}
+
 static void usb_state_ind(const DsmeDbusMessage* ind)
 {
-    bool        mounted_to_pc = false;
+    static bool mounted_to_pc = false, mounted_to_pc_new = false;
+    static bool	charger_connected = false, charger_connected_new = false;
     const char* state         = dsme_dbus_message_get_string(ind);
 
     if (strcmp(state, "mass_storage") == 0 ||
         strcmp(state, "data_in_use" ) == 0)
     {
-        mounted_to_pc = true;
+	mounted_to_pc_new = true;
+    }
+    if (strcmp(state, "USB connected") == 0 ||
+	strcmp(state, "charger_connected") == 0 )
+        charger_connected_new = true;
+    else if (strcmp(state, "USB disconnected") == 0 ||
+             strcmp(state, "charger_disconnected") == 0 )
+    {
+        charger_connected_new = false;
+	mounted_to_pc_new = false;
     }
 
-    send_usb_status(mounted_to_pc);
+    if (mounted_to_pc != mounted_to_pc_new)
+    {
+        mounted_to_pc = mounted_to_pc_new;
+        send_usb_status(mounted_to_pc);
+    }
+    
+    if (charger_connected != charger_connected_new)
+    {
+        charger_connected = charger_connected_new;
+        send_charger_status(charger_connected);
+    }
+
 }
 
 static const dsme_dbus_signal_binding_t signals[] = {
@@ -74,10 +110,86 @@ static const dsme_dbus_signal_binding_t signals[] = {
 
 static bool bound = false;
 
+static bool is_charging_mode(const char *mode)
+{
+    return strcmp(mode, "undefined") ? true : false;
+}
+
+static void mode_request_cb(DBusPendingCall *pending,
+                            void *user_data)
+{
+    (void)user_data; // not used
+
+    dsme_log(LOG_DEBUG, "usbtracker: mode_request reply");
+
+    DBusMessage *rsp = 0;
+    DBusError    err = DBUS_ERROR_INIT;
+    const char  *dta = 0;
+
+    if( !(rsp = dbus_pending_call_steal_reply(pending)) )
+        goto cleanup;
+
+    if( dbus_set_error_from_message(&err, rsp) ||
+        !dbus_message_get_args(rsp, &err,
+                               DBUS_TYPE_STRING, &dta,
+                               DBUS_TYPE_INVALID) )
+    {
+        dsme_log(LOG_ERR, "usbtracker: mode_request: %s: %s",
+                 err.name, err.message);
+        goto cleanup;
+    }
+
+    dsme_log(LOG_DEBUG, "usbtracker: mode = '%s'", dta ?: "???");
+
+    if( dta )
+        send_charger_status(is_charging_mode(dta));
+
+cleanup:
+    if( rsp ) dbus_message_unref(rsp);
+    dbus_error_free(&err);
+}
+
 DSME_HANDLER(DSM_MSGTYPE_DBUS_CONNECT, client, msg)
 {
-  dsme_log(LOG_DEBUG, "usbtracker: DBUS_CONNECT");
-  dsme_dbus_bind_signals(&bound, signals);
+    dsme_log(LOG_DEBUG, "usbtracker: DBUS_CONNECT");
+    dsme_dbus_bind_signals(&bound, signals);
+
+    /* we are connected on dbus, now we can query
+     * charger/usb connection details */
+
+    DBusError        err  = DBUS_ERROR_INIT;
+    DBusPendingCall *pc   = 0;
+    DBusConnection  *conn = 0;
+    DBusMessage     *req  = NULL;
+
+    if( !(conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err)) )
+    {
+        dsme_log(LOG_ERR, "DBUS_BUS_SYSTEM: %s: %s",
+                 err.name, err.message);
+        goto cleanup;
+    }
+
+    req = dbus_message_new_method_call("com.meego.usb_moded",
+                                       "/com/meego/usb_moded",
+                                       "com.meego.usb_moded",
+                                       "mode_request");
+    if( !req )
+        goto cleanup;
+
+    if( !dbus_connection_send_with_reply(conn, req, &pc, -1) )
+        goto cleanup;
+
+    if( !dbus_pending_call_set_notify(pc, mode_request_cb, 0, 0) )
+        goto cleanup;
+
+    dsme_log(LOG_DEBUG, "usbtracker: mode_request sent");
+
+cleanup:
+
+    if( pc ) dbus_pending_call_unref(pc);
+    if( req ) dbus_message_unref(req);
+    if( conn ) dbus_connection_unref(conn);
+    dbus_error_free(&err);
 }
 
 DSME_HANDLER(DSM_MSGTYPE_DBUS_DISCONNECT, client, msg)

@@ -109,6 +109,8 @@ thermalmanager_la_LIBADD = -lthermalmanager_dbus_if
 emergencycalltracker_la_SOURCES = emergencycalltracker.c
 
 usbtracker_la_SOURCES = usbtracker.c
+usbtracker_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS)
+usbtracker_la_LIBADD = $(DBUS_LIBS)
 
 iphb_la_SOURCES = iphb.c
 iphb_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS)
