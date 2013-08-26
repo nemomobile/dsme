@@ -1,6 +1,6 @@
 [Unit]
 Description=DSME
-After=syslog.target
+After=syslog.target usb-moded.service
 
 [Service]
 Type=notify
