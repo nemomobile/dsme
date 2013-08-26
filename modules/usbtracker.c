@@ -42,6 +42,8 @@
 #include <string.h>
 #include <dbus/dbus.h>
 
+static bool mounted_to_pc = false; 
+static bool charger_connected = false;
 
 static void send_usb_status(bool mounted_to_pc)
 {
@@ -50,7 +52,7 @@ static void send_usb_status(bool mounted_to_pc)
     msg.mounted_to_pc = mounted_to_pc;
 
     dsme_log(LOG_DEBUG,
-             "broadcasting usb state:%s mounted to PC",
+             "usbtracker: broadcasting usb state:%s mounted to PC",
              msg.mounted_to_pc ? "" : " not");
     broadcast_internally(&msg);
 }
@@ -62,7 +64,7 @@ static void send_charger_status(bool charger_state)
     msg.connected = charger_state;
 
     dsme_log(LOG_DEBUG,
-             "broadcasting usb charger state:%s connected",
+             "usbtracker: broadcasting usb charger state:%s connected",
              msg.connected ? "" : " not");
 
     broadcast_internally(&msg);
@@ -70,9 +72,11 @@ static void send_charger_status(bool charger_state)
 
 static void usb_state_ind(const DsmeDbusMessage* ind)
 {
-    static bool mounted_to_pc = false, mounted_to_pc_new = false;
-    static bool	charger_connected = false, charger_connected_new = false;
+    static bool mounted_to_pc_new = false;
+    static bool charger_connected_new = false;
     const char* state         = dsme_dbus_message_get_string(ind);
+
+    // dsme_log(LOG_DEBUG, "usbtracker: %s(state = %s)",__FUNCTION__, state);
 
     if (strcmp(state, "mass_storage") == 0 ||
         strcmp(state, "data_in_use" ) == 0)
@@ -110,17 +114,26 @@ static const dsme_dbus_signal_binding_t signals[] = {
 
 static bool bound = false;
 
-static bool is_charging_mode(const char *mode)
+static bool is_charging(const char *mode)
 {
     return strcmp(mode, "undefined") ? true : false;
+}
+
+static bool is_mounted_pc(const char *mode)
+{
+  bool connected = FALSE;
+   
+    if ((strcmp(mode, "mass_storage") == 0) ||
+        (strcmp(mode, "mtp_mode") == 0))
+        connected = TRUE;
+
+    return (connected);
 }
 
 static void mode_request_cb(DBusPendingCall *pending,
                             void *user_data)
 {
     (void)user_data; // not used
-
-    dsme_log(LOG_DEBUG, "usbtracker: mode_request reply");
 
     DBusMessage *rsp = 0;
     DBusError    err = DBUS_ERROR_INIT;
@@ -141,8 +154,13 @@ static void mode_request_cb(DBusPendingCall *pending,
 
     dsme_log(LOG_DEBUG, "usbtracker: mode = '%s'", dta ?: "???");
 
-    if( dta )
-        send_charger_status(is_charging_mode(dta));
+    if( dta ) 
+    {
+        charger_connected = is_charging(dta);
+        send_charger_status(charger_connected);
+        mounted_to_pc = is_mounted_pc(dta);
+        send_usb_status(mounted_to_pc);
+    }
 
 cleanup:
     if( rsp ) dbus_message_unref(rsp);
