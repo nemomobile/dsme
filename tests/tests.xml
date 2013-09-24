@@ -4,7 +4,7 @@
         <description>Testing dsme functionality</description>
         <set name="Basic-tests-for-dsme" feature="dsme">
             <case name="dsme-socket-interface" type="Functional" level="Component">
-              <step expected_result="0">dsmetool -v</step>
+              <step expected_result="0">/usr/sbin/dsmetool -v</step>
             </case>
             <case name="dsme-dbus-interface" type="Functional" level="Component">
               <step expected_result="0">dbus-send --system --print-reply --dest=com.nokia.dsme /com/nokia/dsme com.nokia.dsme.request.get_version</step>
