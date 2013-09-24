@@ -87,7 +87,7 @@ static bool enable_hw_core_temp_sensor(void)
         }
         fclose(fd);
     } else {
-        dsme_log(LOG_ERROR, "FAILED enabling thermal sensor %s", CORE_SENSOR_MODE);
+        dsme_log(LOG_ERR, "FAILED enabling thermal sensor %s", CORE_SENSOR_MODE);
     }
     return ret;
 }
