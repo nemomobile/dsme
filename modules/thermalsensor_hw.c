@@ -34,17 +34,17 @@
 
 static bool read_temperature(const char *path, int *temperature)
 {
-    FILE* fd; 
+    FILE* f;
     bool  ret = false;
     // dsme_log(LOG_DEBUG, "thermal: %s", __FUNCTION__);
 
-    fd = fopen(path, "r");
-    if (fd) {
-        if (fscanf(fd, "%d", temperature) == 1) {
+    f = fopen(path, "r");
+    if (f) {
+        if (fscanf(f, "%d", temperature) == 1) {
             // dsme_log(LOG_DEBUG, "thermal: %s = %d C", path, *temperature);
             ret = true;
         }
-        fclose(fd);
+        fclose(f);
     } else {
         dsme_log(LOG_DEBUG, "thermal: read of %s FAILED", path);
     }
@@ -68,24 +68,23 @@ extern bool dsme_hw_get_core_temperature(thermal_object_t*         thermal_objec
         if (callback) 
             callback(thermal_object, temperature);
         return true;
-    } else {
-        return false;
-    }
+    } 
+    return false;
 }
 
 static bool enable_hw_core_temp_sensor(void)
 {
-    FILE* fd; 
+    FILE* f; 
     bool ret = false;
 
     // dsme_log(LOG_DEBUG, "thermal: %s", __FUNCTION__);
 
-    fd = fopen(CORE_SENSOR_MODE, "w");
-    if (fd) {
-        if (fprintf(fd, "enabled") > 0) {
+    f = fopen(CORE_SENSOR_MODE, "w");
+    if (f) {
+        if (fprintf(f, "enabled") > 0) {
             ret = true;
         }
-        fclose(fd);
+        fclose(f);
     } else {
         dsme_log(LOG_ERR, "FAILED enabling thermal sensor %s", CORE_SENSOR_MODE);
     }
@@ -101,9 +100,8 @@ extern bool dsme_hw_supports_core_temp(void)
     if (enable_hw_core_temp_sensor() &&
         dsme_hw_get_core_temperature(NULL, NULL)) {
         return true;
-    } else {
-        return false;
-    }
+    } 
+    return false;
 }
 
 /* Get temp from battery sensor */
@@ -122,9 +120,8 @@ extern bool dsme_hw_get_battery_temperature(thermal_object_t*         thermal_ob
         if (callback) 
             callback(thermal_object, temperature);
         return true;
-    } else {
-        return false;
-    }
+    } 
+    return false;
 }
 
 /* Does our HW support this temp reading ? */
@@ -133,6 +130,5 @@ extern bool dsme_hw_supports_battery_temp(void)
 
     if (dsme_hw_get_battery_temperature(NULL, NULL))
         return true;
-    else
-        return false;
+    return false;
 }
