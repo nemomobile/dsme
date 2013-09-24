@@ -84,6 +84,9 @@ const char *modules[] = {
     "alarmtracker.so",
     "thermalflagger.so",
     "thermalmanager.so",
+#ifdef DSME_HW_THERMAL_MGMT
+    "thermalobject_hw.so",
+#endif
 #ifdef DSME_MEMORY_THERMAL_MGMT
     "thermalobject_memory.so",
 #endif

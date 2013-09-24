@@ -31,6 +31,9 @@
  * - use a single timer for all thermal objects
  *   i.e. use the shortest interval of all thermal objects
  */
+
+#define _GNU_SOURCE
+
 #include "thermalmanager.h"
 
 #include <iphbd/iphb_internal.h>
@@ -259,10 +262,15 @@ static void thermal_object_polling_interval_expired(void* object)
 
 void dsme_register_thermal_object(thermal_object_t* thermal_object)
 {
+    dsme_log(LOG_DEBUG,
+             "%s (%s)", __FUNCTION__,
+             thermal_object->conf->name);
+
   enter_module(this_module);
 
 #ifdef DSME_THERMAL_TUNING
   thermal_object = thermal_object_copy(thermal_object);
+  thermal_object_try_to_read_config(thermal_object);
 #endif
 
   // add the thermal object to the list of know thermal objects
@@ -275,6 +283,7 @@ void dsme_register_thermal_object(thermal_object_t* thermal_object)
 
 void dsme_unregister_thermal_object(thermal_object_t* thermal_object)
 {
+  dsme_log(LOG_DEBUG, "%s(%s)", __FUNCTION__, thermal_object->conf->name);
   // TODO
 }
 
@@ -386,16 +395,16 @@ static bool thermal_object_config_read(
 
   for (i = 0; i < THERMAL_STATUS_COUNT; ++i) {
       if (fscanf(f,
-                 "%d, %d, %d",
+                 "%d, %d, %d, %d",
                  &new_config.state[i].min,
                  &new_config.state[i].max,
-                 &new_config.state[i].mintime) != 3)
+                 &new_config.state[i].mintime,
+                 &new_config.state[i].maxtime) != 4)
       {
           dsme_log(LOG_ERR, "syntax error in thermal tuning on line %d", i+1);
           success = false;
           break;
       }
-      new_config.state[i].maxtime = new_config.state[i].mintime + 10;
   }
 
   if (success) {
@@ -413,23 +422,19 @@ static void thermal_object_try_to_read_config(thermal_object_t* thermal_object)
 
       if (thermal_object_config_read(thermal_object->conf, f)) {
           dsme_log(LOG_NOTICE,
-                   "(re)read thermal tuning file for %s;"
-                   " thermal values may have changed",
+                   "Read thermal tuning file for %s",
                    thermal_object->conf->name);
       } else {
           dsme_log(LOG_NOTICE,
-                   "thermal tuning file for %s discarded;"
-                   " no change in thermal values",
+                   "Thermal tuning file for %s discarded. Using default values",
                    thermal_object->conf->name);
       }
 
       fclose(f);
-#ifndef DSME_THERMAL_LOGGING
   } else {
-      dsme_log(LOG_DEBUG,
-               "no thermal tuning file for %s; no change in thermal values",
+      dsme_log(LOG_NOTICE,
+               "No thermal tuning file for %s. Using default values",
                thermal_object->conf->name);
-#endif
   }
 }
 
@@ -499,11 +504,13 @@ static void log_temperature(int temperature, const thermal_object_t* thermal_obj
   }
 
   fprintf(log_file,
-          "%d %d %d %s\n",
-          (int)time(0),
+          "%d %s %d C %s\n",
           now - start_time,
+          thermal_object->conf->name,
           temperature,
           status_string(thermal_object->status));
   fflush(log_file);
+  dsme_log(LOG_DEBUG,"%s %d C %s", thermal_object->conf->name, 
+	   temperature, status_string(thermal_object->status));
 }
 #endif
