@@ -1,5 +1,5 @@
 # Package name and version
-AC_INIT(dsme, 0.62.16)
+AC_INIT(dsme, 0.62.17)
 
 AM_INIT_AUTOMAKE
 
@@ -105,6 +105,19 @@ AS_IF([test "x$enable_memory_thermal_mgmt" != xno],
 AM_CONDITIONAL([WANT_MEMORY_THERMAL_MGMT], [test x$enable_memory_thermal_mgmt != xno])
 
 #
+# HW thermal mgmt
+#
+AC_ARG_ENABLE([hw-thermal-mgmt],
+  [AS_HELP_STRING([--disable-hw-thermal-mgmt],
+    [disable hw thermal management (libthermalobject_hw)])],
+  [],
+  [enable_hw_thermal_mgmt=yes])
+
+AS_IF([test "x$enable_hw_thermal_mgmt" != xno],
+  [AC_DEFINE([DSME_HW_THERMAL_MGMT], [1])])
+AM_CONDITIONAL([WANT_HW_THERMAL_MGMT], [test x$enable_hw_thermal_mgmt != xno])
+
+#
 # pwrkeymonitor
 #
 AC_ARG_ENABLE([pwrkeymonitor],
@@ -168,7 +181,7 @@ AC_CHECK_LIB([dsme], [dsmesock_init], [AC_MSG_NOTICE([got libdsme])], AC_MSG_FAI
 
 # Check headers
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h ftw.h inttypes.h limits.h stdint.h stdlib.h \
-                  string.h strings.h sys/ioctl.h sys/socket.h sys/time.h    \
+                  string.h strings.h sys/ioctl.h sys/socket.h sys/time.h time.h   \
                   syslog.h unistd.h utmpx.h])
 
 # Checks for typedefs, structures, and compiler characteristics.

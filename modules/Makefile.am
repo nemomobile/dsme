@@ -43,6 +43,10 @@ if WANT_MEMORY_THERMAL_MGMT
 pkglib_LTLIBRARIES += thermalobject_memory.la
 endif
 
+if WANT_HW_THERMAL_MGMT
+pkglib_LTLIBRARIES += thermalobject_hw.la
+endif
+
 if WANT_POWERON_TIMER
 pkglib_LTLIBRARIES += powerontimer.la
 endif
@@ -133,6 +137,14 @@ if WANT_MEMORY_THERMAL_MGMT
 thermalobject_memory_la_SOURCES = thermalobject_memory.c \
                                      thermalsensor_omap.c   \
                                      thermalsensor_omap.h
+endif
+
+if WANT_HW_THERMAL_MGMT
+thermalobject_hw_la_SOURCES = thermalobject_hw.c \
+                              thermalsensor_hw.c   \
+                              thermalsensor_hw.h
+thermalobject_hw_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
+thermalobject_hw_la_LIBADD = $(GLIB_LIBS)
 endif
 
 
