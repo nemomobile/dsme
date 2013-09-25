@@ -199,13 +199,6 @@ static void receive_temperature_response(thermal_object_t* thermal_object,
       temperature = temperature - 273;
   }
 
-#ifndef DSME_THERMAL_LOGGING
-  dsme_log(LOG_DEBUG,
-           "%s temperature: %d",
-           thermal_object->conf->name,
-           temperature);
-#endif
-
   /* figure out the new thermal object status based on the temperature */
   if        (temperature < thermal_object->conf->state[new_status].min) {
       while (new_status > THERMAL_STATUS_NORMAL &&
@@ -221,6 +214,14 @@ static void receive_temperature_response(thermal_object_t* thermal_object,
       }
   }
   thermal_object->status = new_status;
+
+#ifndef DSME_THERMAL_LOGGING
+  dsme_log(LOG_DEBUG,
+           "%s temperature: %d %s",
+           thermal_object->conf->name,
+           status_string(thermal_object->status),
+           temperature);
+#endif
 
   if (new_status != previous_status) {
       /* thermal object status has changed*/
