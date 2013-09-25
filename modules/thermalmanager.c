@@ -219,8 +219,8 @@ static void receive_temperature_response(thermal_object_t* thermal_object,
   dsme_log(LOG_DEBUG,
            "%s temperature: %d %s",
            thermal_object->conf->name,
-           thermal_status_name[thermal_object->status],
-           temperature);
+           temperature,
+           thermal_status_name[thermal_object->status]);
 #endif
 
   if (new_status != previous_status) {
