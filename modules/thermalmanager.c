@@ -82,13 +82,13 @@ static THERMAL_STATUS current_status = THERMAL_STATUS_NORMAL;
 static bool is_in_ta_test = false;
 #endif
 
+static const char* const thermal_status_name[] = {
+  "normal", "warning", "alert", "fatal"
+};
+
 
 static const char* current_status_name()
 {
-  static const char* const thermal_status_name[] = {
-      "normal", "warning", "alert", "fatal"
-  };
-
   return thermal_status_name[current_status];
 }
 
@@ -219,7 +219,7 @@ static void receive_temperature_response(thermal_object_t* thermal_object,
   dsme_log(LOG_DEBUG,
            "%s temperature: %d %s",
            thermal_object->conf->name,
-           status_string(thermal_object->status),
+           thermal_status_name[thermal_object->status],
            temperature);
 #endif
 
