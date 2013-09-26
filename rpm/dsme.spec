@@ -15,7 +15,7 @@ Name:       dsme
 # << macros
 
 Summary:    Device State Management Entity
-Version:    0.62.17
+Version:    0.62.18
 Release:    0
 Group:      System/System Control
 License:    LGPLv2+
