@@ -105,30 +105,30 @@ static void read_config_file(void)
     if (f) {
         for (i = 0; i < BATTERY_STATUS_COUNT; i++) {
             if (fscanf(f,
-		       "%d, %d",
-		       &new_levels[i].min_level,
-		       &new_levels[i].polling_time) != 2) {
+                      "%d, %d",
+                       &new_levels[i].min_level,
+                       &new_levels[i].polling_time) != 2) {
                 success = false;
-	    }
-	    if (success) {
-	        /* Do some sanity checking for values 
-		 * Battery level values should be between 2-99, and in descending order.
-		 * Polling times should also make sense  10-1000s
-		 */
+            }
+            if (success) {
+                /* Do some sanity checking for values 
+                  * Battery level values should be between 2-99, and in descending order.
+                  * Polling times should also make sense  10-1000s
+                  */
                 if (((i <  BATTERY_STATUS_EMPTY) && (new_levels[i].min_level < 2)) ||
                     (new_levels[i].min_level > 99 ) ||
                     ((i>0) && (new_levels[i].min_level >=  new_levels[i-1].min_level)) ||
                     (new_levels[i].polling_time < 10 ) ||
                     (new_levels[i].polling_time > 1000 )) {
-		    success = false;
-		}
-	    }
-	    if (!success) {
-	        dsme_log(LOG_ERR, "batterytracker: syntax error in %s line %d", BATTERY_LEVEL_CONFIG_FILE, i+1);
-		break;
-	    }
-	}
-	fclose(f);
+                    success = false;
+                }
+            }
+            if (!success) {
+                dsme_log(LOG_ERR, "batterytracker: syntax error in %s line %d", BATTERY_LEVEL_CONFIG_FILE, i+1);
+                break;
+            }
+        }
+        fclose(f);
     } else
         success = false;
 
@@ -150,7 +150,7 @@ static bool read_data(const char *path, int *data)
     f = fopen(path, "r");
     if (f) {
         if (fscanf(f, "%d", data) == 1) {
-	    // dsme_log(LOG_DEBUG, "batterytracker: %s = %d", path, *data);
+            // dsme_log(LOG_DEBUG, "batterytracker: %s = %d", path, *data);
             ret = true;
         }
         fclose(f);
@@ -172,7 +172,7 @@ static void update_battery_info(void)
         if ((data >= 0) && (data <= 100)) {
             battery_state.percentance = data;
             battery_state.data_uptodate = true;
-	}
+        }
     }
     if (read_data(CHARGING_INFO_PATH, &data)) {
         battery_state.is_charging = (data != 0);
@@ -189,7 +189,7 @@ static void update_battery_status(void)
         if (battery_state.percentance >= levels[n].min_level) {
             battery_state.status = n;
             break;
-	}
+        }
     } 
     if (n < BATTERY_STATUS_COUNT) {
         dsme_log(LOG_DEBUG, "batterytracker: Battery status %d%% = %s", battery_state.percentance, battery_status_name[n]);
@@ -208,12 +208,12 @@ static void  give_warning_if_needed()
         if (! battery_warning_sent) {
             battery_warning_sent = true;
             dsme_log(LOG_INFO, "batterytracker:  WARNING, Battery level low %d%%", battery_state.percentance);
-	}
-	/* TODO: We should broadcast warnings every now and then  */
-	/* Second tough, maybe we don't need to send anything. Seems that home screen gets
-	 * needed info already.
-	 * Let's leave this function here as place holder if ever needed
-	 */
+        }
+        /* TODO: We should broadcast warnings every now and then  */
+        /* Second tough, maybe we don't need to send anything. Seems that home screen gets
+         * needed info already.
+         * Let's leave this function here as place holder if ever needed
+         */
     } else if (battery_warning_sent && (battery_state.status != BATTERY_STATUS_EMPTY)) {
         dsme_log(LOG_INFO, "batterytracker: Battery level back to normal %d%%", battery_state.percentance);
         battery_warning_sent = false;
@@ -245,42 +245,42 @@ static void send_empty_if_needed()
         dsme_log(LOG_INFO, "batterytracker: WARNING, Battery level %d%% EMPTY", battery_state.percentance);
         if (! battery_empty_seen) {
             /* We have first time reached battery level empty.
-	     * Remember the level we saw it
-	     */
-	    battery_empty_seen = true;
-	    battery_level_when_empty_seen = battery_state.percentance;
-	}
-	/* Before starting shutdown, check charging. If charging is
-	 * going, give battery change to charge. But if battery level
-	 * keeps dropping even charger is connected (could be that we get only 100 mA)
-	 * we need to do shutdown, no matter what
-	 */
-	if (!battery_state.is_charging) {
-	    /* Charging is not goig on. Request shutdown */
-	    request_shutdown = true;
-	} else {
-	    /* If charging, make sure level won't drop more and always keep above 2% */
-	    if ((battery_state.percentance < battery_level_when_empty_seen) ||
-	        (battery_state.percentance < 2)) {
-	        request_shutdown = true;
-		dsme_log(LOG_INFO, "batterytracker: Battery level keeps dropping. Must shutdown");
-	    } else {
-		dsme_log(LOG_INFO, "batterytracker: Charging is going on. We don't shutdown");
-	    }
-	}
+             * Remember the level we saw it
+             */
+            battery_empty_seen = true;
+            battery_level_when_empty_seen = battery_state.percentance;
+        }
+        /* Before starting shutdown, check charging. If charging is
+         * going, give battery change to charge. But if battery level
+         * keeps dropping even charger is connected (could be that we get only 100 mA)
+         * we need to do shutdown, no matter what
+         */
+        if (!battery_state.is_charging) {
+            /* Charging is not goig on. Request shutdown */
+            request_shutdown = true;
+        } else {
+            /* If charging, make sure level won't drop more and always keep above 2% */
+            if ((battery_state.percentance < battery_level_when_empty_seen) ||
+                (battery_state.percentance < 2)) {
+                request_shutdown = true;
+                dsme_log(LOG_INFO, "batterytracker: Battery level keeps dropping. Must shutdown");
+            } else {
+                dsme_log(LOG_INFO, "batterytracker: Charging is going on. We don't shutdown");
+            }
+        }
 
-	if (request_shutdown && !battery_empty_sent) {
-	    send_battery_empty_status(true);
-	    battery_empty_sent = true;
-	}
+        if (request_shutdown && !battery_empty_sent) {
+            send_battery_empty_status(true);
+            battery_empty_sent = true;
+        }
 
     } else if (battery_empty_seen) {
-	battery_empty_seen = false;
-	dsme_log(LOG_INFO, "batterytracker: Battery no more empty %d%%", battery_state. percentance);
-	if (battery_empty_sent) {
-	    send_battery_empty_status(false);
-	    battery_empty_sent = false;
-	}
+        battery_empty_seen = false;
+        dsme_log(LOG_INFO, "batterytracker: Battery no more empty %d%%", battery_state. percentance);
+        if (battery_empty_sent) {
+            send_battery_empty_status(false);
+            battery_empty_sent = false;
+        }
     }
 }
 
@@ -296,9 +296,9 @@ static void schedule_next_wakeup(void)
     if (battery_state.data_uptodate) {
         maxtime = levels[battery_state.status].polling_time;
         /* Note, it is important to give big enough window min..max
-	 * then IPHB can freely choose best wake-up time
-	 */
-	mintime = maxtime/2;
+         * then IPHB can freely choose best wake-up time
+         */
+        mintime = maxtime/2;
     }
 
     msg.req.mintime = mintime;
@@ -318,8 +318,8 @@ static void do_regular_duties()
     update_battery_info();
     if (battery_state.data_uptodate) {
         update_battery_status();
-	give_warning_if_needed();
-	send_empty_if_needed();
+        give_warning_if_needed();
+        send_empty_if_needed();
     } else {
         dsme_log(LOG_WARNING, "batterytracker: No battery data available");
     }
