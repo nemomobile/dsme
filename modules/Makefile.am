@@ -67,6 +67,10 @@ if WANT_PWRKEY_MONITOR
 pkglib_LTLIBRARIES += pwrkeymonitor.la
 endif
 
+if WANT_BATTERY_TRACKER
+pkglib_LTLIBRARIES += batterytracker.la
+endif
+
 startup_la_SOURCES = startup.c
 
 # TODO: remove this
@@ -173,4 +177,10 @@ if WANT_PWRKEY_MONITOR
 pwrkeymonitor_la_SOURCES = pwrkeymonitor.c
 pwrkeymonitor_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
 pwrkeymonitor_la_LIBADD = $(GLIB_LIBS)
+endif
+
+if WANT_BATTERY_TRACKER
+batterytracker_la_SOURCES = batterytracker.c
+batterytracker_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS) -D_GNU_SOURCE
+batterytracker_la_LIBADD = $(GLIB_LIBS)
 endif
