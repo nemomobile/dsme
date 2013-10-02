@@ -397,18 +397,42 @@ static bool thermal_object_config_read(
 
   for (i = 0; i < THERMAL_STATUS_COUNT; ++i) {
       if (fscanf(f,
-                 "%d, %d, %d, %d",
+                 "%d, %d, %d",
                  &new_config.state[i].min,
                  &new_config.state[i].max,
-                 &new_config.state[i].mintime,
-                 &new_config.state[i].maxtime) != 4)
-      {
-          dsme_log(LOG_ERR, "syntax error in thermal tuning on line %d", i+1);
+                 &new_config.state[i].maxtime) != 3) {
           success = false;
+      }
+      if (success) {
+          /* Do some sanity checking for values 
+           * Temp values should be between 20-200, and in ascending order.
+           * Min must be < max
+	   * Next min <= previous max
+           * Polling times should also make sense  10-1000s
+           */
+          if (((i > THERMAL_STATUS_NORMAL) && (new_config.state[i].min < 20)) ||
+              (new_config.state[i].max < 20) ||
+              (new_config.state[i].min > 200) ||
+              ((i > THERMAL_STATUS_FATAL) && (new_config.state[i].max > 200)) ||
+              (new_config.state[i].min >= new_config.state[i].max) ||
+              ((i > THERMAL_STATUS_NORMAL) && (new_config.state[i].min <= new_config.state[i-1].min)) ||
+              ((i > THERMAL_STATUS_NORMAL) && (new_config.state[i].max <= new_config.state[i-1].max)) ||
+              ((i > THERMAL_STATUS_NORMAL) && (new_config.state[i].min > new_config.state[i-1].max)) ||
+              (new_config.state[i].maxtime < 10) ||
+              (new_config.state[i].maxtime > 1000)) {
+              success = false;
+          }
+      }
+      if (success) {
+          /* Note, it is important to give big enough window min..max
+           * then IPHB can freely choose best wake-up time
+           */
+          new_config.state[i].mintime = new_config.state[i].maxtime/2;
+      } else {
+          dsme_log(LOG_ERR, "syntax error in thermal tuning on line %d", i+1);
           break;
       }
   }
-
   if (success) {
       *config = new_config;
   }
