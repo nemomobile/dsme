@@ -407,7 +407,7 @@ static bool thermal_object_config_read(
           /* Do some sanity checking for values 
            * Temp values should be between 20-200, and in ascending order.
            * Min must be < max
-	   * Next min <= previous max
+           * Next min <= previous max
            * Polling times should also make sense  10-1000s
            */
           if (((i > THERMAL_STATUS_NORMAL) && (new_config.state[i].min < 20)) ||
@@ -537,6 +537,6 @@ static void log_temperature(int temperature, const thermal_object_t* thermal_obj
           status_string(thermal_object->status));
   fflush(log_file);
   dsme_log(LOG_DEBUG,"%s %d C %s", thermal_object->conf->name, 
-	   temperature, status_string(thermal_object->status));
+           temperature, status_string(thermal_object->status));
 }
 #endif
