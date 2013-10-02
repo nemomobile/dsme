@@ -11,7 +11,7 @@ Type=notify
 # This works because EnvironmentFile overrides Environment
 Environment=BOOTSTATE=USER
 EnvironmentFile=-/run/systemd/boot-status/bootstate
-ExecStart=/usr/sbin/dsme -p /usr/lib/dsme/libstartup.so --systemd -v7
+ExecStart=/usr/sbin/dsme -p /usr/lib/dsme/libstartup.so --systemd
 # No restart, we want WD to bite
 Restart=no
 
