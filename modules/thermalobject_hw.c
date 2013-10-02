@@ -41,8 +41,8 @@ static thermal_object_configuration_t core_thermal_conf = {
   "hw_core",
   {
       /* (min, max], [mintime, maxtime] */
-      {   -99, 100,       110,     120 }, /* NORMAL  */
-      {    99, 110,        55,      60 }, /* WARNING */
+      {   -99, 100,        60,     120 }, /* NORMAL  */
+      {    99, 110,        30,      60 }, /* WARNING */
       {   109, 119,         5,      10 }, /* ALERT   */
       {   119, 200,         5,      10 }  /* FATAL   */
   },
@@ -62,8 +62,8 @@ static thermal_object_configuration_t battery_thermal_conf = {
   "hw_battery",
   {
       /* (min, max], [mintime, maxtime] */
-      {   -99,  60,       110,     120 }, /* NORMAL  */
-      {    59,  65,        55,      60 }, /* WARNING */
+      {   -99,  60,        60,     120 }, /* NORMAL  */
+      {    59,  65,        30,      60 }, /* WARNING */
       {    64,  68,         5,      10 }, /* ALERT   */
       {    68,  99,         5,      10 }, /* FATAL   */
   },
