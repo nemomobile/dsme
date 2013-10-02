@@ -367,6 +367,7 @@ void module_fini(void)
 #ifdef DSME_THERMAL_TUNING
 #include <stdio.h>
 
+/* Thermal values can be configured in file /etc/dsme/temp_<name>.conf */
 #define DSME_THERMAL_TUNING_CONF_PATH "/etc/dsme/temp_"
 
 static FILE* thermal_tuning_file(const char* thermal_object_name)
@@ -375,7 +376,7 @@ static FILE* thermal_tuning_file(const char* thermal_object_name)
 
   snprintf(name,
            sizeof(name),
-           "%s%s",
+           "%s%s.conf",
            DSME_THERMAL_TUNING_CONF_PATH,
            thermal_object_name);
 
