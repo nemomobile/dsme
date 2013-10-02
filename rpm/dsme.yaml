@@ -38,6 +38,10 @@ PkgBR:
     - libtool
     - automake
 
+Requires:
+    - systemd
+    - statefs
+
 UseAsNeeded: no
 
 Files:

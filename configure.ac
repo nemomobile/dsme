@@ -130,6 +130,18 @@ AS_IF([test "x$enable_pwrkeymonitor" != xno],
   [AC_DEFINE([DSME_PWRKEY_MONITOR], [1], [Enable pwrkeymonitor plugin])])
 AM_CONDITIONAL([WANT_PWRKEY_MONITOR], [test x$enable_pwrkeymonitor != xno])
 
+#
+# Battery tracker
+#
+AC_ARG_ENABLE([battery-tracker],
+  [AS_HELP_STRING([--disable-battery-tracker],
+    [disable hw thermal management (libbatterytracker)])],
+  [],
+  [enable_battery_tracker=yes])
+
+AS_IF([test "x$enable_battery_tracker" != xno],
+  [AC_DEFINE([DSME_BATTERY_TRACKER], [1])])
+AM_CONDITIONAL([WANT_BATTERY_TRACKER], [test x$enable_battery_tracker != xno])
 
 #
 # Compiler and linker flags
