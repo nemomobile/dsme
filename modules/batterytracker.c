@@ -73,10 +73,10 @@ typedef struct battery_levels_t {
 static battery_levels_t levels[BATTERY_STATUS_COUNT] = {
     /* Min %, polling time */
     {  80, 300  }, /* Full    80 - 100, polling 5 mins */
-    {  20, 180  }, /* Normal  20 - 80 */
-    {  10, 120  }, /* Low     10 - 20 */
-    {   5, 60   }, /* Warning  5 - 10, shutdown happens below this */
-    {   0, 60   }  /* Empty    0 - 5,  shutdown should have happened already  */
+    {  20, 180  }, /* Normal  20 - 79 */
+    {  10, 120  }, /* Low     10 - 19 */
+    {   5, 60   }, /* Warning  5 -  9, shutdown happens below this */
+    {   0, 60   }  /* Empty    0 -  4, shutdown should have happened already  */
 };
 
 typedef struct battery_state_t {
@@ -88,6 +88,7 @@ typedef struct battery_state_t {
 
 
 static battery_state_t battery_state;
+static dsme_state_t dsme_state = DSME_STATE_NOT_SET;
 
 static void read_config_file(void)
 {
@@ -242,34 +243,43 @@ static void send_empty_if_needed()
     // dsme_log(LOG_DEBUG, "batterytracker: %s()", __FUNCTION__);
 
     if (battery_state.status == BATTERY_STATUS_EMPTY) {
-        dsme_log(LOG_INFO, "batterytracker: WARNING, Battery level %d%% EMPTY", battery_state.percentance);
+        dsme_log(LOG_DEBUG, "batterytracker: Battery level %d%% EMPTY", battery_state.percentance);
         if (! battery_empty_seen) {
             /* We have first time reached battery level empty.
              * Remember the level we saw it
              */
             battery_empty_seen = true;
             battery_level_when_empty_seen = battery_state.percentance;
+            dsme_log(LOG_INFO, "batterytracker: Battery low level seen at %d%%", battery_state.percentance);
         }
         /* Before starting shutdown, check charging. If charging is
          * going, give battery change to charge. But if battery level
          * keeps dropping even charger is connected (could be that we get only 100 mA)
-         * we need to do shutdown, no matter what
+         * we need to do shutdown. But let charging continue in actdead state
          */
         if (!battery_state.is_charging) {
             /* Charging is not goig on. Request shutdown */
             request_shutdown = true;
-        } else {
-            /* If charging, make sure level won't drop more and always keep above 2% */
+        } else if (dsme_state != DSME_STATE_ACTDEAD) {
+            /* If charging in USER state, make sure level won't drop more and always keep above 2% */
             if ((battery_state.percentance < battery_level_when_empty_seen) ||
                 (battery_state.percentance < 2)) {
                 request_shutdown = true;
-                dsme_log(LOG_INFO, "batterytracker: Battery level keeps dropping. Must shutdown");
+                dsme_log(LOG_DEBUG, "batterytracker: Battery level keeps dropping. Must shutdown");
             } else {
-                dsme_log(LOG_INFO, "batterytracker: Charging is going on. We don't shutdown");
+                dsme_log(LOG_DEBUG, "batterytracker: Charging is going on. We don't shutdown");
             }
+        } else {
+            /* If charging in ACTDEAD state, let it charge even if not enough power is coming.
+             * There is no point of shutting down because usb connection would wake up the device anyway
+             * and that would result reboot loop. Better stay still in actdead and hope we get
+             * some juice from chager.
+             */
+            dsme_log(LOG_DEBUG, "batterytracker: Charging in ACTDEAD. We don't shutdown");
         }
 
         if (request_shutdown && !battery_empty_sent) {
+            dsme_log(LOG_INFO, "batterytracker: WARNING, Low battery shutdown, battery level %d%% EMPTY", battery_state.percentance);
             send_battery_empty_status(true);
             battery_empty_sent = true;
         }
@@ -326,6 +336,15 @@ static void do_regular_duties()
     schedule_next_wakeup();
 }
 
+DSME_HANDLER(DSM_MSGTYPE_STATE_CHANGE_IND, server, msg)
+{
+    dsme_log(LOG_DEBUG, "batterytracker: Received new state %d %s", msg->state,
+             (msg->state == DSME_STATE_ACTDEAD) ? "ACTDEAD" :
+             (msg->state == DSME_STATE_USER) ? "USER" : "");
+
+    dsme_state = msg->state;
+}
+
 DSME_HANDLER(DSM_MSGTYPE_WAKEUP, client, msg)
 {
     dsme_log(LOG_DEBUG, "batterytracker: WAKEUP");
@@ -348,9 +367,17 @@ module_fn_info_t message_handlers[] = {
     DSME_HANDLER_BINDING(DSM_MSGTYPE_WAKEUP),
     DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_CONNECT),
     DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_DISCONNECT),
+    DSME_HANDLER_BINDING(DSM_MSGTYPE_STATE_CHANGE_IND),
     { 0 }
 };
 
+
+static void query_current_state(void)
+{
+    // dsme_log(LOG_DEBUG, "batterytracker: %s()", __FUNCTION__);
+    DSM_MSGTYPE_STATE_QUERY query = DSME_MSG_INIT(DSM_MSGTYPE_STATE_QUERY);
+    broadcast_internally(&query);
+}
 
 void module_init(module_t* handle)
 {
@@ -362,6 +389,7 @@ void module_init(module_t* handle)
     dsme_log(LOG_DEBUG, "batterytracker.so loaded");
     battery_state.data_uptodate = false;
     read_config_file();
+    query_current_state();
 }
 
 void module_fini(void)
