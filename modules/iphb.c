@@ -1713,7 +1713,7 @@ static void clientlist_rethink_rtc_wakeup(const struct timeval *now)
 {
     /* start with no wakeup */
     struct timeval wakeup = tv_invalid;
-    time_t         sleeptime = 0;
+    time_t         sleeptime = INT_MAX;
     time_t         alarmtime = 0;
 
     /* scan closest external client wakeup time */
@@ -1741,6 +1741,9 @@ static void clientlist_rethink_rtc_wakeup(const struct timeval *now)
     rtc_sync_to_system_time();
 
     /* program rtc wakeup alarm (or disable it) */
+    if( sleeptime < 0 || sleeptime >= INT_MAX )
+	sleeptime = 0;
+
     rtc_set_alarm_after(sleeptime);
 }
 
