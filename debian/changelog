@@ -1,3 +1,10 @@
+dsme (0.62.21) unstable; urgency=low
+
+  * [iphb] Fix evaluation of the next rtc wakeup time
+  * [iphb] Use /dev/alarm for scheduling rtc wakeups
+
+ -- Simo Piiroinen <simo.piiroinen@jollamobile.com>  Wed, 09 Oct 2013 13:27:37 +0300
+
 dsme (0.62.1) unstable; urgency=low
 
   [Simo Piiroinen]
