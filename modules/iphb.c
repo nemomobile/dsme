@@ -62,6 +62,8 @@
 #include <dbus/dbus-glib-lowlevel.h>
 #include <mce/dbus-names.h>
 
+#include "../include/android/android_alarm.h"
+
 /* ------------------------------------------------------------------------- *
  * Constants
  * ------------------------------------------------------------------------- */
@@ -114,6 +116,12 @@ static void epollfd_remove_fd(int fd);
 /* ------------------------------------------------------------------------- *
  * Variables
  * ------------------------------------------------------------------------- */
+
+/** Path to android alarm device node */
+static const char android_alarm_path[] = "/dev/alarm";
+
+/** File descriptor for android alarm device node */
+static int android_alarm_fd = -1;
 
 /** Handle to the epoll instance */
 static int epollfd  = -1;
@@ -659,6 +667,70 @@ static void xmce_handle_dbus_disconnect(void)
 }
 
 /* ------------------------------------------------------------------------- *
+ * Android alarm management functionality
+ * ------------------------------------------------------------------------- */
+
+/** Open android alarm device
+ */
+static void android_alarm_init(void)
+{
+    if( (android_alarm_fd = open(android_alarm_path, O_RDWR)) == -1 ) {
+	/* Using /dev/alarm is optional; do not complain if it is missing */
+	if( errno != ENOENT )
+	    dsme_log(LOG_WARNING, PFIX"%s: %m", android_alarm_path);
+    }
+}
+
+/** Close android alarm device
+ */
+static void android_alarm_quit(void)
+{
+    if( android_alarm_fd != -1 )
+	close(android_alarm_fd), android_alarm_fd = -1;
+}
+
+/** Add rtc wakeup via android alarm device
+ *
+ * @param t time stamp of the wakeup
+ */
+static void android_alarm_set(time_t t)
+{
+    struct timespec ts = { .tv_sec = t, .tv_nsec = 0 };
+
+    if( android_alarm_fd == -1 )
+	goto cleanup;
+
+    int cmd = ANDROID_ALARM_SET(ANDROID_ALARM_RTC_WAKEUP);
+
+    if( ioctl(android_alarm_fd, cmd, &ts) != 0 )
+	dsme_log(LOG_ERR, PFIX"%s: %m", "ANDROID_ALARM_SET");
+    else
+	dsme_log(LOG_INFO, PFIX"%s: %s", "ANDROID_ALARM_SET",
+		"android alarm wakeup set");
+cleanup:
+    return;
+}
+
+/** Remove rtc wakeup via android alarm device
+ */
+static void android_alarm_clear(void)
+{
+    if( android_alarm_fd == -1 )
+	goto cleanup;
+
+    int cmd = ANDROID_ALARM_CLEAR(ANDROID_ALARM_RTC_WAKEUP);
+
+    if( ioctl(android_alarm_fd, cmd) != 0 )
+	dsme_log(LOG_ERR, PFIX"%s: %m", "ANDROID_ALARM_CLEAR");
+    else
+	dsme_log(LOG_INFO, PFIX"%s: %s", "ANDROID_ALARM_CLEAR",
+		"android alarm wakeup removed");
+
+cleanup:
+    return;
+}
+
+/* ------------------------------------------------------------------------- *
  * RTC management functionality
  * ------------------------------------------------------------------------- */
 
@@ -1053,13 +1125,20 @@ static bool rtc_set_alarm_tm(const struct tm *tm, bool enabled)
     bool result = false;
 
     struct rtc_time tod;
+    time_t t;
 
     memset(&tod, 0, sizeof tod);
-    if( !rtc_time_from_tm(&tod, tm) )
+    if( (t = rtc_time_from_tm(&tod, tm)) < 0 )
 	goto cleanup;
 
     if( !rtc_set_alarm_raw(&tod, enabled) )
 	goto cleanup;
+
+    if( enabled )
+	android_alarm_set(t);
+    else
+	android_alarm_clear();
+
 
     result = true;
 
@@ -2465,6 +2544,9 @@ void module_init(module_t *handle)
     /* if possible, add rtc fd to the epoll set */
     rtc_attach();
 
+    /* if available, open android alarm device */
+    android_alarm_init();
+
     success = true;
 
 cleanup:
@@ -2480,6 +2562,9 @@ cleanup:
 /** Shutdown */
 void module_fini(void)
 {
+    /* close android alarm device */
+    android_alarm_quit();
+
     /* cancel timers */
     rtc_cancel_finetune();
     clientlist_cancel_wakeup_timeout();
