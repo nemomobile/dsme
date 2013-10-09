@@ -1159,6 +1159,8 @@ static bool rtc_handle_input(void)
 	goto cleanup;
     }
 
+    dsme_log(LOG_INFO, PFIX"handling RTC wakeup");
+
     /* acquire wakelock that is passed to mce via ipc */
     wakelock_lock(rtc_wakeup, -1);
 
@@ -1983,6 +1985,9 @@ static void xtimed_alarm_status_cb(const DsmeDbusMessage* ind)
 	monotime_get_tv(&now);
 	clientlist_rethink_rtc_wakeup(&now);
     }
+
+    log_time_t(LOG_INFO, "powerup time", alarm_powerup, sys);
+    log_time_t(LOG_INFO, "resume  time", alarm_resume,  sys);
 }
 
 /** Handler for timed settings_changed signal
