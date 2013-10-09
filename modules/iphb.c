@@ -258,6 +258,41 @@ static int tv_diff_ms(const struct timeval *tv1, const struct timeval *tv2)
     return tv.tv_sec * 1000 + tv.tv_usec / 1000;
 }
 
+/** Emit wakeup time stamp to log
+ *
+ * @param lev   logging level
+ * @param title string to emit before time stamp
+ * @param t     time stamp to print
+ * @param now   time now
+ */
+static void log_time_t(int lev, const char *title, time_t t, time_t now)
+{
+    struct tm tm;
+    char left[32];
+
+    if( t <= 0 ) {
+	dsme_log(lev, PFIX"%s: not set", title);
+	goto cleanup;
+    }
+
+    snprintf(left, sizeof left, " (T%+ld)", (long)(now - t));
+
+    memset(&tm, 0, sizeof tm);
+    gmtime_r(&t, &tm);
+
+    dsme_log(lev, PFIX"%s: %04d-%02d-%02d %02d:%02d:%02d%s",
+	     title,
+	     tm.tm_year + 1900,
+	     tm.tm_mon + 1,
+	     tm.tm_mday,
+	     tm.tm_hour,
+	     tm.tm_min,
+	     tm.tm_sec,
+	     left);
+cleanup:
+    return;
+}
+
 /* ------------------------------------------------------------------------- *
  * ipc with hwwd kicker process
  * ------------------------------------------------------------------------- */
@@ -1089,6 +1124,9 @@ static void rtc_set_alarm_powerup(void)
     /* do not program alarms that we cant serve */
     if( rtc < SHUTDOWN_TIME_ESTIMATE_SECS )
 	rtc = 0;
+
+    /* always log the state we leave rtc wakeup on dsme exit */
+    log_time_t(LOG_CRIT, PFIX"powerup via RTC", rtc ? sys+rtc : 0, sys);
 
     rtc_set_alarm_after(rtc);
 }
