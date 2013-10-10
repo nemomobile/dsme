@@ -460,15 +460,19 @@ static bool dispatcher_list_dispatch(const DispatcherList* list,
                                      DBusMessage*          msg)
 {
   bool          dispatched = false;
+  int           msg_type   = dbus_message_get_type(msg);
   Dispatcher*   d          = 0;
   const GSList* i;
-
   for (i = list->dispatchers; i; i = g_slist_next(i)) {
     d = i->data;
     if (d->can_dispatch(d, msg)) {
         d->dispatch(d, connection, msg);
         dispatched = true;
-        break; // TODO: we only dispatch one method
+
+        /* Method calls should have only one handler.
+	 * Stop after suitable one has been found. */
+        if( msg_type == DBUS_MESSAGE_TYPE_METHOD_CALL )
+           break;
     }
   }
 
@@ -533,7 +537,12 @@ static DBusHandlerResult filter_static_message_handler(
   if (filter->handler(filter->child, connection, msg) ||
       filter_handle_message(filter, msg))
   {
+    /* It is ok to have multiple handlers for signals etc.
+     * Only method calls should be marked as "handled" */
+    if( dbus_message_get_type(msg) == DBUS_MESSAGE_TYPE_METHOD_CALL )
+    {
       result = DBUS_HANDLER_RESULT_HANDLED;
+    }
   }
 
   return result;
