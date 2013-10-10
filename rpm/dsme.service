@@ -12,8 +12,8 @@ Type=notify
 Environment=BOOTSTATE=USER
 EnvironmentFile=-/run/systemd/boot-status/bootstate
 ExecStart=/usr/sbin/dsme -p /usr/lib/dsme/libstartup.so --systemd
-# No restart, we want WD to bite
-Restart=no
+Restart=always
+RestartSec=1
 
 [Install]
 WantedBy=multi-user.target
