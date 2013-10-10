@@ -84,24 +84,25 @@ static void schedule_next_wakeup(void)
 static void save_alarm_queue_status(void)
 {
   if (alarm_state_file_up_to_date) {
+      dsme_log(LOG_DEBUG, "alarmtracker: alarm_state_file_up_to_date");
       return;
    }
 
   FILE* f;
 
   if ((f = fopen(ALARM_STATE_FILE_TMP, "w+")) == 0) {
-      dsme_log_raw(LOG_DEBUG, "%s: %s", ALARM_STATE_FILE, strerror(errno));
+      dsme_log(LOG_DEBUG, "alarmtracker: %s: %s", ALARM_STATE_FILE, strerror(errno));
   } else {
       bool temp_file_ok = true;
 
       if (fprintf(f, "%ld\n", alarm_queue_head) < 0) {
-          dsme_log_raw(LOG_DEBUG, "Error writing %s", ALARM_STATE_FILE_TMP);
+          dsme_log(LOG_DEBUG, "alarmtracker: Error writing %s", ALARM_STATE_FILE_TMP);
           temp_file_ok = false;
       }
 
       if (fclose(f) != 0) {
-          dsme_log_raw(LOG_DEBUG,
-                       "%s: %s",
+          dsme_log(LOG_DEBUG,
+                       "alarmtracker: %s: %s",
                        ALARM_STATE_FILE_TMP,
                        strerror(errno));
           temp_file_ok = false;
@@ -109,8 +110,8 @@ static void save_alarm_queue_status(void)
 
       if (temp_file_ok) {
           if (rename(ALARM_STATE_FILE_TMP, ALARM_STATE_FILE) != 0) {
-              dsme_log_raw(LOG_DEBUG,
-                           "Error writing file %s",
+              dsme_log(LOG_DEBUG,
+                           "alarmtracker: Error writing file %s",
                            ALARM_STATE_FILE);
           } else {
               alarm_state_file_up_to_date = true;
@@ -119,11 +120,11 @@ static void save_alarm_queue_status(void)
   }
 
   if (alarm_state_file_up_to_date) {
-      dsme_log_raw(LOG_DEBUG,
-      "Alarm queue head saved to file %s",
+      dsme_log(LOG_DEBUG,
+      "alarmtracker: Alarm queue head saved to file %s",
       ALARM_STATE_FILE);
   } else {
-      dsme_log_raw(LOG_ERR, "Saving alarm queue head failed");
+      dsme_log(LOG_ERR, "alarmtracker: Saving alarm queue head failed");
       /* do not retry to avoid spamming the log */
       alarm_state_file_up_to_date = true;
   }
@@ -141,10 +142,10 @@ static void restore_alarm_queue_status(void)
   FILE* f;
 
   if ((f = fopen(ALARM_STATE_FILE, "r")) == 0) {
-      dsme_log(LOG_DEBUG, "%s: %s", ALARM_STATE_FILE, strerror(errno));
+      dsme_log(LOG_DEBUG, "alarmtracker: %s: %s", ALARM_STATE_FILE, strerror(errno));
   } else {
       if (fscanf(f, "%ld", &alarm_queue_head) != 1) {
-          dsme_log(LOG_DEBUG, "Error reading file %s", ALARM_STATE_FILE);
+          dsme_log(LOG_DEBUG, "alarmtracker: Error reading file %s", ALARM_STATE_FILE);
       } else {
           alarm_state_file_up_to_date = true;
       }
@@ -153,9 +154,9 @@ static void restore_alarm_queue_status(void)
   }
 
   if (alarm_state_file_up_to_date) {
-      dsme_log(LOG_DEBUG, "Alarm queue head restored: %ld", alarm_queue_head);
+      dsme_log(LOG_DEBUG, "alarmtracker: Alarm queue head restored: %ld", alarm_queue_head);
   } else {
-      dsme_log(LOG_WARNING, "Restoring alarm queue head failed");
+      dsme_log(LOG_WARNING, "alarmtracker: Restoring alarm queue head failed");
   }
 }
 
@@ -191,7 +192,7 @@ static int set_internal_alarm_state(void* dummy)
                          - dsme_snooze_timeout_in_seconds();
           alarm_state_transition_timer =
               dsme_create_timer(transition, set_internal_alarm_state, 0);
-          dsme_log(LOG_DEBUG, "next snooze in %d s", transition);
+          dsme_log(LOG_DEBUG, "alarmtracker: next snooze in %d s", transition);
 
           alarm_set = false;
       }
@@ -208,7 +209,7 @@ static int set_internal_alarm_state(void* dummy)
       msg.alarm_set = alarm_set;
 
       dsme_log(LOG_DEBUG,
-               "broadcasting internal alarm state: %s",
+               "alarmtracker: broadcasting internal alarm state: %s",
                alarm_set ? "set" : "not set");
       broadcast_internally(&msg);
   }
@@ -234,7 +235,7 @@ static void set_external_alarm_state(void)
         msg.alarm_set = external_state_alarm_set;
 
         dsme_log(LOG_DEBUG,
-                 "broadcasting external alarm state: %s",
+                 "alarmtracker: broadcasting external alarm state: %s",
                  external_state_alarm_set ? "set" : "not set");
         dsmesock_broadcast(&msg);
     }
@@ -256,12 +257,12 @@ static void alarm_queue_status_ind(const DsmeDbusMessage* ind)
     {
         alarm_queue_head = new_alarm_queue_head;
 
-        dsme_log(LOG_DEBUG, "got new alarm: %ld", alarm_queue_head);
+        dsme_log(LOG_DEBUG, "alarmtracker: got new alarm: %ld", alarm_queue_head);
 
         alarm_state_file_up_to_date = false;
         schedule_next_wakeup();
     } else {
-        dsme_log(LOG_DEBUG, "got old alarm: %ld", alarm_queue_head);
+        dsme_log(LOG_DEBUG, "alarmtracker: got old alarm: %ld", alarm_queue_head);
     }
 
     set_alarm_state();
