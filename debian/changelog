@@ -1,3 +1,9 @@
+dsme (0.62.23) unstable; urgency=low
+
+  * [iphb] Prefer ANDROID_ALARM_ELAPSED_REALTIME over CLOCK_MONOTONIC
+
+ -- Simo Piiroinen <simo.piiroinen@jollamobile.com>  Thu, 10 Oct 2013 18:18:13 +0300
+
 dsme (0.62.21) unstable; urgency=low
 
   * [iphb] Fix evaluation of the next rtc wakeup time
