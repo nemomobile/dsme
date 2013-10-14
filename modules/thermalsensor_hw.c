@@ -99,8 +99,12 @@ extern bool dsme_hw_get_core_temperature(thermal_object_t*         thermal_objec
             got_temperature = true;
         }
     }
-    if (got_temperature && callback)
-        callback(thermal_object, temperature);
+    if (got_temperature) {
+        if (callback)
+            callback(thermal_object, temperature);
+    } else {
+        dsme_log(LOG_WARNING, "thermal: Can't get core temperature readings");
+    }
     return got_temperature;
 }
 
