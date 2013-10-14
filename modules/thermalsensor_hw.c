@@ -49,7 +49,8 @@ static bool read_temperature(const char *path, int *temperature)
             ret = true;
         }
         fclose(f);
-    } else {
+    }
+    if (!ret) {
         dsme_log(LOG_DEBUG, "thermal: read of %s FAILED", path);
     }
     return ret;
@@ -87,8 +88,8 @@ extern bool dsme_hw_get_core_temperature(thermal_object_t*         thermal_objec
     if (read_temperature(CORE_SENSOR_TEMP, &temperature)) {
         got_temperature = true;
     } else {
-        /* Read failed, that could be because after deep sleep sensor is 
-         * disabled and we need to reenabe it.
+        /* Read failed, that could be because after deep sleep or transfer
+	 * between actdead/user state, sensor is disabled and we need to re-enabe it.
          * Try one more time
          */
         dsme_log(LOG_DEBUG, "thermal: First read failed, trying to (re)enable");
