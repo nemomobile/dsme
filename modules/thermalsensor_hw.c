@@ -31,6 +31,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/* TODO: These should be changed to use statefs once we have it */
+#define CORE_SENSOR_MODE "/sys/devices/virtual/thermal/thermal_zone9/mode"
+#define CORE_SENSOR_TEMP "/sys/devices/virtual/thermal/thermal_zone9/temp"
+#define BATTERY_TEMP     "/sys/class/power_supply/battery/temp"
 
 static bool read_temperature(const char *path, int *temperature)
 {
@@ -45,31 +49,11 @@ static bool read_temperature(const char *path, int *temperature)
             ret = true;
         }
         fclose(f);
-    } else {
+    }
+    if (!ret) {
         dsme_log(LOG_DEBUG, "thermal: read of %s FAILED", path);
     }
     return ret;
-}
-
-/* Get temp from sensor 9 */
-/* TODO: This should be changed to use statefs once we have it */
-
-#define CORE_SENSOR_MODE "/sys/devices/virtual/thermal/thermal_zone9/mode"
-#define CORE_SENSOR_TEMP "/sys/devices/virtual/thermal/thermal_zone9/temp"
-
-extern bool dsme_hw_get_core_temperature(thermal_object_t*         thermal_object,
-                                         temperature_handler_fn_t* callback)
-{
-    int temperature;
-
-    // dsme_log(LOG_DEBUG, "thermal: %s", __FUNCTION__);
-
-    if (read_temperature(CORE_SENSOR_TEMP, &temperature)) {
-        if (callback) 
-            callback(thermal_object, temperature);
-        return true;
-    } 
-    return false;
 }
 
 static bool enable_hw_core_temp_sensor(void)
@@ -85,10 +69,43 @@ static bool enable_hw_core_temp_sensor(void)
             ret = true;
         }
         fclose(f);
-    } else {
+    }
+    if (!ret) {
         dsme_log(LOG_ERR, "FAILED enabling thermal sensor %s", CORE_SENSOR_MODE);
     }
     return ret;
+}
+
+extern bool dsme_hw_get_core_temperature(thermal_object_t*         thermal_object,
+                                         temperature_handler_fn_t* callback)
+{
+    int temperature;
+    bool got_temperature = false;
+
+    // dsme_log(LOG_DEBUG, "thermal: %s", __FUNCTION__);
+
+
+    if (read_temperature(CORE_SENSOR_TEMP, &temperature)) {
+        got_temperature = true;
+    } else {
+        /* Read failed, that could be because after deep sleep or transfer
+         * between actdead/user state, sensor is disabled and we need to re-enabe it.
+         * Try one more time
+         */
+        dsme_log(LOG_DEBUG, "thermal: First read failed, trying to (re)enable");
+        if (enable_hw_core_temp_sensor() &&
+            read_temperature(CORE_SENSOR_TEMP, &temperature)) {
+            dsme_log(LOG_DEBUG, "thermal: On second try it was ok");
+            got_temperature = true;
+        }
+    }
+    if (got_temperature) {
+        if (callback)
+            callback(thermal_object, temperature);
+    } else {
+        dsme_log(LOG_WARNING, "thermal: Can't get core temperature readings");
+    }
+    return got_temperature;
 }
 
 /* Does our HW support this temp reading ? */
@@ -114,9 +131,9 @@ extern bool dsme_hw_get_battery_temperature(thermal_object_t*         thermal_ob
 
     // dsme_log(LOG_DEBUG, "thermal: %s", __FUNCTION__);
 
-    if (read_temperature("/sys/class/power_supply/battery/temp", &temperature)) {
-      /* We get the temp in one tens */
-      temperature = (temperature + 5 ) / 10;
+    if (read_temperature(BATTERY_TEMP, &temperature)) {
+        /* We get the temp in one tens */
+        temperature = (temperature + 5 ) / 10;
         if (callback) 
             callback(thermal_object, temperature);
         return true;

@@ -126,7 +126,7 @@ static void send_thermal_indication(void)
                                thermalmanager_state_change_ind);
       dsme_dbus_message_append_string(sig, current_status_name());
       dsme_dbus_signal_emit(sig);
-      dsme_log(LOG_NOTICE, "thermal status: %s", current_status_name());
+      dsme_log(LOG_NOTICE, "thermalmanager: Device thermal status: %s", current_status_name());
   }
 
   /* then broadcast an indication internally */
@@ -136,11 +136,11 @@ static void send_thermal_indication(void)
       if (current_status == THERMAL_STATUS_FATAL) {
           send_overheat_status(true);
           overheated = true;
-          dsme_log(LOG_CRIT, "Device overheated");
+          dsme_log(LOG_CRIT, "thermalmanager: Device overheated");
       } else if (overheated) {
           send_overheat_status(false);
           overheated = false;
-          dsme_log(LOG_NOTICE, "Device no longer overheated");
+          dsme_log(LOG_NOTICE, "thermalmanager: Device no longer overheated");
       }
   }
 }
@@ -149,7 +149,7 @@ static void send_temperature_request(thermal_object_t* thermal_object)
 {
   if (!thermal_object->request_pending) {
       dsme_log(LOG_DEBUG,
-               "requesting %s temperature",
+               "thermalmanager: requesting %s temperature",
                thermal_object->conf->name);
       thermal_object->request_pending = true;
       if (!thermal_object->conf->request_temperature(
@@ -158,12 +158,12 @@ static void send_temperature_request(thermal_object_t* thermal_object)
       {
           thermal_object->request_pending = false;
           dsme_log(LOG_DEBUG,
-                   "error requesting %s temperature",
+                   "thermalmanager: error requesting %s temperature",
                    thermal_object->conf->name);
       }
   } else {
       dsme_log(LOG_DEBUG,
-               "still waiting for %s temperature",
+               "thermalmanager: still waiting for %s temperature",
                thermal_object->conf->name);
   }
 }
@@ -175,7 +175,7 @@ static void receive_temperature_response(thermal_object_t* thermal_object,
 
   if (temperature == -1) {
       dsme_log(LOG_DEBUG,
-               "%s temperature request failed",
+               "thermalmanager: %s temperature request failed",
                thermal_object->conf->name);
       return;
   }
@@ -217,7 +217,7 @@ static void receive_temperature_response(thermal_object_t* thermal_object,
 
 #ifndef DSME_THERMAL_LOGGING
   dsme_log(LOG_DEBUG,
-           "%s temperature: %d %s",
+           "thermalmanager: %s temperature: %d %s",
            thermal_object->conf->name,
            temperature,
            thermal_status_name[thermal_object->status]);
@@ -264,7 +264,7 @@ static void thermal_object_polling_interval_expired(void* object)
 void dsme_register_thermal_object(thermal_object_t* thermal_object)
 {
     dsme_log(LOG_DEBUG,
-             "%s (%s)", __FUNCTION__,
+             "thermalmanager: %s (%s)", __FUNCTION__,
              thermal_object->conf->name);
 
   enter_module(this_module);
@@ -284,7 +284,7 @@ void dsme_register_thermal_object(thermal_object_t* thermal_object)
 
 void dsme_unregister_thermal_object(thermal_object_t* thermal_object)
 {
-  dsme_log(LOG_DEBUG, "%s(%s)", __FUNCTION__, thermal_object->conf->name);
+  dsme_log(LOG_DEBUG, "thermalmanager: %s(%s)", __FUNCTION__, thermal_object->conf->name);
   // TODO
 }
 
@@ -309,7 +309,7 @@ DSME_HANDLER(DSM_MSGTYPE_WAKEUP, client, msg)
     thermal_object_t* thermal_object = (thermal_object_t*)(msg->data);
 
     dsme_log(LOG_DEBUG,
-             "check thermal object '%s'",
+             "thermalmanager: check thermal object '%s'",
              thermal_object->conf->name);
     thermal_object_polling_interval_expired(thermal_object);
 }
@@ -331,7 +331,7 @@ DSME_HANDLER(DSM_MSGTYPE_DBUS_DISCONNECT, client, msg)
 DSME_HANDLER(DSM_MSGTYPE_SET_TA_TEST_MODE, client, msg)
 {
     is_in_ta_test = true;
-    dsme_log(LOG_NOTICE, "thermal manager: set TA test mode");
+    dsme_log(LOG_NOTICE, "thermalmanager: set TA test mode");
 }
 #endif
 
@@ -380,7 +380,7 @@ static FILE* thermal_tuning_file(const char* thermal_object_name)
            DSME_THERMAL_TUNING_CONF_PATH,
            thermal_object_name);
 
-  dsme_log(LOG_DEBUG, "trying to open %s for thermal tuning values", name);
+  dsme_log(LOG_DEBUG, "thermalmanager: trying to open %s for thermal tuning values", name);
 
   return fopen(name, "r");
 }
@@ -429,7 +429,7 @@ static bool thermal_object_config_read(
            */
           new_config.state[i].mintime = new_config.state[i].maxtime/2;
       } else {
-          dsme_log(LOG_ERR, "syntax error in thermal tuning on line %d", i+1);
+          dsme_log(LOG_ERR, "thermalmanager: syntax error in thermal tuning on line %d", i+1);
           break;
       }
   }
@@ -448,18 +448,18 @@ static void thermal_object_try_to_read_config(thermal_object_t* thermal_object)
 
       if (thermal_object_config_read(thermal_object->conf, f)) {
           dsme_log(LOG_NOTICE,
-                   "Read thermal tuning file for %s",
+                   "thermalmanager: Read thermal tuning file for %s",
                    thermal_object->conf->name);
       } else {
           dsme_log(LOG_NOTICE,
-                   "Thermal tuning file for %s discarded. Using default values",
+                   "thermalmanager: Thermal tuning file for %s discarded. Using default values",
                    thermal_object->conf->name);
       }
 
       fclose(f);
   } else {
       dsme_log(LOG_NOTICE,
-               "No thermal tuning file for %s. Using default values",
+               "thermalmanager: No thermal tuning file for %s. Using default values",
                thermal_object->conf->name);
   }
 }
@@ -513,7 +513,7 @@ static void log_temperature(int temperature, const thermal_object_t* thermal_obj
   if (!log_file) {
       if (!(log_file = fopen(DSME_THERMAL_LOG_PATH, "a"))) {
           dsme_log(LOG_ERR,
-                   "Error opening thermal log " DSME_THERMAL_LOG_PATH ": %s",
+                   "thermalmanager: Error opening thermal log " DSME_THERMAL_LOG_PATH ": %s",
                    strerror(errno));
           return;
       }
@@ -536,7 +536,7 @@ static void log_temperature(int temperature, const thermal_object_t* thermal_obj
           temperature,
           status_string(thermal_object->status));
   fflush(log_file);
-  dsme_log(LOG_DEBUG,"%s %d C %s", thermal_object->conf->name, 
+  dsme_log(LOG_DEBUG,"thermalmanager: %s %d C %s", thermal_object->conf->name, 
            temperature, status_string(thermal_object->status));
 }
 #endif
