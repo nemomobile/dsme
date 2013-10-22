@@ -451,7 +451,7 @@ static bool start_delayed_actdead_timer(unsigned seconds)
   }
   return success;
 }
-endif /* DSME_SUPPORT_DIRECT_USER_ACTDEAD */
+#endif /* DSME_SUPPORT_DIRECT_USER_ACTDEAD */
 
 static int delayed_actdead_fn(void* unused)
 {
