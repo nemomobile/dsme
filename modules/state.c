@@ -128,7 +128,9 @@ static void deny_state_change_request(dsme_state_t denied_state,
 
 static void start_delayed_shutdown_timer(unsigned seconds);
 static int  delayed_shutdown_fn(void* unused);
+#ifdef DSME_SUPPORT_DIRECT_USER_ACTDEAD
 static bool start_delayed_actdead_timer(unsigned seconds);
+#endif
 static int  delayed_actdead_fn(void* unused);
 static bool start_delayed_user_timer(unsigned seconds);
 static int delayed_user_fn(void* unused);
@@ -302,7 +304,16 @@ static void try_to_change_state(dsme_state_t new_state)
           }
       } else if (current_state == DSME_STATE_USER) {
           actdead_switch_done = false;
-
+#ifndef DSME_SUPPORT_DIRECT_USER_ACTDEAD
+          /* We don't support direct transfer from USER to ACTDEAD
+           * but do it via shutdown. Usb cable will wakeup the device again
+           * and then we will boot to ACTDEAD
+           * Force SHUTDOWN
+           */
+          dsme_log(LOG_DEBUG, "ACTDEAD state requested, we do it via SHUTDOWN");
+          change_state(DSME_STATE_SHUTDOWN);
+          start_delayed_shutdown_timer(SHUTDOWN_TIMER_TIMEOUT);
+#else
           if (user_switch_done) {
               /* user init done; runlevel change from user to actdead state */
               if (start_delayed_actdead_timer(ACTDEAD_TIMER_MIN_TIMEOUT)) {
@@ -314,6 +325,7 @@ static void try_to_change_state(dsme_state_t new_state)
                   change_state(new_state);
               } 
           }
+#endif /* DSME_SUPPORT_DIRECT_USER_ACTDEAD */
       }
       break;
 
@@ -421,6 +433,7 @@ static int delayed_shutdown_fn(void* unused)
   return 0; /* stop the interval */
 }
 
+#ifdef DSME_SUPPORT_DIRECT_USER_ACTDEAD
 static bool start_delayed_actdead_timer(unsigned seconds)
 {
   bool success = false;
@@ -438,6 +451,7 @@ static bool start_delayed_actdead_timer(unsigned seconds)
   }
   return success;
 }
+#endif /* DSME_SUPPORT_DIRECT_USER_ACTDEAD */
 
 static int delayed_actdead_fn(void* unused)
 {
