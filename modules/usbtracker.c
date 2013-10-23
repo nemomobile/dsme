@@ -79,7 +79,8 @@ static void usb_state_ind(const DsmeDbusMessage* ind)
     // dsme_log(LOG_DEBUG, "usbtracker: %s(state = %s)",__FUNCTION__, state);
 
     if (strcmp(state, "mass_storage") == 0 ||
-        strcmp(state, "data_in_use" ) == 0)
+        strcmp(state, "data_in_use" ) == 0 ||
+        strcmp(state, "pc_suite" ) == 0)
     {
 	mounted_to_pc_new = true;
     }
