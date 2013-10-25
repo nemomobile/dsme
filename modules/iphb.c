@@ -2576,9 +2576,6 @@ cleanup:
 /** Shutdown */
 void module_fini(void)
 {
-    /* close android alarm device */
-    android_alarm_quit();
-
     /* cancel timers */
     rtc_cancel_finetune();
     clientlist_cancel_wakeup_timeout();
@@ -2589,6 +2586,9 @@ void module_fini(void)
     /* set wakeup alarm before closing the rtc */
     rtc_set_alarm_powerup();
     rtc_detach();
+
+    /* close android alarm device */
+    android_alarm_quit();
 
     /* cleanup rest of what is in the epoll set */
     listenfd_quit();
