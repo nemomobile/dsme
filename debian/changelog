@@ -1,3 +1,9 @@
+dsme (0.63.3) unstable; urgency=low
+
+  * [iphb] Do not close /dev/alarm before the final rtc wakeup programming
+
+ -- Simo Piiroinen <simo.piiroinen@jollamobile.com>  Fri, 25 Oct 2013 12:03:54 +0300
+
 dsme (0.62.23) unstable; urgency=low
 
   * [iphb] Prefer ANDROID_ALARM_ELAPSED_REALTIME over CLOCK_MONOTONIC
