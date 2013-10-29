@@ -86,7 +86,7 @@ static char* make_command_new(char* dirs[])
     if (argz_create(dirs, &cmdline, &len) == 0) {
         argz_stringify(cmdline, len, ' ');
 
-        if (asprintf(&buf, "%s %s", "/usr/bin/lsof -Fn", cmdline) < 0) {
+        if (asprintf(&buf, "%s %s", "/usr/sbin/lsof -Fn" , cmdline) < 0) {
             goto out;
         }
     }
@@ -185,8 +185,10 @@ static bool is_open(const char* file)
     return bsearch(&file, open_files, num_files, sizeof *open_files, string_cmp);
 }
 
-static int reaper(const char *file, const struct stat64 *sb, int flag)
+static int reaper(const char *file, const struct stat64 *sb, int flag, struct FTW *ftwbuf)
 {
+    (void)ftwbuf;
+
     if (flag != FTW_F) {
         #ifdef DEBUG
             fprintf(stderr, "file '%s' is not a normal file, skipping\n", file);
@@ -220,6 +222,10 @@ static int reaper(const char *file, const struct stat64 *sb, int flag)
             fprintf(stderr, ME "failed to unlink file '%s': %m\n", file);
             goto out;
         }
+        #ifdef DEBUG
+        else fprintf(stderr, ME "deleted file '%s'\n", file);
+        #endif
+
     } else {
         #ifdef DEBUG
             fprintf(stderr, "file '%s' modified too recently mod_age=%lus acc_age=%lus, skipping\n",
@@ -239,8 +245,8 @@ static int reap(char* dirs[])
     checkpoint = curt - TIMEOUT;
 
     for (i = 0; dirs[i]; i++) {
-        if (ftw64(dirs[i], reaper, MAX_FTW_FDS) != 0) {
-            fprintf(stderr,  ME "ERROR traversing '%s': ftw64() failed: %m\n",
+        if (nftw64(dirs[i], reaper, MAX_FTW_FDS, FTW_PHYS) != 0) {
+            fprintf(stderr,  ME "ERROR traversing '%s': nftw64() failed: %m\n",
                     dirs[i]);
         }
     }
