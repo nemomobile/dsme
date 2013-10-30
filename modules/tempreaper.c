@@ -34,6 +34,7 @@
 #include <glib.h>
 #include <pwd.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
@@ -92,11 +93,19 @@ static pid_t reaper_process_new(void)
     /* The tempdirs we will cleanup are given as an argument.
      */
     char* const argv[] = {(char*)"rpdir",
-                          (char*)"/var/tmp",
+                          (char*)"/tmp",
+                          (char*)"/run/log",
+                          (char*)"/var/log",
+                          (char*)"/var/cache/core-dumps",
                           (char*)0};
+ 
+    fflush(0);
     pid_t pid = fork();
 
     if (pid == 0) {
+         int fd;
+         closelog();
+         for( fd = 3; fd < 1024; ++fd ) close(fd);
         /* Child; set a reasonably low priority, DSME runs with the priority -1
            so we don't want to use the inherited priority */
         if (setpriority(PRIO_PROCESS, 0, MIN_PRIORITY) != 0) {
