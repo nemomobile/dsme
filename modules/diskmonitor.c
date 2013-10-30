@@ -108,7 +108,6 @@ static void check_disk_space(void)
 {
     struct timeval monotime;
     monotime_get(&monotime);
-    dsme_log(LOG_DEBUG, LOGPFIX"check_disk_space called");
 
     if (init_done_received) {
         check_disk_space_usage(), last_check_time = monotime.tv_sec;
@@ -136,8 +135,7 @@ static void req_check(const DsmeDbusMessage* request, DsmeDbusMessage** reply)
     monotime_get(&monotime);
     seconds_from_last_check = monotime.tv_sec - last_check_time;
 
-    dsme_log(LOG_DEBUG, LOGPFIX"check request received");
-    if (seconds_from_last_check >=  CHECK_THRESHOLD) {
+    if (seconds_from_last_check >= CHECK_THRESHOLD) {
         check_disk_space();
 
         schedule_next_wakeup();
