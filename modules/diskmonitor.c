@@ -23,8 +23,8 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-// to send the base_boot_done signal:
-// dbus-send --system --type=signal /com/nokia/startup/signal com.nokia.startup.signal.base_boot_done
+// to send the init_done signal:
+// dbus-send --system --type=signal /com/nokia/startup/signal com.nokia.startup.signal.init_done
 
 // to request a disk space check:
 // dbus-send --system --print-reply --dest=com.nokia.diskmonitor /com/nokia/diskmonitor/request com.nokia.diskmonitor.request.req_check
@@ -156,7 +156,7 @@ static const dsme_dbus_binding_t methods[] =
 
 static void init_done_ind(const DsmeDbusMessage* ind)
 {
-    dsme_log(LOG_DEBUG, LOGPFIX"base_boot_done received");
+    dsme_log(LOG_DEBUG, LOGPFIX"init_done received");
 
     init_done_received = true;
 }
@@ -193,7 +193,7 @@ static void mce_inactivity_sig(const DsmeDbusMessage* sig)
 
 static const dsme_dbus_signal_binding_t signals[] =
 {
-    { init_done_ind,      "com.nokia.startup.signal", "base_boot_done" },
+    { init_done_ind,      "com.nokia.startup.signal", "init_done" },
     { mce_inactivity_sig, "com.nokia.mce.signal",     "system_inactivity_ind" },
     { 0, 0 }
 };
