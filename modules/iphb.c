@@ -223,8 +223,15 @@ static bool monotime_get_tv(struct timeval *tv)
 
     struct timespec ts;
 
+#if defined(CLOCK_BOOTTIME)
+    if( clock_gettime(CLOCK_BOOTTIME, &ts) < 0 ) {
+        if( clock_gettime(CLOCK_MONOTONIC, &ts) < 0 )
+            timerclear(tv);
+    }
+#else
     if( clock_gettime(CLOCK_MONOTONIC, &ts) < 0 )
 	timerclear(tv);
+#endif
     else {
 	TIMESPEC_TO_TIMEVAL(tv, &ts);
 	res = true;
