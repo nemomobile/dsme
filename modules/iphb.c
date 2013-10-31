@@ -219,30 +219,23 @@ static inline bool tv_ge(const struct timeval *tv1, const struct timeval *tv2)
  */
 static bool monotime_get_tv(struct timeval *tv)
 {
-    bool res = true;
+    bool res = false;
 
     struct timespec ts;
 
-    if( android_alarm_fd != -1 ) {
-	int cmd = ANDROID_ALARM_GET_TIME(ANDROID_ALARM_ELAPSED_REALTIME);
-	if( ioctl(android_alarm_fd, cmd, &ts) == 0 )
-	    goto have_timespec;
+#if defined(CLOCK_BOOTTIME)
+    if( clock_gettime(CLOCK_BOOTTIME, &ts) < 0 ) {
+        if( clock_gettime(CLOCK_MONOTONIC, &ts) < 0 )
+            timerclear(tv);
     }
-
-    if( clock_gettime(CLOCK_MONOTONIC, &ts) == 0 )
-	goto have_timespec;
-
-    if( gettimeofday(tv, 0) == 0 )
-	goto have_timeval;
-
-    timerclear(tv);
-    res = false;
-    goto have_timeval;
-
-have_timespec:
-    TIMESPEC_TO_TIMEVAL(tv, &ts);
-
-have_timeval:
+#else
+    if( clock_gettime(CLOCK_MONOTONIC, &ts) < 0 )
+	timerclear(tv);
+#endif
+    else {
+	TIMESPEC_TO_TIMEVAL(tv, &ts);
+	res = true;
+    }
     return res;
 }
 
