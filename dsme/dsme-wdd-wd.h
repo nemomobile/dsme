@@ -29,11 +29,11 @@
 
 // Period for kicking; i.e. how soon the quickest watchdog will bite.
 // NOTE: This must be picked from the wd[] array in dsme-wdd-wd.c!
-#define DSME_SHORTEST_WD_PERIOD 14 // seconds
+#define DSME_SHORTEST_WD_PERIOD 20 // seconds
 
 // Period for heartbeat; i.e. how often we wakeup to kick watchdogs, etc.
-// We take a 2 second window for kicking the watchdogs.
-#define DSME_HEARTBEAT_INTERVAL (DSME_SHORTEST_WD_PERIOD - 2) // seconds
+// We take a 8 second window for kicking the watchdogs.
+#define DSME_HEARTBEAT_INTERVAL (DSME_SHORTEST_WD_PERIOD - 8) // seconds
 
 #ifdef __cplusplus
 extern "C" {
