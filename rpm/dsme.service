@@ -12,6 +12,7 @@ Type=notify
 ControlGroup=cpu:/
 Environment=BOOTSTATE=USER
 EnvironmentFile=-/run/systemd/boot-status/bootstate
+EnvironmentFile=-/var/lib/environment/dsme/*.conf
 ExecStart=/usr/sbin/dsme -p /usr/lib/dsme/libstartup.so --systemd
 Restart=always
 RestartSec=1
