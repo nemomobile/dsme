@@ -26,6 +26,7 @@
 #define DSME_DBUS_H
 
 #include <stdbool.h>
+#include <dbus/dbus.h>
 
 typedef struct DsmeDbusMessage DsmeDbusMessage;
 
@@ -47,6 +48,7 @@ typedef struct dsme_dbus_signal_binding_t {
 
 
 bool dsme_dbus_is_available(void);
+DBusConnection *dsme_dbus_get_connection(DBusError *err);
 
 void dsme_dbus_bind_methods(bool*                      bound_already,
                             const dsme_dbus_binding_t* bindings,

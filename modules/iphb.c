@@ -2420,7 +2420,7 @@ static void systembus_connect(void)
 {
     DBusError err = DBUS_ERROR_INIT;
 
-    if( !(systembus = dbus_bus_get(DBUS_BUS_SYSTEM, &err)) ) {
+    if( !(systembus = dsme_dbus_get_connection(&err)) ) {
 	dsme_log(LOG_WARNING, PFIX"can't connect to systembus: %s: %s",
 		 err.name, err.message);
 	goto cleanup;
