@@ -84,6 +84,7 @@ heartbeat_la_SOURCES = heartbeat.c
 heartbeat_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
 
 state_la_SOURCES = state.c
+state_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS)
 
 if WANT_RUNLEVEL
 runlevel_la_SOURCES = runlevel.c
@@ -108,13 +109,15 @@ dbusproxy_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS) $(DBUSGLIB_CFLAGS)
 dbusproxy_la_LIBADD = $(DBUSGLIB_LIBS) -ldsme_dbus_if
 
 alarmtracker_la_SOURCES = alarmtracker.c
+alarmtracker_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS)
 alarmtracker_la_CPPFLAGS = $(AM_CPPFLAGS) -D_GNU_SOURCE
 
 thermalmanager_la_SOURCES = thermalmanager.c
-thermalmanager_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS) -DDSME_THERMAL_TUNING
+thermalmanager_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS) -DDSME_THERMAL_TUNING
 thermalmanager_la_LIBADD = -lthermalmanager_dbus_if
 
 emergencycalltracker_la_SOURCES = emergencycalltracker.c
+emergencycalltracker_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS)
 
 usbtracker_la_SOURCES = usbtracker.c
 usbtracker_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS)
@@ -166,11 +169,13 @@ diskmonitor_la_SOURCES = diskmonitor.c \
 				diskmonitor.h \
 				diskmonitor_backend.h
 
+diskmonitor_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS)
+
 tempreaper_la_SOURCES = tempreaper.c
 tempreaper_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
 
 dbusautoconnector_la_SOURCES = dbusautoconnector.c
-dbusautoconnector_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
+dbusautoconnector_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS)
 dbusautoconnector_la_LIBADD = $(GLIB_LIBS)
 
 if WANT_PWRKEY_MONITOR
@@ -181,6 +186,6 @@ endif
 
 if WANT_BATTERY_TRACKER
 batterytracker_la_SOURCES = batterytracker.c
-batterytracker_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS) -D_GNU_SOURCE
+batterytracker_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS) -D_GNU_SOURCE
 batterytracker_la_LIBADD = $(GLIB_LIBS)
 endif

@@ -181,10 +181,10 @@ DSME_HANDLER(DSM_MSGTYPE_DBUS_CONNECT, client, msg)
     DBusConnection  *conn = 0;
     DBusMessage     *req  = NULL;
 
-    if( !(conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err)) )
+    if( !(conn = dsme_dbus_get_connection(&err)) )
     {
-        dsme_log(LOG_ERR, "DBUS_BUS_SYSTEM: %s: %s",
-                 err.name, err.message);
+	dsme_log(LOG_ERR, "system bus connect: %s: %s",
+		 err.name, err.message);
         goto cleanup;
     }
 
