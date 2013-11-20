@@ -1,3 +1,10 @@
+dsme (0.63.7) precise; urgency=low
+
+  * [service] Add EnvironmentFile to allow easy configuration of dsme
+  * [dsme] Handle DBus disconnects gracefully
+
+ -- Simo Piiroinen <simo.piiroinen@jollamobile.com>  Wed, 20 Nov 2013 09:35:41 +0200
+
 dsme (0.63.3) unstable; urgency=low
 
   * [iphb] Do not close /dev/alarm before the final rtc wakeup programming
