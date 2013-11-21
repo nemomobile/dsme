@@ -86,6 +86,9 @@
  */
 #define RTC_WAKEUP_TIMEOUT_MS 2000
 
+/** Maximum time to stay in suspend [seconds]; zero for no limit */
+#define RTC_MAXIMUM_WAKEUP_TIME (30*60) // 30 minutes
+
 /* ------------------------------------------------------------------------- *
  * Custom types
  * ------------------------------------------------------------------------- */
@@ -1891,6 +1894,15 @@ static void clientlist_rethink_rtc_wakeup(const struct timeval *now)
     /* synchronize rtc time with system time */
     rtc_sync_to_system_time();
 
+    /* Even if there are not clients, we want rtc wakeup every
+     * now and then to drive the battery monitoring during suspend */
+#if RTC_MAXIMUM_WAKEUP_TIME
+    if( sleeptime < 0 || sleeptime > RTC_MAXIMUM_WAKEUP_TIME ) {
+	dsme_log(LOG_DEBUG, "truncating sleep: %ld -> %ld seconds",
+		 (long)sleeptime, (long)RTC_MAXIMUM_WAKEUP_TIME);
+	sleeptime = RTC_MAXIMUM_WAKEUP_TIME;
+    }
+#endif
 
     /* program rtc wakeup alarm (or disable it) */
     if( sleeptime < 0 || sleeptime >= INT_MAX )
