@@ -101,6 +101,7 @@ typedef struct _client_t {
     struct timeval    mintime; /*!< min end of sleep period */
     struct timeval    maxtime; /*!< max end of sleep period */
     pid_t             pid;     /*!< client process ID */
+    bool              wakeup;  /*!< resume to handle */
     struct _client_t *next;    /*!< pointer to the next client in the list (NULL if none) */
 } client_t;
 
@@ -1401,6 +1402,9 @@ static client_t *client_new_external(int fd)
      * in client_new_internal() and client_handle_wait_req() */
     self->pidtxt = strdup("unknown");
 
+    /* All external clients should wake up from suspend too */
+    self->wakeup = true;
+
     return self;
 }
 
@@ -1420,6 +1424,9 @@ static client_t *client_new_internal(endpoint_t *conn, void* data)
 
     free(self->pidtxt);
     self->pidtxt = strdup("internal");
+
+    /* By default internal clients do not wake up from suspend */
+    self->wakeup = false;
 
     return self;
 }
@@ -1444,6 +1451,17 @@ static bool client_wait_started(const client_t *self)
 static bool client_is_external(const client_t *self)
 {
     return self->fd != -1;
+}
+
+/** Test if client needs resume
+ *
+ * @param self pointer to client object
+ *
+ * @return true if client needs resume, false otherwise
+ */
+static bool client_needs_resume(const client_t *self)
+{
+    return self->wakeup;
 }
 
 /** Wake up a client
@@ -1661,6 +1679,13 @@ static bool client_handle_wait_req(client_t                      *self,
 
     self->pid = req->pid;
 
+    /* Update wakeup from susped flag from internal request */
+    if( !client_is_external(self) )
+	self->wakeup = (req->wakeup != 0);
+
+    if( self->wakeup )
+	dsme_log(LOG_DEBUG, PFIX"client %s, wakeup flag set", self->pidtxt);
+
     return client_woken;
 }
 
@@ -1844,7 +1869,7 @@ static void clientlist_rethink_rtc_wakeup(const struct timeval *now)
 
     /* scan closest external client wakeup time */
     for( client_t *client = clients; client; client = client->next ) {
-	if( !client_is_external(client) )
+	if( !client_needs_resume(client) )
 	    continue;
 
 	if( !client_wait_started(client) )
@@ -1865,6 +1890,7 @@ static void clientlist_rethink_rtc_wakeup(const struct timeval *now)
 
     /* synchronize rtc time with system time */
     rtc_sync_to_system_time();
+
 
     /* program rtc wakeup alarm (or disable it) */
     if( sleeptime < 0 || sleeptime >= INT_MAX )
@@ -1949,7 +1975,7 @@ static void clientlist_wakeup_clients_if(const struct timeval *now)
         if( !client_wait_started(client) )
 	    continue;
 
-	if( !client_is_external(client) )
+	if( !client_needs_resume(client) )
 	    continue;
 
 	if( tv_lt(now, &client->mintime) )
@@ -1979,7 +2005,7 @@ static void clientlist_wakeup_clients_if(const struct timeval *now)
 
 	if( tv_lt(now, &client->mintime) ) {
 	    /* mintime not reached yet */
-	    if( tv.tv_sec >= DSME_HEARTBEAT_INTERVAL || !client_is_external(client) ) {
+	    if( tv.tv_sec >= DSME_HEARTBEAT_INTERVAL || !client_needs_resume(client) ) {
 		/* timer is not used for internal clients */
 		dsme_log(LOG_DEBUG, PFIX"client %s is not yet due", client->pidtxt);
 	    }
