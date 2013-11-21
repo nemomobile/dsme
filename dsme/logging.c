@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <sys/syslog.h>
 #include <sys/socket.h>
@@ -486,40 +487,53 @@ void dsme_log_stop(void)
     thread_enabled = 0;
 }
 
+static char *pid2exe(pid_t pid)
+{
+    char *res = 0;
+    int   fd  = -1;
+    int   rc;
+    char  path[128];
+    char  temp[128];
+
+    snprintf(path, sizeof path, "/proc/%ld/cmdline", (long)pid);
+
+    if( (fd = open(path, O_RDONLY)) == -1 )
+	goto EXIT;
+
+    if( (rc = read(fd, temp, sizeof temp - 1)) <= 0 )
+	goto EXIT;
+
+    temp[rc] = 0;
+    res = strdup(temp);
+
+EXIT:
+    if( fd != -1 ) close(fd);
+
+    return res;
+}
+
 char* pid2text(pid_t pid)
 {
-    char* str;
-    int ret = -1;
-    if (pid == 0)
-        return strdup("<internal>");
-    if (logopt.verbosity == LOG_DEBUG)
-    {
-        char* path = 0;
-        if (asprintf(&path, "/proc/%ld/cmdline", (long)pid) != -1)
-        {
-            FILE* file = fopen(path, "r");
-            if (file != NULL)
-            {
-                char* proc = NULL;
-                int ret2;
+    static unsigned id = 0;
 
-                ret2 = fscanf(file, "%ms", &proc);
-                if (ret2 == 1)
-                {
-                    ret = asprintf(&str, "%ld (%s)", (long)pid, proc);
-                    if (proc)
-                        free(proc);
-                }
-                fclose(file);
-            }
-            free(path);
-        }
+    char *str = 0;
+    char *exe = 0;
+
+    if( pid == 0 ) {
+	str = strdup("<internal>");
+	goto EXIT;
     }
-    else
-    {
-        ret = asprintf(&str, "%ld", (long)pid);
-    }
-    return (ret > -1 ? str : strdup("<error>"));
+
+    exe = pid2exe(pid);
+
+    if( asprintf(&str, "external-%u/%ld (%s)", ++id,
+		 (long)pid, exe ?: "unknown") < 0 )
+	str = 0;
+
+EXIT:
+    free(exe);
+
+    return str ?: strdup("error");
 }
 
 #endif /* DSME_LOG_ENABLE */

@@ -1420,13 +1420,15 @@ static client_t *client_new_external(int fd)
  */
 static client_t *client_new_internal(endpoint_t *conn, void* data)
 {
+    static unsigned id = 0;
     client_t *self = client_new_external(-1);
 
     self->conn   = endpoint_copy(conn);
     self->data   = data;
 
     free(self->pidtxt);
-    self->pidtxt = strdup("internal");
+    if( asprintf(&self->pidtxt,"internal-%u", ++id) < 0 )
+	self->pidtxt = strdup("error");
 
     /* By default internal clients do not wake up from suspend */
     self->wakeup = false;
