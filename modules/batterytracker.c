@@ -76,8 +76,8 @@ static battery_levels_t levels[BATTERY_STATUS_COUNT] = {
     {  80, 300, false  }, /* Full    80 - 100, polling 5 mins */
     {  20, 180, false  }, /* Normal  20 - 79 */
     {  10, 120, true   }, /* Low     10 - 19 */
-    {   5,  60, true   }, /* Warning  5 -  9, shutdown happens below this */
-    {   0,  60, true   }  /* Empty    0 -  4, shutdown should have happened already  */
+    {   3,  60, true   }, /* Warning  3 -  9, shutdown happens below this */
+    {   0,  60, true   }  /* Empty    0 -  2, shutdown should have happened already  */
 };
 
 typedef struct battery_state_t {
