@@ -64,6 +64,7 @@ static const char* const battery_status_name[BATTERY_STATUS_COUNT] = {
 typedef struct battery_levels_t {
     int min_level;     /* percentance */
     int polling_time;  /* Polling time in sec */
+    bool wakeup;       /* Resume from suspend to check battery level */
 }  battery_levels_t;
 
 /* This is default config for battery levels
@@ -72,11 +73,11 @@ typedef struct battery_levels_t {
  */
 static battery_levels_t levels[BATTERY_STATUS_COUNT] = {
     /* Min %, polling time */
-    {  80, 300  }, /* Full    80 - 100, polling 5 mins */
-    {  20, 180  }, /* Normal  20 - 79 */
-    {  10, 120  }, /* Low     10 - 19 */
-    {   5, 60   }, /* Warning  5 -  9, shutdown happens below this */
-    {   0, 60   }  /* Empty    0 -  4, shutdown should have happened already  */
+    {  80, 300, false  }, /* Full    80 - 100, polling 5 mins */
+    {  20, 180, false  }, /* Normal  20 - 79 */
+    {  10, 120, true   }, /* Low     10 - 19 */
+    {   3,  60, true   }, /* Warning  3 -  9, shutdown happens below this */
+    {   0,  60, true   }  /* Empty    0 -  2, shutdown should have happened already  */
 };
 
 typedef struct battery_state_t {
@@ -102,16 +103,25 @@ static void read_config_file(void)
 
     // dsme_log(LOG_DEBUG, "batterytracker: %s()",__FUNCTION__);
 
+    memset(new_levels, 0, sizeof new_levels);
+
     f = fopen(BATTERY_LEVEL_CONFIG_FILE, "r");
     if (f) {
         for (i = 0; i < BATTERY_STATUS_COUNT; i++) {
-            if (fscanf(f,
-                      "%d, %d",
-                       &new_levels[i].min_level,
-                       &new_levels[i].polling_time) != 2) {
+	    int wakeup = 0;
+	    int values = fscanf(f, "%d, %d, %d",
+				&new_levels[i].min_level,
+				&new_levels[i].polling_time,
+				&wakeup);
+	    if( values < 2 ) {
                 success = false;
-            }
-            if (success) {
+	    }
+	    else {
+		if( values < 3 )
+		    new_levels[i].wakeup = (i >= BATTERY_STATUS_LOW);
+		else
+		    new_levels[i].wakeup = (wakeup != 0);
+
                 /* Do some sanity checking for values 
                   * Battery level values should be between 2-99, and in descending order.
                   * Polling times should also make sense  10-1000s
@@ -300,10 +310,12 @@ static void schedule_next_wakeup(void)
 
     int maxtime = 60;  /* Default polling time if no data */
     int mintime = 30;
+    bool wakeup = true; /* Default to resuming for battery monitoring */
 
     DSM_MSGTYPE_WAIT msg = DSME_MSG_INIT(DSM_MSGTYPE_WAIT);
 
     if (battery_state.data_uptodate) {
+	wakeup  = levels[battery_state.status].wakeup;
         maxtime = levels[battery_state.status].polling_time;
         /* Note, it is important to give big enough window min..max
          * then IPHB can freely choose best wake-up time
@@ -314,6 +326,7 @@ static void schedule_next_wakeup(void)
     msg.req.mintime = mintime;
     msg.req.maxtime = maxtime;
     msg.req.pid     = 0;
+    msg.req.wakeup  = wakeup;
     msg.data        = 0;
 
     dsme_log(LOG_DEBUG, "batterytracker: next wakeup at %d...%d", msg.req.mintime,  msg.req.maxtime);

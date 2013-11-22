@@ -30,7 +30,7 @@ Requires(postun): systemd
 BuildRequires:  pkgconfig(glib-2.0)
 BuildRequires:  pkgconfig(dbus-1)
 BuildRequires:  pkgconfig(dbus-glib-1)
-BuildRequires:  pkgconfig(libiphb)
+BuildRequires:  pkgconfig(libiphb) >= 1.1.0
 BuildRequires:  pkgconfig(dsme)
 BuildRequires:  pkgconfig(systemd)
 BuildRequires:  pkgconfig(mce) >= 1.12.3
