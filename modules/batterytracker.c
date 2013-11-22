@@ -103,16 +103,25 @@ static void read_config_file(void)
 
     // dsme_log(LOG_DEBUG, "batterytracker: %s()",__FUNCTION__);
 
+    memset(new_levels, 0, sizeof new_levels);
+
     f = fopen(BATTERY_LEVEL_CONFIG_FILE, "r");
     if (f) {
         for (i = 0; i < BATTERY_STATUS_COUNT; i++) {
-            if (fscanf(f,
-                      "%d, %d",
-                       &new_levels[i].min_level,
-                       &new_levels[i].polling_time) != 2) {
+	    int wakeup = 0;
+	    int values = fscanf(f, "%d, %d, %d",
+				&new_levels[i].min_level,
+				&new_levels[i].polling_time,
+				&wakeup);
+	    if( values < 2 ) {
                 success = false;
-            }
-            if (success) {
+	    }
+	    else {
+		if( values < 3 )
+		    new_levels[i].wakeup = (i >= BATTERY_STATUS_LOW);
+		else
+		    new_levels[i].wakeup = (wakeup != 0);
+
                 /* Do some sanity checking for values 
                   * Battery level values should be between 2-99, and in descending order.
                   * Polling times should also make sense  10-1000s
