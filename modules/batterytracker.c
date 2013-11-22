@@ -336,7 +336,20 @@ static void schedule_next_wakeup(void)
 
 static void do_regular_duties()
 {
+    static bool first_reading = true;
+
     // dsme_log(LOG_DEBUG, "batterytracker: %s()", __FUNCTION__);
+
+    if (first_reading) {
+        // First reading after boot for battery levels is unreliable
+        // Don't use its values
+        // We will schedule new reading after one minute
+        first_reading = false;
+        dsme_log(LOG_DEBUG, "batterytracker: Skip battery data on first reading");
+        battery_state.data_uptodate = false;
+        schedule_next_wakeup();
+        return;
+    }
 
     update_battery_info();
     if (battery_state.data_uptodate) {
