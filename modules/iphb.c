@@ -2533,10 +2533,18 @@ DSME_HANDLER(DSM_MSGTYPE_WAIT, conn, msg)
 
     client_handle_wait_req(client, &msg->req, &tv_now);
 
-    /* We don't want to wake anyone else up for internal clients showing up.
-     * And internal clients do not use timers or rtc interrupts.
-     * -> skip wakeup scanning and just feed the hwwd kicker */
-    hwwd_feeder_sync();
+    if( client_needs_resume(client) ) {
+	/* Internal requests with wakeup flag set are handled similarly
+	 * to external requests */
+	clientlist_wakeup_clients_if(&tv_now);
+    }
+    else {
+	/* We don't want to wake anyone else up for internal clients showing up.
+	 * And internal clients do not use timers or rtc interrupts.
+	 * -> skip wakeup scanning and just feed the hwhw kicker */
+	hwwd_feeder_sync();
+    }
+
 }
 
 /** Handle connected to system bus */
