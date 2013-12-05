@@ -82,6 +82,9 @@ const char *modules[] = {
     "iphb.so",
     "processwd.so",
     "alarmtracker.so",
+#ifdef DSME_BOOTREASON_LOGGER
+    "bootreasonlogger.so",
+#endif
 #ifdef DSME_BATTERY_TRACKER
     "batterytracker.so",
 #endif

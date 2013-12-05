@@ -94,6 +94,8 @@ install -d %{buildroot}/lib/systemd/system/multi-user.target.wants/
 ln -s ../%{name}.service %{buildroot}/lib/systemd/system/multi-user.target.wants/%{name}.service
 install -d %{buildroot}/var/lib/dsme
 [ ! -f %{buildroot}/var/lib/dsme/alarm_queue_status ] && echo 0 > %{buildroot}/var/lib/dsme/alarm_queue_status
+mkdir -p %{buildroot}/var/log/
+ln -s /var/lib/dsme/systemboot.log %{buildroot}/var/log/systemboot.log
 # << install post
 
 %preun
@@ -119,6 +121,7 @@ systemctl daemon-reload
 /lib/systemd/system/multi-user.target.wants/%{name}.service
 /var/lib/dsme
 %config(noreplace) /var/lib/dsme/alarm_queue_status
+/var/log/systemboot.log
 # >> files
 # << files
 

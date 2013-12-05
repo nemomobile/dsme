@@ -54,6 +54,7 @@ Files:
     - "/lib/systemd/system/multi-user.target.wants/%{name}.service"
     - "/var/lib/dsme"
     - "%config(noreplace) /var/lib/dsme/alarm_queue_status"
+    - "/var/log/systemboot.log"
 
 SubPackages:
     - Name: tests

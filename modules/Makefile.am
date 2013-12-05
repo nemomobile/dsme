@@ -71,6 +71,10 @@ if WANT_BATTERY_TRACKER
 pkglib_LTLIBRARIES += batterytracker.la
 endif
 
+if WANT_BOOTREASON_LOGGER
+pkglib_LTLIBRARIES += bootreasonlogger.la
+endif
+
 startup_la_SOURCES = startup.c
 
 # TODO: remove this
@@ -188,4 +192,10 @@ if WANT_BATTERY_TRACKER
 batterytracker_la_SOURCES = batterytracker.c
 batterytracker_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS) -D_GNU_SOURCE
 batterytracker_la_LIBADD = $(GLIB_LIBS)
+endif
+
+if WANT_BOOTREASON_LOGGER 
+bootreasonlogger_la_SOURCES = bootreasonlogger.c
+bootreasonlogger_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS) -D_GNU_SOURCE
+bootreasonlogger_la_LIBADD = $(GLIB_LIBS)
 endif
