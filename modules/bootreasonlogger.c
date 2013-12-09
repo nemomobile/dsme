@@ -107,6 +107,7 @@ static void write_log(const char *state, const char *reason)
     if (f) {
       if ( fprintf(f, "%s %s %s\n", get_timestamp(), state, reason) > 0) {
             success = true;
+            sync();
         }
         fclose(f);
     }
@@ -196,6 +197,7 @@ DSME_HANDLER(DSM_MSGTYPE_SET_BATTERY_STATE, conn, battery)
              PFIX"battery %s state received",
              battery->empty ? "empty" : "not empty");
 
+    write_log("Received: battery ", battery->empty ? "empty" : "not empty");
     if (battery->empty)
         saved_shutdown_reason = SD_BATTERY_EMPTY;
     else // Battery is no more empty. Shutdown won't happen
@@ -208,6 +210,7 @@ DSME_HANDLER(DSM_MSGTYPE_SET_THERMAL_STATE, conn, msg)
              PFIX"%s state received",
              msg->overheated ? "overheated" : "not overheated");
 
+    write_log("Received: device ",  msg->overheated ? "overheated" : "not overheated");
     if (msg->overheated)
         saved_shutdown_reason = SD_DEVICE_OVERHEAT;
     else  // Device is no more overheated. Shutdown won't happen
