@@ -1,5 +1,5 @@
 # Package name and version
-AC_INIT(dsme, 0.64.1)
+AC_INIT(dsme, 0.64.2)
 
 AM_INIT_AUTOMAKE
 
@@ -135,13 +135,26 @@ AM_CONDITIONAL([WANT_PWRKEY_MONITOR], [test x$enable_pwrkeymonitor != xno])
 #
 AC_ARG_ENABLE([battery-tracker],
   [AS_HELP_STRING([--disable-battery-tracker],
-    [disable hw thermal management (libbatterytracker)])],
+    [disable battery tracker (libbatterytracker)])],
   [],
   [enable_battery_tracker=yes])
 
 AS_IF([test "x$enable_battery_tracker" != xno],
   [AC_DEFINE([DSME_BATTERY_TRACKER], [1])])
 AM_CONDITIONAL([WANT_BATTERY_TRACKER], [test x$enable_battery_tracker != xno])
+
+#
+# Bootreason logger
+#
+AC_ARG_ENABLE([bootreason-logger],
+  [AS_HELP_STRING([--disable-bootreason-logger],
+    [disable bootreason logger (libbootreasonlogger)])],
+  [],
+  [enable_bootreason_logger=yes])
+
+AS_IF([test "x$enable_bootreason_logger" != xno],
+  [AC_DEFINE([DSME_BOOTREASON_LOGGER], [1])])
+AM_CONDITIONAL([WANT_BOOTREASON_LOGGER], [test x$enable_bootreason_logger != xno])
 
 #
 # Compiler and linker flags
