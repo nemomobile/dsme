@@ -26,7 +26,6 @@
 #include "dbusproxy.h"
 #include "dsme_dbus.h"
 
-// #include "dsme/timers.h"
 #include "dsme/modules.h"
 #include "dsme/logging.h"
 
@@ -34,13 +33,11 @@
 #include <dsme/protocol.h>
 
 #include <stdio.h>
-//#include <limits.h>
 #include <time.h>
-//#include <errno.h>
 #include <string.h>
 #include <stdlib.h>
 
-#define BOOT_LOG_FILE   "/var/lib/dsme/systemboot.log"
+#define BOOT_LOG_FILE   "/var/log/systemboot.log"
 #define PFIX            "bootlogger: "
 #define MAX_CMDLINE_LEN 1024
 
@@ -79,14 +76,13 @@ static const char *possible_pwrup_strings[] = {
 
 static char pwrup_reason[80];
 
-static char default_date[] = "00000000_000000";
-static char date_time[80];
-
-static char * get_timestamp(void)
+static const char * get_timestamp(void)
 {
+    static const char default_date[] = "00000000_000000";
+    static char date_time[80];
     time_t raw_time;
     struct tm *timeinfo;
-    char *timestamp = default_date;
+    const char *timestamp = default_date;
 
     if ((time(&raw_time) > 0) &&
         ((timeinfo = localtime(&raw_time)) != NULL) &&
@@ -134,19 +130,19 @@ static int get_cmd_line_value(char* get_value, int max_len, const char* key)
     }
 
     if (fgets(cmdline, MAX_CMDLINE_LEN, cmdline_file)) {
-        key_and_value = strtok(cmdline, " ,");
+        key_and_value = strtok(cmdline, " ");
         keylen = strlen(key);
         while (key_and_value != NULL) {
             if(!strncmp(key_and_value, key, keylen)) {
                 value = strtok(key_and_value, "=");
                 value = strtok(NULL, "=");
                 if (value) {
-                    strncpy(get_value, value, max_len);
+                    snprintf(get_value, max_len, "%s", value);
                     ret = strlen(get_value);
                 }
                 break;
             }
-            key_and_value = strtok(NULL, " ,");
+            key_and_value = strtok(NULL, " ");
         }
     }
     fclose(cmdline_file);
@@ -170,10 +166,10 @@ static char * get_powerup_reason_str(void)
     while ((search_key = possible_pwrup_strings[i])) {
         if ((env = getenv(search_key))) {
             snprintf(pwrup_reason, sizeof(pwrup_reason),"%s=%s", search_key, env);
-	    break;
+            break;
         } else if ((get_cmd_line_value(cmdvalue, sizeof(cmdvalue), search_key)) > 0) {
             snprintf(pwrup_reason, sizeof(pwrup_reason),"%s=%s", search_key, cmdvalue);
-	    break;
+            break;
         }
         i++;
     }
