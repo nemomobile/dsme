@@ -1877,7 +1877,7 @@ static void clientlist_rethink_rtc_wakeup(const struct timeval *now)
      * now and then to drive the battery monitoring during suspend */
 #if RTC_MAXIMUM_WAKEUP_TIME
     if( sleeptime < 0 || sleeptime > RTC_MAXIMUM_WAKEUP_TIME ) {
-	dsme_log(LOG_DEBUG, "truncating sleep: %ld -> %ld seconds",
+	dsme_log(LOG_DEBUG, PFIX"truncating sleep: %ld -> %ld seconds",
 		 (long)sleeptime, (long)RTC_MAXIMUM_WAKEUP_TIME);
 	sleeptime = RTC_MAXIMUM_WAKEUP_TIME;
     }
