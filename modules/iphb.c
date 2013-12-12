@@ -89,6 +89,15 @@
 /** Maximum time to stay in suspend [seconds]; zero for no limit */
 #define RTC_MAXIMUM_WAKEUP_TIME (30*60) // 30 minutes
 
+/** Image create time = mtime of mer-release file */
+#define IMAGE_TIME_STAMP_FILE "/etc/mer-release"
+
+/** Saved system time = mtime of saved-time file */
+#define SAVED_TIME_FILE       "/var/tmp/saved-time"
+
+/** Where to persistently store alarm state data received from timed */
+#define XTIMED_STATE_FILE     "/var/lib/dsme/timed_state"
+
 /* ------------------------------------------------------------------------- *
  * Custom types
  * ------------------------------------------------------------------------- */
@@ -116,6 +125,11 @@ static void clientlist_wakeup_clients_if(const struct timeval *now);
 
 static bool epollfd_add_fd(int fd, void *ptr);
 static void epollfd_remove_fd(int fd);
+
+static void systemtime_init(void);
+
+static char *tm_repr(const struct tm *tm, char *buff, size_t size);
+static char *t_repr(time_t t, char *buff, size_t size);
 
 /* ------------------------------------------------------------------------- *
  * Variables
@@ -259,22 +273,6 @@ static bool realtime_get_tv(struct timeval *tv)
 	res = true;
 
     return res;
-}
-
-/** Helper for calculating the difference between two time values in msecs
- *
- * @note No attempt is made to detect numeric overflows
- *
- * @param tv1 time value
- * @param tv2 time value
- *
- * @return tv1 - tv2 in milliseconds
- */
-static int tv_diff_ms(const struct timeval *tv1, const struct timeval *tv2)
-{
-    struct timeval tv;
-    timersub(tv1, tv2, &tv);
-    return tv.tv_sec * 1000 + tv.tv_usec / 1000;
 }
 
 /** Emit wakeup time stamp to log
@@ -700,24 +698,42 @@ static void android_alarm_quit(void)
 	close(android_alarm_fd), android_alarm_fd = -1;
 }
 
+static time_t android_alarm_prev = -1;
+
 /** Add rtc wakeup via android alarm device
  *
  * @param t time stamp of the wakeup
  */
-static void android_alarm_set(time_t t)
+static void android_alarm_set(time_t delay)
 {
-    struct timespec ts = { .tv_sec = t, .tv_nsec = 0 };
+    struct timespec now = { .tv_sec = 0, .tv_nsec = 0 };
 
     if( android_alarm_fd == -1 )
 	goto cleanup;
 
-    int cmd = ANDROID_ALARM_SET(ANDROID_ALARM_RTC_WAKEUP);
+    char tmp[32];
 
-    if( ioctl(android_alarm_fd, cmd, &ts) != 0 )
+    int get_time = ANDROID_ALARM_GET_TIME(ANDROID_ALARM_RTC);
+    if( ioctl(android_alarm_fd, get_time, &now) != 0 ) {
+	dsme_log(LOG_ERR, PFIX"%s: %m", "ANDROID_ALARM_TIME_GET");
+	goto cleanup;
+    }
+
+    struct timespec wup = now;
+    wup.tv_sec += delay;
+
+    int set_alarm = ANDROID_ALARM_SET(ANDROID_ALARM_RTC_WAKEUP);
+    if( ioctl(android_alarm_fd, set_alarm, &wup) != 0 ) {
 	dsme_log(LOG_ERR, PFIX"%s: %m", "ANDROID_ALARM_SET");
-    else
-	dsme_log(LOG_INFO, PFIX"%s: %s", "ANDROID_ALARM_SET",
-		"android alarm wakeup set");
+	goto cleanup;
+    }
+
+    if( android_alarm_prev != wup.tv_sec ) {
+	android_alarm_prev = wup.tv_sec;
+	dsme_log(LOG_INFO, PFIX"android: %s", t_repr(now.tv_sec, tmp, sizeof tmp));
+	dsme_log(LOG_INFO, PFIX"alarm  : %s", t_repr(wup.tv_sec, tmp, sizeof tmp));
+    }
+
 cleanup:
     return;
 }
@@ -731,11 +747,15 @@ static void android_alarm_clear(void)
 
     int cmd = ANDROID_ALARM_CLEAR(ANDROID_ALARM_RTC_WAKEUP);
 
-    if( ioctl(android_alarm_fd, cmd) != 0 )
+    if( ioctl(android_alarm_fd, cmd) != 0 ) {
 	dsme_log(LOG_ERR, PFIX"%s: %m", "ANDROID_ALARM_CLEAR");
-    else
-	dsme_log(LOG_INFO, PFIX"%s: %s", "ANDROID_ALARM_CLEAR",
-		"android alarm wakeup removed");
+	goto cleanup;
+    }
+
+    if( android_alarm_prev != -1 ) {
+	android_alarm_prev = -1;
+	dsme_log(LOG_INFO, PFIX"android alarm wakeup removed");
+    }
 
 cleanup:
     return;
@@ -744,6 +764,29 @@ cleanup:
 /* ------------------------------------------------------------------------- *
  * RTC management functionality
  * ------------------------------------------------------------------------- */
+
+/** Human readable representation of struct tm
+ */
+static char *tm_repr(const struct tm *tm, char *buff, size_t size)
+{
+    snprintf(buff, size, "%04d-%02d-%02d %02d:%02d:%02d %s",
+	     tm->tm_year  + 1900,
+	     tm->tm_mon   + 1,
+	     tm->tm_mday  + 0,
+	     tm->tm_hour,
+	     tm->tm_min,
+	     tm->tm_sec,
+	     tm->tm_zone ?: "???");
+    return buff;
+}
+
+/** Human readable representation of time_t
+ */
+static char *t_repr(time_t t, char *buff, size_t size)
+{
+    struct tm tm;
+    return tm_repr(gmtime_r(&t, &tm), buff, size);
+}
 
 /** Helper for logging rtc time values via dsme_log()
  *
@@ -937,19 +980,14 @@ cleanup:
     return result;
 }
 
-static struct timeval monodiff;
-
 static bool rtc_set_time_tv(const struct timeval *rtc)
 {
     bool result = false;
-    struct timeval mono;
-
-    monotime_get_tv(&mono);
 
     if( !rtc_set_time_t(rtc->tv_sec) )
 	goto cleanup;
 
-    timersub(rtc, &mono, &monodiff);
+    result = true;
 
 cleanup:
 
@@ -960,12 +998,6 @@ static bool rtc_get_time_tv(struct timeval *rtc)
 {
     bool result = false;
 
-#if 0
-    struct timeval mono;
-    monotime_get_tv(&mono);
-    timeradd(&mono, &monodiff, rtc);
-    result = true;
-#else
     struct tm tm;
     time_t t;
 
@@ -975,109 +1007,10 @@ static bool rtc_get_time_tv(struct timeval *rtc)
     rtc->tv_sec  = t;
     rtc->tv_usec = 0;
     result = true;
+
 cleanup:
-#endif
 
     return result;
-}
-
-enum
-{
-    ms_low    = 400,
-    ms_high   = 600,
-    ms_middle = (ms_low + ms_high) / 2,
-
-};
-
-static guint rtc_finetune_id = 0;
-
-static bool rtc_start_finetune(const struct timeval *tv_sys);
-
-static gboolean rtc_finetune_cb(gpointer aptr)
-{
-    struct timeval tv_sys;
-
-    if( !rtc_finetune_id )
-	return FALSE;
-
-    rtc_finetune_id = 0;
-
-    realtime_get_tv(&tv_sys);
-    rtc_start_finetune(&tv_sys);
-    return FALSE;
-}
-
-static void rtc_cancel_finetune(void)
-{
-    if( rtc_finetune_id )
-	g_source_remove(rtc_finetune_id), rtc_finetune_id = 0;
-}
-
-static bool rtc_start_finetune(const struct timeval *tv_sys)
-{
-    bool synchronized = false;
-
-    if( rtc_finetune_id )
-	goto cleanup;
-
-    int ms = tv_sys->tv_usec / 1000;
-
-    if( ms < ms_low || ms > ms_high ) {
-	if( (ms = ms_middle - ms) < 0 )
-	    ms += 1000;
-	dsme_log(LOG_INFO, PFIX"rtc finetune wakeup in %d ms", ms);
-	rtc_finetune_id = g_timeout_add(ms, rtc_finetune_cb, 0);
-    }
-    else {
-	dsme_log(LOG_INFO, PFIX"sync rtc time with system time");
-	rtc_set_time_tv(tv_sys);
-	synchronized = true;
-    }
-cleanup:
-    return synchronized;
-}
-
-/** Synchronize rtc time to system time
- *
- * Adjust rtc time if disagrees from system time by more
- * than one second.
- *
- * @return true on success, or false in case of errors
- */
-static bool rtc_sync_to_system_time(void)
-{
-    bool success = false;
-
-    int diff;
-
-    struct timeval tv_rtc, tv_sys;
-
-    memset(&tv_sys, 0, sizeof tv_sys);
-    memset(&tv_rtc, 0, sizeof tv_rtc);
-
-    if( !rtc_get_time_tv(&tv_rtc) )
-	goto cleanup;
-
-    if( !realtime_get_tv(&tv_sys) )
-	goto cleanup;
-
-    diff = tv_diff_ms(&tv_sys, &tv_rtc);
-
-    dsme_log(LOG_DEBUG, PFIX"system time - rtc time = %d ms", diff);
-
-    if( diff < 0 || diff > 1000 ) {
-	/* start finetuning timer if needed */
-	if( !rtc_start_finetune(&tv_sys) ) {
-	    /* or sync immediately within one second accuracy */
-	    dsme_log(LOG_DEBUG, PFIX"coarse rtc time sync");
-	    rtc_set_time_tv(&tv_sys);
-	}
-    }
-    success = true;
-
-cleanup:
-
-    return success;
 }
 
 /** Set rtc alarm from struct rtc_time
@@ -1145,12 +1078,6 @@ static bool rtc_set_alarm_tm(const struct tm *tm, bool enabled)
     if( !rtc_set_alarm_raw(&tod, enabled) )
 	goto cleanup;
 
-    if( enabled )
-	android_alarm_set(t);
-    else
-	android_alarm_clear();
-
-
     result = true;
 
 cleanup:
@@ -1169,7 +1096,15 @@ static bool rtc_set_alarm_after(time_t delay)
     bool result = false;
     bool enabled = false;
 
+    time_t sys = time(0);
+    time_t alm = sys + delay;
+
     struct tm tm;
+    char tmp[32];
+
+    dsme_log(LOG_INFO, PFIX"wakeup delay %d", (int)delay);
+    dsme_log(LOG_INFO, PFIX"system : %s", t_repr(sys, tmp, sizeof tmp));
+    dsme_log(LOG_INFO, PFIX"alarm  : %s", t_repr(alm, tmp, sizeof tmp));
 
     if( rtc_fd == -1 )
 	goto cleanup;
@@ -1181,6 +1116,11 @@ static bool rtc_set_alarm_after(time_t delay)
 	tm.tm_sec += delay;
 	enabled = true;
     }
+
+    if( enabled )
+	android_alarm_set(delay);
+    else
+	android_alarm_clear();
 
     if( !rtc_set_alarm_tm(&tm, enabled) )
 	goto cleanup;
@@ -1221,6 +1161,9 @@ static void rtc_set_alarm_powerup(void)
     rtc_set_alarm_after(rtc);
 }
 
+/** Flag for: update system time on rtc interrupt */
+static bool rtc_to_system_time = false;
+
 /** Handle input from /dev/rtc
  *
  * @return true on success, or false in case of errors
@@ -1250,6 +1193,23 @@ static bool rtc_handle_input(void)
     }
 
     dsme_log(LOG_INFO, PFIX"handling RTC wakeup");
+
+    /* set system time and disable update interrupts */
+    if( rtc_to_system_time ) {
+	rtc_to_system_time = false;
+
+	if( ioctl(rtc_fd, RTC_UIE_OFF, 0) == -1 )
+	    dsme_log(LOG_WARNING, PFIX"failed to disable update interrupts");
+
+	struct timeval tv;
+
+	if( !rtc_get_time_tv(&tv) )
+	    dsme_log(LOG_WARNING, PFIX"failed to read rtc time");
+	else if( settimeofday(&tv, 0) == -1 )
+	    dsme_log(LOG_WARNING, PFIX"failed to set system time");
+	else
+	    dsme_log(LOG_INFO, PFIX"system time set from rtc");
+    }
 
     /* acquire wakelock that is passed to mce via ipc */
     wakelock_lock(rtc_wakeup, -1);
@@ -1300,8 +1260,27 @@ static bool rtc_attach(void)
     rtc_fd = fd, fd = -1;
     dsme_log(LOG_INFO, PFIX"opened %s", rtc_path);
 
-    /* synchronize rtc time with system time */
-    rtc_sync_to_system_time();
+    /* deal with obviously wrong rtc time values */
+    systemtime_init();
+
+    /* 1st: Set system time from rtc. This should bring the two
+     *      clocks within one second from each other */
+    struct timeval tv;
+    if( !rtc_get_time_tv(&tv) )
+	dsme_log(LOG_WARNING, PFIX"failed to read rtc time");
+    else if( settimeofday(&tv, 0) == -1 )
+	dsme_log(LOG_WARNING, PFIX"failed to set system time");
+    else
+	dsme_log(LOG_INFO, PFIX"system time set from rtc");
+
+    /* 2nd: Use rtc update interrupts to bring system time
+     *      closer to rtc time */
+    if( ioctl(rtc_fd, RTC_UIE_ON, 0) == -1 ) {
+	dsme_log(LOG_WARNING, PFIX"failed to enable update interrupts");
+    }
+    else {
+	rtc_to_system_time = true;
+    }
 
 cleanup:
 
@@ -1893,14 +1872,11 @@ static void clientlist_rethink_rtc_wakeup(const struct timeval *now)
     if( alarmtime > 0 && sleeptime > alarmtime )
 	sleeptime = alarmtime;
 
-    /* synchronize rtc time with system time */
-    rtc_sync_to_system_time();
-
     /* Even if there are not clients, we want rtc wakeup every
      * now and then to drive the battery monitoring during suspend */
 #if RTC_MAXIMUM_WAKEUP_TIME
     if( sleeptime < 0 || sleeptime > RTC_MAXIMUM_WAKEUP_TIME ) {
-	dsme_log(LOG_DEBUG, "truncating sleep: %ld -> %ld seconds",
+	dsme_log(LOG_DEBUG, PFIX"truncating sleep: %ld -> %ld seconds",
 		 (long)sleeptime, (long)RTC_MAXIMUM_WAKEUP_TIME);
 	sleeptime = RTC_MAXIMUM_WAKEUP_TIME;
     }
@@ -2132,6 +2108,78 @@ static void xtimed_config_status_cb(const DsmeDbusMessage* ind)
     struct timeval now;
     monotime_get_tv(&now);
     clientlist_rethink_rtc_wakeup(&now);
+}
+
+/** Store alarm queue data to a file
+ */
+static void xtimed_status_save(void)
+{
+  const char *path = XTIMED_STATE_FILE;
+  const char *temp = XTIMED_STATE_FILE".tmp";
+
+  FILE *file = 0;
+  int rc;
+
+  if( remove(temp) == -1 && errno != ENOENT ) {
+    dsme_log(LOG_ERR, PFIX"%s: %s: %m", temp, "remove");
+    goto cleanup;
+  }
+
+  if( !(file = fopen(temp, "w")) ) {
+    dsme_log(LOG_ERR, PFIX"%s: %s: %m", temp, "open");
+    goto cleanup;
+  }
+
+  rc = fprintf(file, "%ld %ld\n", (long)alarm_powerup, (long)alarm_resume);
+  if( rc < 0 ) {
+    dsme_log(LOG_ERR, PFIX"%s: %s: %m", temp, "write");
+    goto cleanup;
+  }
+
+  if( fflush(file) == EOF ) {
+    dsme_log(LOG_ERR, PFIX"%s: %s: %m", temp, "flush");
+    goto cleanup;
+  }
+
+  rc = fclose(file), file = 0;
+  if( rc == EOF ) {
+    dsme_log(LOG_ERR, PFIX"%s: %s: %m", temp, "close");
+    goto cleanup;
+  }
+
+  if( rename(temp, path) == -1 ) {
+    dsme_log(LOG_ERR, PFIX"%s: rename to %s: %m", temp, path);
+  }
+
+cleanup:
+  if( file ) fclose(file);
+}
+
+/** Restore alarm queue data from a file
+ */
+static void xtimed_status_load(void)
+{
+  const char *path = XTIMED_STATE_FILE;
+
+  FILE *file = 0;
+
+  if( !(file = fopen(path, "r")) ) {
+      if( errno != ENOENT )
+	  dsme_log(LOG_ERR, PFIX"%s: %s: %m", path, "open");
+    goto cleanup;
+  }
+
+  long powerup = 0, resume = 0;
+
+  if( fscanf(file, "%ld %ld", &powerup, &resume) != 2 ) {
+    dsme_log(LOG_ERR, PFIX"%s: %s: did not get two values", path, "read");
+    goto cleanup;
+  }
+  alarm_powerup = (time_t)powerup;
+  alarm_resume  = (time_t)resume;
+
+cleanup:
+  if( file ) fclose(file);
 }
 
 /* ------------------------------------------------------------------------- *
@@ -2574,6 +2622,93 @@ module_fn_info_t message_handlers[] =
 };
 
 /* ------------------------------------------------------------------------- *
+ * System time setup / update
+ * ------------------------------------------------------------------------- */
+
+static time_t get_mtime(const char *path)
+{
+    struct stat st;
+
+    if( stat(path, &st) == 0 )
+	return st.st_mtime;
+
+    if( errno != ENOENT )
+	dsme_log(LOG_ERR, PFIX"%s: failed to get mtime: %m", path);
+
+    return 0;
+}
+
+static time_t mintime_fetch(void)
+{
+    struct tm tm =
+    {
+	// 2013-12-01 12:00:00 UTC
+	.tm_sec   = 0,
+	.tm_min   = 0,
+	.tm_hour  = 12,
+
+	.tm_mday  = 10   - 0,
+	.tm_mon   = 12   - 1,
+	.tm_year  = 2013 - 1900,
+
+	.tm_wday  = -1,
+	.tm_yday  = -1,
+	.tm_isdst = -1,
+    };
+
+    time_t    t_builtin = timegm(&tm);
+    time_t    t_release = get_mtime(IMAGE_TIME_STAMP_FILE);
+    time_t    t_saved   = get_mtime(SAVED_TIME_FILE);
+    time_t    t_system  = time(0);
+    char      tmp[32];
+
+    dsme_log(LOG_INFO, PFIX"builtin %s", t_repr(t_builtin, tmp, sizeof tmp));
+    dsme_log(LOG_INFO, PFIX"release %s", t_repr(t_release, tmp, sizeof tmp));
+    dsme_log(LOG_INFO, PFIX"saved   %s", t_repr(t_saved,   tmp, sizeof tmp));
+    dsme_log(LOG_INFO, PFIX"system  %s", t_repr(t_system,  tmp, sizeof tmp));
+
+    if( t_saved < t_builtin )
+	t_saved = t_builtin;
+
+    if( t_saved < t_release )
+	t_saved = t_release;
+
+    if( t_saved < t_system )
+	t_saved = t_system;
+
+    return t_saved;
+}
+
+static void mintime_store(void)
+{
+    static const char *path =  SAVED_TIME_FILE;
+    int fd = open(path, O_WRONLY|O_CREAT|O_TRUNC, 0644);
+    if( fd == -1 )
+	dsme_log(LOG_ERR, PFIX"%s: failed to open for writing: %m", path);
+    else
+	close(fd);
+}
+
+static void systemtime_init(void)
+{
+    struct tm tm;
+    time_t t_min = mintime_fetch();
+    time_t t_rtc = rtc_get_time_tm(&tm);
+
+    if( t_rtc < t_min ) {
+	char tmp[32];
+	dsme_log(LOG_WARNING, PFIX"rtc at %s", t_repr(t_rtc, tmp, sizeof tmp));
+	dsme_log(LOG_WARNING, PFIX"set to %s", t_repr(t_min, tmp, sizeof tmp));
+	rtc_set_time_t(t_min);
+    }
+}
+
+static void systemtime_quit(void)
+{
+    mintime_store();
+}
+
+/* ------------------------------------------------------------------------- *
  * Module loading & unloading
  * ------------------------------------------------------------------------- */
 
@@ -2583,6 +2718,9 @@ void module_init(module_t *handle)
     bool success = false;
 
     dsme_log(LOG_INFO, PFIX"iphb.so loaded");
+
+    /* restore alarm queue state */
+    xtimed_status_load();
 
     /* Clear stale wakelocks that we might have left due to dsme crash etc */
     wakelock_unlock(rtc_wakeup);
@@ -2618,11 +2756,35 @@ cleanup:
 void module_fini(void)
 {
     /* cancel timers */
-    rtc_cancel_finetune();
     clientlist_cancel_wakeup_timeout();
 
     /* detach dbus handlers */
     dsme_dbus_unbind_signals(&bound, signals);
+
+    /* store alarm queue state to a file*/
+    xtimed_status_save();
+
+    /* store system time to rtc */
+    struct timeval tv_sys, tv_rtc;
+    if( !rtc_get_time_tv(&tv_rtc) )
+	dsme_log(LOG_ERR, PFIX"could not get rtc time");
+    else if( !realtime_get_tv(&tv_sys) )
+	dsme_log(LOG_ERR, PFIX"could not get system time");
+    else {
+	struct timeval t;
+	timersub(&tv_sys, &tv_rtc, &t);
+
+	/* Note: due to how timeval works, we get
+	 * nonzero t.tv_sec when rtc > sys || sys+1 >= rtc
+	 */
+
+	if( !t.tv_sec )
+	    dsme_log(LOG_CRIT, PFIX"RTC in sync with system time");
+	else if( !rtc_set_time_tv(&tv_sys) )
+	    dsme_log(LOG_ERR, PFIX"could not set rtc time");
+	else
+	    dsme_log(LOG_CRIT, PFIX"RTC updated to system time");
+    }
 
     /* set wakeup alarm before closing the rtc */
     rtc_set_alarm_powerup();
@@ -2630,6 +2792,9 @@ void module_fini(void)
 
     /* close android alarm device */
     android_alarm_quit();
+
+    /* save last-known-system-time */
+    systemtime_quit();
 
     /* cleanup rest of what is in the epoll set */
     listenfd_quit();
