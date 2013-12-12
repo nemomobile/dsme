@@ -89,6 +89,12 @@
 /** Maximum time to stay in suspend [seconds]; zero for no limit */
 #define RTC_MAXIMUM_WAKEUP_TIME (30*60) // 30 minutes
 
+/** Image create time = mtime of mer-release file */
+#define IMAGE_TIME_STAMP_FILE "/etc/mer-release"
+
+/** Saved system time = mtime of saved-time file */
+#define SAVED_TIME_FILE       "/var/tmp/saved-time"
+
 /* ------------------------------------------------------------------------- *
  * Custom types
  * ------------------------------------------------------------------------- */
@@ -116,6 +122,8 @@ static void clientlist_wakeup_clients_if(const struct timeval *now);
 
 static bool epollfd_add_fd(int fd, void *ptr);
 static void epollfd_remove_fd(int fd);
+
+static void systemtime_init(void);
 
 static char *tm_repr(const struct tm *tm, char *buff, size_t size);
 static char *t_repr(time_t t, char *buff, size_t size);
@@ -1248,6 +1256,9 @@ static bool rtc_attach(void)
     /* N.B. rtc_xxx utilities can be called after rtc_fd is set */
     rtc_fd = fd, fd = -1;
     dsme_log(LOG_INFO, PFIX"opened %s", rtc_path);
+
+    /* deal with obviously wrong rtc time values */
+    systemtime_init();
 
     /* Enable update interrupts and use the first one to sync
      * system time with rtc. Or, if that fails update system
@@ -2537,6 +2548,93 @@ module_fn_info_t message_handlers[] =
 };
 
 /* ------------------------------------------------------------------------- *
+ * System time setup / update
+ * ------------------------------------------------------------------------- */
+
+static time_t get_mtime(const char *path)
+{
+    struct stat st;
+
+    if( stat(path, &st) == 0 )
+	return st.st_mtime;
+
+    if( errno != ENOENT )
+	dsme_log(LOG_ERR, PFIX"%s: failed to get mtime: %m", path);
+
+    return 0;
+}
+
+static time_t mintime_fetch(void)
+{
+    struct tm tm =
+    {
+	// 2013-12-01 12:00:00 UTC
+	.tm_sec   = 0,
+	.tm_min   = 0,
+	.tm_hour  = 12,
+
+	.tm_mday  = 10   - 0,
+	.tm_mon   = 12   - 1,
+	.tm_year  = 2013 - 1900,
+
+	.tm_wday  = -1,
+	.tm_yday  = -1,
+	.tm_isdst = -1,
+    };
+
+    time_t    t_builtin = timegm(&tm);
+    time_t    t_release = get_mtime(IMAGE_TIME_STAMP_FILE);
+    time_t    t_saved   = get_mtime(SAVED_TIME_FILE);
+    time_t    t_system  = time(0);
+    char      tmp[32];
+
+    dsme_log(LOG_INFO, PFIX"builtin %s", t_repr(t_builtin, tmp, sizeof tmp));
+    dsme_log(LOG_INFO, PFIX"release %s", t_repr(t_release, tmp, sizeof tmp));
+    dsme_log(LOG_INFO, PFIX"saved   %s", t_repr(t_saved,   tmp, sizeof tmp));
+    dsme_log(LOG_INFO, PFIX"system  %s", t_repr(t_system,  tmp, sizeof tmp));
+
+    if( t_saved < t_builtin )
+	t_saved = t_builtin;
+
+    if( t_saved < t_release )
+	t_saved = t_release;
+
+    if( t_saved < t_system )
+	t_saved = t_system;
+
+    return t_saved;
+}
+
+static void mintime_store(void)
+{
+    static const char *path =  SAVED_TIME_FILE;
+    int fd = open(path, O_WRONLY|O_CREAT|O_TRUNC, 0644);
+    if( fd == -1 )
+	dsme_log(LOG_ERR, PFIX"%s: failed to open for writing: %m", path);
+    else
+	close(fd);
+}
+
+static void systemtime_init(void)
+{
+    struct tm tm;
+    time_t t_min = mintime_fetch();
+    time_t t_rtc = rtc_get_time_tm(&tm);
+
+    if( t_rtc < t_min ) {
+	char tmp[32];
+	dsme_log(LOG_WARNING, PFIX"rtc at %s", t_repr(t_rtc, tmp, sizeof tmp));
+	dsme_log(LOG_WARNING, PFIX"set to %s", t_repr(t_min, tmp, sizeof tmp));
+	rtc_set_time_t(t_min);
+    }
+}
+
+static void systemtime_quit(void)
+{
+    mintime_store();
+}
+
+/* ------------------------------------------------------------------------- *
  * Module loading & unloading
  * ------------------------------------------------------------------------- */
 
@@ -2614,6 +2712,9 @@ void module_fini(void)
 
     /* close android alarm device */
     android_alarm_quit();
+
+    /* save last-known-system-time */
+    systemtime_quit();
 
     /* cleanup rest of what is in the epoll set */
     listenfd_quit();
