@@ -1,3 +1,12 @@
+dsme (0.64.3) unstable; urgency=low
+
+  * [iphb] Do not modify RTC time while dsme is running
+  * [iphb] Sync RTC and system time on dsme startup/exit
+  * [iphb] Do not apply obviously wrong RTC time as system time
+  * [iphb] Cache alarm queue state over dsme/device restarts
+
+ -- Simo Piiroinen <simo.piiroinen@jollamobile.com>  Thu, 12 Dec 2013 14:16:20 +0200
+
 dsme (0.64.0) unstable; urgency=low
 
   * [iphb] Allow internal wakeups to resume from suspend
