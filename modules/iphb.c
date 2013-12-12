@@ -1150,6 +1150,9 @@ static void rtc_set_alarm_powerup(void)
     rtc_set_alarm_after(rtc);
 }
 
+/** Flag for: update system time on rtc interrupt */
+static bool rtc_to_system_time = false;
+
 /** Handle input from /dev/rtc
  *
  * @return true on success, or false in case of errors
@@ -1179,6 +1182,23 @@ static bool rtc_handle_input(void)
     }
 
     dsme_log(LOG_INFO, PFIX"handling RTC wakeup");
+
+    /* set system time and disable update interrupts */
+    if( rtc_to_system_time ) {
+	rtc_to_system_time = false;
+
+	if( ioctl(rtc_fd, RTC_UIE_OFF, 0) == -1 )
+	    dsme_log(LOG_WARNING, PFIX"failed to disable update interrupts");
+
+	struct timeval tv;
+
+	if( !rtc_get_time_tv(&tv) )
+	    dsme_log(LOG_WARNING, PFIX"failed to read rtc time");
+	else if( settimeofday(&tv, 0) == -1 )
+	    dsme_log(LOG_WARNING, PFIX"failed to set system time");
+	else
+	    dsme_log(LOG_INFO, PFIX"system time set from rtc");
+    }
 
     /* acquire wakelock that is passed to mce via ipc */
     wakelock_lock(rtc_wakeup, -1);
@@ -1229,6 +1249,25 @@ static bool rtc_attach(void)
     rtc_fd = fd, fd = -1;
     dsme_log(LOG_INFO, PFIX"opened %s", rtc_path);
 
+    /* Enable update interrupts and use the first one to sync
+     * system time with rtc. Or, if that fails update system
+     * time immediately.
+     */
+    if( ioctl(rtc_fd, RTC_UIE_ON, 0) == -1 ) {
+	dsme_log(LOG_WARNING, PFIX"failed to enable update interrupts");
+	dsme_log(LOG_WARNING, PFIX"setting system time immediately");
+
+	struct timeval tv;
+	if( !rtc_get_time_tv(&tv) )
+	    dsme_log(LOG_WARNING, PFIX"failed to read rtc time");
+	else if( settimeofday(&tv, 0) == -1 )
+	    dsme_log(LOG_WARNING, PFIX"failed to set system time");
+	else
+	    dsme_log(LOG_INFO, PFIX"system time set from rtc");
+    }
+    else {
+	rtc_to_system_time = true;
+    }
 
 cleanup:
 
@@ -2546,6 +2585,28 @@ void module_fini(void)
 
     /* detach dbus handlers */
     dsme_dbus_unbind_signals(&bound, signals);
+
+    /* store system time to rtc */
+    struct timeval tv_sys, tv_rtc;
+    if( !rtc_get_time_tv(&tv_rtc) )
+	dsme_log(LOG_ERR, PFIX"could not get rtc time");
+    else if( !realtime_get_tv(&tv_sys) )
+	dsme_log(LOG_ERR, PFIX"could not get system time");
+    else {
+	struct timeval t;
+	timersub(&tv_sys, &tv_rtc, &t);
+
+	/* Note: due to how timeval works, we get
+	 * nonzero t.tv_sec when rtc > sys || sys+1 >= rtc
+	 */
+
+	if( !t.tv_sec )
+	    dsme_log(LOG_CRIT, PFIX"RTC in sync with system time");
+	else if( !rtc_set_time_tv(&tv_sys) )
+	    dsme_log(LOG_ERR, PFIX"could not set rtc time");
+	else
+	    dsme_log(LOG_CRIT, PFIX"RTC updated to system time");
+    }
 
     /* set wakeup alarm before closing the rtc */
     rtc_set_alarm_powerup();
