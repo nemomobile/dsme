@@ -1263,21 +1263,20 @@ static bool rtc_attach(void)
     /* deal with obviously wrong rtc time values */
     systemtime_init();
 
-    /* Enable update interrupts and use the first one to sync
-     * system time with rtc. Or, if that fails update system
-     * time immediately.
-     */
+    /* 1st: Set system time from rtc. This should bring the two
+     *      clocks within one second from each other */
+    struct timeval tv;
+    if( !rtc_get_time_tv(&tv) )
+	dsme_log(LOG_WARNING, PFIX"failed to read rtc time");
+    else if( settimeofday(&tv, 0) == -1 )
+	dsme_log(LOG_WARNING, PFIX"failed to set system time");
+    else
+	dsme_log(LOG_INFO, PFIX"system time set from rtc");
+
+    /* 2nd: Use rtc update interrupts to bring system time
+     *      closer to rtc time */
     if( ioctl(rtc_fd, RTC_UIE_ON, 0) == -1 ) {
 	dsme_log(LOG_WARNING, PFIX"failed to enable update interrupts");
-	dsme_log(LOG_WARNING, PFIX"setting system time immediately");
-
-	struct timeval tv;
-	if( !rtc_get_time_tv(&tv) )
-	    dsme_log(LOG_WARNING, PFIX"failed to read rtc time");
-	else if( settimeofday(&tv, 0) == -1 )
-	    dsme_log(LOG_WARNING, PFIX"failed to set system time");
-	else
-	    dsme_log(LOG_INFO, PFIX"system time set from rtc");
     }
     else {
 	rtc_to_system_time = true;
