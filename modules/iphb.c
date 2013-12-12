@@ -95,6 +95,9 @@
 /** Saved system time = mtime of saved-time file */
 #define SAVED_TIME_FILE       "/var/tmp/saved-time"
 
+/** Where to persistently store alarm state data received from timed */
+#define XTIMED_STATE_FILE     "/var/lib/dsme/timed_state"
+
 /* ------------------------------------------------------------------------- *
  * Custom types
  * ------------------------------------------------------------------------- */
@@ -2108,6 +2111,78 @@ static void xtimed_config_status_cb(const DsmeDbusMessage* ind)
     clientlist_rethink_rtc_wakeup(&now);
 }
 
+/** Store alarm queue data to a file
+ */
+static void xtimed_status_save(void)
+{
+  const char *path = XTIMED_STATE_FILE;
+  const char *temp = XTIMED_STATE_FILE".tmp";
+
+  FILE *file = 0;
+  int rc;
+
+  if( remove(temp) == -1 && errno != ENOENT ) {
+    dsme_log(LOG_ERR, PFIX"%s: %s: %m", temp, "remove");
+    goto cleanup;
+  }
+
+  if( !(file = fopen(temp, "w")) ) {
+    dsme_log(LOG_ERR, PFIX"%s: %s: %m", temp, "open");
+    goto cleanup;
+  }
+
+  rc = fprintf(file, "%ld %ld\n", (long)alarm_powerup, (long)alarm_resume);
+  if( rc < 0 ) {
+    dsme_log(LOG_ERR, PFIX"%s: %s: %m", temp, "write");
+    goto cleanup;
+  }
+
+  if( fflush(file) == EOF ) {
+    dsme_log(LOG_ERR, PFIX"%s: %s: %m", temp, "flush");
+    goto cleanup;
+  }
+
+  rc = fclose(file), file = 0;
+  if( rc == EOF ) {
+    dsme_log(LOG_ERR, PFIX"%s: %s: %m", temp, "close");
+    goto cleanup;
+  }
+
+  if( rename(temp, path) == -1 ) {
+    dsme_log(LOG_ERR, PFIX"%s: rename to %s: %m", temp, path);
+  }
+
+cleanup:
+  if( file ) fclose(file);
+}
+
+/** Restore alarm queue data from a file
+ */
+static void xtimed_status_load(void)
+{
+  const char *path = XTIMED_STATE_FILE;
+
+  FILE *file = 0;
+
+  if( !(file = fopen(path, "r")) ) {
+      if( errno != ENOENT )
+	  dsme_log(LOG_ERR, PFIX"%s: %s: %m", path, "open");
+    goto cleanup;
+  }
+
+  long powerup = 0, resume = 0;
+
+  if( fscanf(file, "%ld %ld", &powerup, &resume) != 2 ) {
+    dsme_log(LOG_ERR, PFIX"%s: %s: did not get two values", path, "read");
+    goto cleanup;
+  }
+  alarm_powerup = (time_t)powerup;
+  alarm_resume  = (time_t)resume;
+
+cleanup:
+  if( file ) fclose(file);
+}
+
 /* ------------------------------------------------------------------------- *
  * listenfd
  * ------------------------------------------------------------------------- */
@@ -2645,6 +2720,9 @@ void module_init(module_t *handle)
 
     dsme_log(LOG_INFO, PFIX"iphb.so loaded");
 
+    /* restore alarm queue state */
+    xtimed_status_load();
+
     /* Clear stale wakelocks that we might have left due to dsme crash etc */
     wakelock_unlock(rtc_wakeup);
     wakelock_unlock(rtc_input);
@@ -2683,6 +2761,9 @@ void module_fini(void)
 
     /* detach dbus handlers */
     dsme_dbus_unbind_signals(&bound, signals);
+
+    /* store alarm queue state to a file*/
+    xtimed_status_save();
 
     /* store system time to rtc */
     struct timeval tv_sys, tv_rtc;
