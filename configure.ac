@@ -161,7 +161,7 @@ fi
 # FIXME: DSME_LOG_ENABLE should be proper&working configure option
 #AC_DEFINE([DSME_LOG_ENABLE], [1])
 
-AC_SUBST(C_GENFLAGS, ["-pthread -g -std=c99 -Wall -Wwrite-strings -Wmissing-prototypes -Werror"])
+AC_SUBST(C_GENFLAGS, ["-pthread -g -std=c99 -Wall -Wwrite-strings -Wmissing-prototypes -Werror -Wshadow"])
 AC_SUBST(C_OPTFLAGS, ["-O2"])
 AC_SUBST(C_DBGFLAGS, ["-g -DDEBUG -DDSME_LOG_ENABLE"])
 AC_SUBST(CPP_GENFLAGS, '-I$(top_srcdir) -I$(top_srcdir)/include')

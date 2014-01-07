@@ -45,11 +45,11 @@
 static bool mounted_to_pc = false; 
 static bool charger_connected = false;
 
-static void send_usb_status(bool mounted_to_pc)
+static void send_usb_status(bool mounted_to_pc_input)
 {
     DSM_MSGTYPE_SET_USB_STATE msg = DSME_MSG_INIT(DSM_MSGTYPE_SET_USB_STATE);
 
-    msg.mounted_to_pc = mounted_to_pc;
+    msg.mounted_to_pc = mounted_to_pc_input;
 
     dsme_log(LOG_DEBUG,
              "usbtracker: broadcasting usb state:%s mounted to PC",
