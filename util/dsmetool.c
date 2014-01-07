@@ -44,6 +44,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/select.h>
+#include <sys/ioctl.h>
+#include <linux/rtc.h>
 
 #include <pwd.h>
 #include <grp.h>
@@ -66,6 +68,7 @@ static void usage(const char* name)
 "  -v --version                    Print the versions of DSME and dsmetool\n"
 "  -t --telinit <runlevel name>    Change runlevel\n"
 "  -l --loglevel <0..7>            Change DSME's logging verbosity\n"
+"  -c --clear-rtc                  Clear RTC alarms\n"
 "  -h --help                       Print usage\n");
 }
 
@@ -251,12 +254,61 @@ static int loglevel(unsigned level)
     return EXIT_SUCCESS;
 }
 
+static int clear_rtc()
+{
+  /* Clear possible RTC alarm wakeup*/
+
+    static const char rtc_path[] = "/dev/rtc0";
+    int rtc_fd = -1;
+    struct rtc_wkalrm alrm;
+
+    if ((rtc_fd = open(rtc_path, O_RDONLY)) == -1) {
+        /* TODO:
+         * If open fails reason is most likely that dsme is running and has opened rtc.
+         * In that case we should send message to dsme and ask it to do the clearing.
+         * This functionality is not now needed because rtc alarms are cleared
+         * only during preinit and there dsme is not running.
+         * But to make this complete, that functionality should be added.
+         */
+        printf("Failed to open %s: %m\n", rtc_path);
+        return EXIT_FAILURE;
+    }
+
+    memset(&alrm, 0, sizeof(alrm));
+    if (ioctl(rtc_fd, RTC_WKALM_RD, &alrm) == -1) {
+        printf("Failed to read rtc alarms %s: %s: %m\n", rtc_path, "RTC_WKALM_RD");
+        close(rtc_fd);
+        return EXIT_FAILURE;
+    }
+    printf("Alarm was %s at %d.%d.%d %02d:%02d:%02d UTC\n",
+           alrm.enabled ? "Enabled" : "Disabled",
+           1900+alrm.time.tm_year, 1+alrm.time.tm_mon, alrm.time.tm_mday, 
+           alrm.time.tm_hour, alrm.time.tm_min, alrm.time.tm_sec);
+
+    /* Because of bug? we need to enable alarm first before we can disable it */
+    alrm.enabled = 1;
+    alrm.pending = 0;
+    if (ioctl(rtc_fd, RTC_WKALM_SET, &alrm) == -1)
+        printf("Failed to enable rtc alarms %s: %s: %m\n", rtc_path, "RTC_WKALM_SET");
+    /* Now disable the alarm */
+    alrm.enabled = 0;
+    alrm.pending = 0;
+    if (ioctl(rtc_fd, RTC_WKALM_SET, &alrm) == -1) {
+        printf("Failed to clear rtc alarms %s: %s: %m\n", rtc_path, "RTC_WKALM_SET");
+        close(rtc_fd);
+        return EXIT_FAILURE;
+    }
+    close(rtc_fd);
+    printf("RTC alarm cleared ok\n");
+    return EXIT_SUCCESS;
+}
+
 int main(int argc, char* argv[])
 {
     const char* program_name  = argv[0];
     int         next_option;
     int         retval        = EXIT_SUCCESS;
-    const char* short_options = "hdsbvat:l:";
+    const char* short_options = "hdsbvact:l:";
     const struct option long_options[] = {
         {"help",       no_argument,       NULL, 'h'},
         {"start-dbus", no_argument,       NULL, 'd'},
@@ -264,6 +316,7 @@ int main(int argc, char* argv[])
         {"reboot",     no_argument,       NULL, 'b'},
         {"version",    no_argument,       NULL, 'v'},
         {"ta-test",    no_argument,       NULL, 'a'},
+        {"clear-rtc",  no_argument,       NULL, 'c'},
         {"telinit",    required_argument, NULL, 't'},
         {"loglevel",   required_argument, NULL, 'l'},
         {0, 0, 0, 0}
@@ -301,6 +354,9 @@ int main(int argc, char* argv[])
                     }
                     return loglevel(atoi(optarg));
                 }
+            case 'c':
+                return clear_rtc();
+                break;
             case 'h':
                 usage(program_name);
                 return EXIT_SUCCESS;
