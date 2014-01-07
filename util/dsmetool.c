@@ -274,7 +274,7 @@ static int clear_rtc()
         return EXIT_FAILURE;
     }
 
-    memset(&alrm, 0, sizeof alrm);
+    memset(&alrm, 0, sizeof(alrm));
     if (ioctl(rtc_fd, RTC_WKALM_RD, &alrm) == -1) {
         printf("Failed to read rtc alarms %s: %s: %m\n", rtc_path, "RTC_WKALM_RD");
         close(rtc_fd);
