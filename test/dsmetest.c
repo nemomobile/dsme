@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
 	int new_state = -1;
 	int powerup = -1;
 	int reboot = -1;
-	int alarm = -1;
+	int alarm_tmp = -1;
         int malf = -1;
 	const char *short_options = "UBshRMa:";
 	const struct option long_options[] = {
@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
 			new_state = 1;
 			break;
 		case 'a':
-			alarm = atoi(optarg);
+			alarm_tmp = atoi(optarg);
 			break;
 		case 'M':
 			malf = 1;
@@ -193,8 +193,8 @@ int main(int argc, char *argv[])
 	if (new_state != -1)
 		send_shutdown_req(new_state);
 
-	if (alarm != -1)
-		send_alarm_state(alarm != 0);
+	if (alarm_tmp != -1)
+		send_alarm_state(alarm_tmp != 0);
 
         if (malf != -1)
                 send_malf_req();

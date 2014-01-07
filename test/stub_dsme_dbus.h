@@ -47,15 +47,15 @@ void dsme_dbus_unbind_signals(bool* really_bound,
       const dsme_dbus_signal_binding_t* binding = bindings;
 
       while (binding && binding->handler) {
-          GSList* signal;
+          GSList* signal_list;
 
-          for (signal = dbus_signal_bindings; signal; signal = signal->next) {
-              dsme_dbus_signal_binding_t* stored = signal->data;
+          for (signal_list = dbus_signal_bindings; signal_list; signal_list = signal_list->next) {
+              dsme_dbus_signal_binding_t* stored = signal_list->data;
 
               if (stored->handler == binding->handler &&
                   (strcmp(stored->interface, binding->interface) == 0) &&
                   (strcmp(stored->name, binding->name) == 0) ) {
-                  dbus_signal_bindings = g_slist_delete_link(dbus_signal_bindings, signal);
+                  dbus_signal_bindings = g_slist_delete_link(dbus_signal_bindings, signal_list);
               }
           }
           ++binding;
@@ -114,21 +114,21 @@ const char* dsme_dbus_message_get_string(const DsmeDbusMessage* msg)
   return s;
 }
 
-static inline void dsme_dbus_stub_send_signal(DBusMessage* signal)
+static inline void dsme_dbus_stub_send_signal(DBusMessage* signal_msg)
 {
   GSList* item;
   DsmeDbusMessage* dsmesig = g_new(DsmeDbusMessage, 1);
   dsmesig->connection = 0;
-  dsmesig->msg = signal;
-  dbus_message_iter_init(signal, &dsmesig->iter);
+  dsmesig->msg = signal_msg;
+  dbus_message_iter_init(signal_msg, &dsmesig->iter);
 
   for (item = dbus_signal_bindings; item; item = item->next) {
       const dsme_dbus_signal_binding_t* binding = (const dsme_dbus_signal_binding_t*)item->data;
 
       printf("bin: %s - %s\n", binding->interface, binding->name);
       if (
-          (strcmp(binding->interface, dbus_message_get_interface(signal)) == 0) &&
-          (strcmp(binding->name, dbus_message_get_member(signal)) == 0) ) {
+          (strcmp(binding->interface, dbus_message_get_interface(signal_msg)) == 0) &&
+          (strcmp(binding->name, dbus_message_get_member(signal_msg)) == 0) ) {
           binding->handler(dsmesig);
       }
   }

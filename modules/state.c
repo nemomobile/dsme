@@ -160,12 +160,12 @@ static const struct {
 
 static const char* state_name(dsme_state_t state)
 {
-    int         index;
+    int         index_sn;
     const char* name = "*** UNKNOWN STATE ***";;
 
-    for (index = 0; index < sizeof states / sizeof states[0]; ++index) {
-        if (states[index].value == state) {
-            name = states[index].name;
+    for (index_sn = 0; index_sn < sizeof states / sizeof states[0]; ++index_sn) {
+        if (states[index_sn].value == state) {
+            name = states[index_sn].name;
             break;
         }
     }
@@ -175,12 +175,12 @@ static const char* state_name(dsme_state_t state)
 
 static const dsme_state_t state_value(const char* name)
 {
-    int          index;
+    int          index_sv;
     dsme_state_t state = DSME_STATE_NOT_SET;
 
-    for (index = 0; index < sizeof states / sizeof states[0]; ++index) {
-        if (strcasecmp(states[index].name, name) == 0) {
-            state = states[index].value;
+    for (index_sv = 0; index_sv < sizeof states / sizeof states[0]; ++index_sv) {
+        if (strcasecmp(states[index_sv].name, name) == 0) {
+            state = states[index_sv].value;
             break;
         }
     }
@@ -693,12 +693,12 @@ static telinit_handler_fn_t* telinit_handler(dsme_state_t state)
 #undef  DSME_STATE
     };
 
-    int index;
+    int index_th;
     telinit_handler_fn_t* handler = handle_telinit_NOT_SET;
 
-    for (index = 0; index < sizeof states / sizeof states[0]; ++index) {
-        if (handlers[index].state == state) {
-            handler = handlers[index].handler;
+    for (index_th = 0; index_th < sizeof states / sizeof states[0]; ++index_th) {
+        if (handlers[index_th].state == state) {
+            handler = handlers[index_th].handler;
             break;
         }
     }

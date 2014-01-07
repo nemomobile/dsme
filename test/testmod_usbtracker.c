@@ -82,12 +82,12 @@ static module_t* usbtracker_module = 0;
 
 static void load_usbtracker(void)
 {
-  gchar* module_name = g_strconcat(dsme_module_path, "usbtracker.so", NULL);
-  usbtracker_module = load_module_under_test(module_name);
+  gchar* module_name_tmp = g_strconcat(dsme_module_path, "usbtracker.so", NULL);
+  usbtracker_module = load_module_under_test(module_name_tmp);
 
   DSM_MSGTYPE_DBUS_CONNECT msg = TEST_MSG_INIT(DSM_MSGTYPE_DBUS_CONNECT);
   send_message(usbtracker_module, &msg);
-  g_free(module_name);
+  g_free(module_name_tmp);
 }
 
 static void unload_usbtracker(void)
