@@ -46,7 +46,6 @@
 #include <sys/select.h>
 #include <sys/ioctl.h>
 #include <linux/rtc.h>
-#include "../include/android/android_alarm.h"
 
 #include <pwd.h>
 #include <grp.h>
