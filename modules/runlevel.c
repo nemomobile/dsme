@@ -52,7 +52,11 @@ static bool change_runlevel(dsme_runlevel_t runlevel)
 {
   char command[32];
 
-  if (access("/sbin/telinit", X_OK) == 0) {
+  if (runlevel == 0) {
+      snprintf(command, sizeof(command), "systemctl --no-block poweroff");
+  } else if (runlevel == 6) {
+      snprintf(command, sizeof(command), "systemctl --no-block reboot");
+  } else if (access("/sbin/telinit", X_OK) == 0) {
       snprintf(command, sizeof(command), "/sbin/telinit %i", runlevel);
   } else if (access("/usr/sbin/telinit", X_OK) == 0) {
       snprintf(command, sizeof(command), "/usr/sbin/telinit %i", runlevel);
