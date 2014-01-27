@@ -1327,8 +1327,17 @@ static void kernelfd_open(void)
     if( !kernel_module_load_error_logged ) {
 	kernel_module_load_error_logged = true;
 	errno = saved_errno;
-	dsme_log(LOG_ERR, PFIX"failed to open kernel connection '%s' (%m)",
-		 HB_KERNEL_DEVICE);
+	if( errno == ENOENT ) {
+	    /* Having a kernel that supports iphb wakeups is a special case.
+	     *
+	     * Not having it just means we are missing one wakeup source to
+	     * synchronize with i.e. no need to create noise about it on
+	     * default verbosity level */
+	    dsme_log(LOG_INFO, PFIX"kernel does not support iphb wakeups");
+	}
+	else
+	    dsme_log(LOG_ERR, PFIX"failed to open kernel connection '%s' (%m)",
+		     HB_KERNEL_DEVICE);
     }
 
     return;
