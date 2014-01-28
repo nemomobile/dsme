@@ -642,9 +642,9 @@ static void testcase16(void)
   module_t* state = load_state_module("USER", DSME_STATE_USER);
   assert(!timer_exists());
 
-  DSM_MSGTYPE_SET_THERMAL_STATE msg =
-      TEST_MSG_INIT(DSM_MSGTYPE_SET_THERMAL_STATE);
-  msg.overheated = true;
+  DSM_MSGTYPE_SET_THERMAL_STATUS msg =
+      TEST_MSG_INIT(DSM_MSGTYPE_SET_THERMAL_STATUS);
+  msg.status = DSM_THERMAL_STATUS_OVERHEATED;
   send_message(state, &msg);
 
   assert(message_queue_is_empty());
@@ -666,18 +666,18 @@ static void testcase17(void)
   assert(!timer_exists());
 
   // overheat
-  DSM_MSGTYPE_SET_THERMAL_STATE msg =
-      TEST_MSG_INIT(DSM_MSGTYPE_SET_THERMAL_STATE);
-  msg.overheated = true;
+  DSM_MSGTYPE_SET_THERMAL_STATUS msg =
+      TEST_MSG_INIT(DSM_MSGTYPE_SET_THERMAL_STATUS);
+  msg.status = DSM_THERMAL_STATUS_OVERHEATED;
   send_message(state, &msg);
 
   assert(message_queue_is_empty());
   assert(timer_exists());
 
   // cool down
-  DSM_MSGTYPE_SET_THERMAL_STATE msg2 =
-      TEST_MSG_INIT(DSM_MSGTYPE_SET_THERMAL_STATE);
-  msg2.overheated = false;
+  DSM_MSGTYPE_SET_THERMAL_STATUS msg2 =
+      TEST_MSG_INIT(DSM_MSGTYPE_SET_THERMAL_STATUS);
+  msg2.status = DSM_THERMAL_STATUS_NORMAL;
   send_message(state, &msg2);
 
   assert(message_queue_is_empty());
@@ -867,9 +867,9 @@ static void testcase23(void)
   module_t* state = load_state_module("USER", DSME_STATE_USER);
   assert(!timer_exists());
 
-  DSM_MSGTYPE_SET_THERMAL_STATE msg =
-      TEST_MSG_INIT(DSM_MSGTYPE_SET_THERMAL_STATE);
-  msg.overheated = true;
+  DSM_MSGTYPE_SET_THERMAL_STATUS msg =
+      TEST_MSG_INIT(DSM_MSGTYPE_SET_THERMAL_STATUS);
+  msg.status = DSM_THERMAL_STATUS_OVERHEATED;
   send_message(state, &msg);
 
   DSM_MSGTYPE_STATE_CHANGE_IND* ind2;
