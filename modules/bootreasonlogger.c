@@ -76,6 +76,48 @@ static const char *possible_pwrup_strings[] = {
 
 static char pwrup_reason[80];
 
+static const struct {
+    int         value;
+    const char* name;
+} states[] = {
+#define DSME_STATE(STATE, VALUE) { VALUE, #STATE },
+#include <dsme/state_states.h>
+#undef  DSME_STATE
+};
+
+static const char* state_name(dsme_state_t state)
+{
+    int         index_sn;
+    const char* name = "*** UNKNOWN STATE ***";;
+
+    for (index_sn = 0; index_sn < sizeof states / sizeof states[0]; ++index_sn) {
+        if (states[index_sn].value == state) {
+            name = states[index_sn].name;
+            break;
+        }
+    }
+
+    return name;
+}
+
+static bool sw_update_running(void)
+{
+  if (access("/tmp/os-update-running", F_OK) == 0)
+        return TRUE;
+    else
+        return FALSE;
+}
+
+static bool system_still_booting(void)
+{
+    /* Once system boot is over, init-done flag is set */
+    /* If file is not there, we are still booting */ 
+    if (access("/run/systemd/boot-status/init-done", F_OK) != 0)
+        return TRUE;
+    else
+        return FALSE;
+}
+
 static const char * get_timestamp(void)
 {
     static const char default_date[] = "00000000_000000";
@@ -179,12 +221,22 @@ static char * get_powerup_reason_str(void)
 
 static void log_startup(void)
 {
-    write_log("Startup: ", get_powerup_reason_str());
+    if (system_still_booting())
+        write_log("Startup: ", get_powerup_reason_str());
+    else {
+        /* System has already booted. Why we are here?
+         * Most likely dsme daemon has been restarted
+         */
+        write_log("Startup: ", "dsme daemon restarted, not real system startup");
+    }
 }
 
 static void log_shutdown(void)
 {
-    write_log("Shutdown:", shutdown_reason_string[saved_shutdown_reason]);
+    if (sw_update_running())
+        write_log("Shutdown:", "SW update reboot");
+    else
+        write_log("Shutdown:", shutdown_reason_string[saved_shutdown_reason]);
 }
 
 DSME_HANDLER(DSM_MSGTYPE_SET_BATTERY_STATE, conn, battery)
@@ -225,29 +277,31 @@ DSME_HANDLER(DSM_MSGTYPE_SET_THERMAL_STATUS, conn, msg)
 
 DSME_HANDLER(DSM_MSGTYPE_REBOOT_REQ, conn, msg)
 {
-    dsme_log(LOG_DEBUG, PFIX"reboot request received");
+    char* sender = endpoint_name(conn);
+
+    write_log("Received: reboot request from", sender ? sender : "(unknown)");
     if (saved_shutdown_reason == SD_REASON_UNKNOWN)
         saved_shutdown_reason = SD_SW_REBOOT;
+    free(sender);
 }
 
 DSME_HANDLER(DSM_MSGTYPE_SHUTDOWN_REQ, conn, msg)
 {
     char* sender = endpoint_name(conn);
 
-    dsme_log(LOG_DEBUG, PFIX"shutdown request received from %s",
-             (sender ? sender : "(unknown)"));
+    write_log("Received: shutdown request from", sender ? sender : "(unknown)");
     if (saved_shutdown_reason == SD_REASON_UNKNOWN) {
-      if (sender && (strstr(sender, "/mce") != NULL))
-          saved_shutdown_reason = SD_USER_PWR_KEY;
-      else
-          saved_shutdown_reason = SD_SW_SHUTDOWN;
+        if (sender && (strstr(sender, "/mce") != NULL))
+            saved_shutdown_reason = SD_USER_PWR_KEY;
+        else
+            saved_shutdown_reason = SD_SW_SHUTDOWN;
     }
     free(sender);
 }
 
 DSME_HANDLER(DSM_MSGTYPE_STATE_CHANGE_IND, conn, msg)
 {
-    dsme_log(LOG_DEBUG, PFIX"Received new state %d", msg->state);
+    write_log("Received: dsme internal state", state_name(msg->state));
     if (saved_shutdown_reason == SD_REASON_UNKNOWN) {
         if (msg->state == DSME_STATE_SHUTDOWN)
             saved_shutdown_reason = SD_SW_SHUTDOWN;
