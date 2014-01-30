@@ -224,8 +224,8 @@ static void log_startup(void)
     if (system_still_booting())
         write_log("Startup: ", get_powerup_reason_str());
     else {
-        /* System has already booted. Why we are here?
-         * Most likely dsme daemon has been restarted
+        /* System has already booted. We are here because
+         * dsme daemon has been restarted
          */
         write_log("Startup: ", "dsme daemon restarted, not real system startup");
     }
