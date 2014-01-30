@@ -99,12 +99,12 @@ extern bool dsme_hw_get_core_temperature(thermal_object_t*         thermal_objec
             got_temperature = true;
         }
     }
-    if (got_temperature) {
-        if (callback)
-            callback(thermal_object, temperature);
-    } else {
+    if (! got_temperature) {
         dsme_log(LOG_WARNING, "thermal: Can't get core temperature readings");
+        temperature = INVALID_TEMPERATURE;
     }
+    if (callback)
+        callback(thermal_object, temperature);
     return got_temperature;
 }
 
@@ -128,17 +128,22 @@ extern bool dsme_hw_get_battery_temperature(thermal_object_t*         thermal_ob
                                             temperature_handler_fn_t* callback)
 {
     int temperature;
+    bool ret;
 
     // dsme_log(LOG_DEBUG, "thermal: %s", __FUNCTION__);
 
     if (read_temperature(BATTERY_TEMP, &temperature)) {
         /* We get the temp in one tens */
         temperature = (temperature + 5 ) / 10;
-        if (callback) 
-            callback(thermal_object, temperature);
-        return true;
-    } 
-    return false;
+        ret = true;
+    } else {
+        dsme_log(LOG_WARNING, "thermal: Can't get battery temperature readings");
+        temperature = INVALID_TEMPERATURE;
+        ret = false;
+    }
+    if (callback) 
+        callback(thermal_object, temperature);
+    return ret;
 }
 
 /* Does our HW support this temp reading ? */

@@ -252,14 +252,24 @@ DSME_HANDLER(DSM_MSGTYPE_SET_BATTERY_STATE, conn, battery)
         saved_shutdown_reason = SD_REASON_UNKNOWN;
 }
 
-DSME_HANDLER(DSM_MSGTYPE_SET_THERMAL_STATE, conn, msg)
+DSME_HANDLER(DSM_MSGTYPE_SET_THERMAL_STATUS, conn, msg)
 {
-    dsme_log(LOG_DEBUG,
-             PFIX"%s state received",
-             msg->overheated ? "overheated" : "not overheated");
+    bool overheated = false;
+    const char *temp_status;
 
-    write_log("Received: device ",  msg->overheated ? "overheated" : "not overheated");
-    if (msg->overheated)
+    if (msg->status == DSM_THERMAL_STATUS_OVERHEATED) {
+        temp_status = "overheated";
+        overheated = true;
+    } else if (msg->status == DSM_THERMAL_STATUS_LOWTEMP)
+        temp_status = "low warning";
+    else
+        temp_status = "normal";
+
+    dsme_log(LOG_DEBUG,
+             PFIX"temp state: %s received", temp_status);
+
+    write_log("Received: device temp",  temp_status);
+    if (overheated)
         saved_shutdown_reason = SD_DEVICE_OVERHEAT;
     else  // Device is no more overheated. Shutdown won't happen
         saved_shutdown_reason = SD_REASON_UNKNOWN;
@@ -303,7 +313,7 @@ DSME_HANDLER(DSM_MSGTYPE_STATE_CHANGE_IND, conn, msg)
 module_fn_info_t message_handlers[] = {
     DSME_HANDLER_BINDING(DSM_MSGTYPE_SHUTDOWN_REQ),
     DSME_HANDLER_BINDING(DSM_MSGTYPE_REBOOT_REQ),
-    DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_THERMAL_STATE),
+    DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_THERMAL_STATUS),
     DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_BATTERY_STATE),
     DSME_HANDLER_BINDING(DSM_MSGTYPE_STATE_CHANGE_IND),
     {0}

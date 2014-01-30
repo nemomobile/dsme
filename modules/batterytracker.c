@@ -90,6 +90,7 @@ typedef struct battery_state_t {
 
 static battery_state_t battery_state;
 static dsme_state_t dsme_state = DSME_STATE_NOT_SET;
+static bool battery_temp_normal = true;
 
 static void read_config_file(void)
 {
@@ -271,9 +272,9 @@ static void send_empty_if_needed()
             /* Charging is not goig on. Request shutdown */
             request_shutdown = true;
         } else if (dsme_state != DSME_STATE_ACTDEAD) {
-            /* If charging in USER state, make sure level won't drop more and always keep above 2% */
+            /* If charging in USER state, make sure level won't drop more and always keep min 1% */
             if ((battery_state.percentance < battery_level_when_empty_seen) ||
-                (battery_state.percentance < 2)) {
+                (battery_state.percentance < 1)) {
                 request_shutdown = true;
                 dsme_log(LOG_DEBUG, "batterytracker: Battery level keeps dropping. Must shutdown");
             } else {
@@ -308,13 +309,15 @@ static void schedule_next_wakeup(void)
 {
     // dsme_log(LOG_DEBUG, "batterytracker: %s()", __FUNCTION__);
 
-    int maxtime = 60;  /* Default polling time if no data */
+    int maxtime = 60;  /* Default polling time if no data or cold battery */
     int mintime = 30;
     bool wakeup = true; /* Default to resuming for battery monitoring */
 
     DSM_MSGTYPE_WAIT msg = DSME_MSG_INIT(DSM_MSGTYPE_WAIT);
 
-    if (battery_state.data_uptodate) {
+    /* If data is not available or battery is too cold, then we use default polling */
+    /* In normal case we use configured polling timeouts */
+    if (battery_state.data_uptodate && battery_temp_normal) {
 	wakeup  = levels[battery_state.status].wakeup;
         maxtime = levels[battery_state.status].polling_time;
         /* Note, it is important to give big enough window min..max
@@ -336,20 +339,7 @@ static void schedule_next_wakeup(void)
 
 static void do_regular_duties()
 {
-    static bool first_reading = true;
-
     // dsme_log(LOG_DEBUG, "batterytracker: %s()", __FUNCTION__);
-
-    if (first_reading) {
-        // First reading after boot for battery levels is unreliable
-        // Don't use its values
-        // We will schedule new reading after one minute
-        first_reading = false;
-        dsme_log(LOG_DEBUG, "batterytracker: Skip battery data on first reading");
-        battery_state.data_uptodate = false;
-        schedule_next_wakeup();
-        return;
-    }
 
     update_battery_info();
     if (battery_state.data_uptodate) {
@@ -360,6 +350,24 @@ static void do_regular_duties()
         dsme_log(LOG_WARNING, "batterytracker: No battery data available");
     }
     schedule_next_wakeup();
+}
+
+DSME_HANDLER(DSM_MSGTYPE_SET_THERMAL_STATUS, server, msg)
+{
+    const char *temp_status;
+
+    if (msg->status == DSM_THERMAL_STATUS_LOWTEMP) {
+        temp_status = "low temp warning";
+        battery_temp_normal = false;
+    } else {
+        temp_status = "normal";  /* For our purpose also high temp is normal */
+        battery_temp_normal = true;
+    }
+
+    dsme_log(LOG_DEBUG,
+             "batterytracker: temp state: %s received", temp_status);
+    if (! battery_temp_normal)
+        schedule_next_wakeup();
 }
 
 DSME_HANDLER(DSM_MSGTYPE_STATE_CHANGE_IND, server, msg)
@@ -377,23 +385,11 @@ DSME_HANDLER(DSM_MSGTYPE_WAKEUP, client, msg)
     do_regular_duties();
 }
 
-DSME_HANDLER(DSM_MSGTYPE_DBUS_CONNECT, client, msg)
-{
-    dsme_log(LOG_DEBUG, "batterytracker: DBUS_CONNECT");
-    /* Start working */
-    do_regular_duties();
-}
-
-DSME_HANDLER(DSM_MSGTYPE_DBUS_DISCONNECT, client, msg)
-{
-    dsme_log(LOG_DEBUG, "batterytracker: DBUS_DISCONNECT");
-}
 
 module_fn_info_t message_handlers[] = {
     DSME_HANDLER_BINDING(DSM_MSGTYPE_WAKEUP),
-    DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_CONNECT),
-    DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_DISCONNECT),
     DSME_HANDLER_BINDING(DSM_MSGTYPE_STATE_CHANGE_IND),
+    DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_THERMAL_STATUS),
     { 0 }
 };
 
@@ -407,15 +403,12 @@ static void query_current_state(void)
 
 void module_init(module_t* handle)
 {
-    /* Wait for DSM_MSGTYPE_DBUS_CONNECT
-       before actually doing anything
-       We don't need dbus but that is good timing point
-       to start this.
-     */
     dsme_log(LOG_DEBUG, "batterytracker.so loaded");
     battery_state.data_uptodate = false;
     read_config_file();
     query_current_state();
+    /* Schedule first reading to happen after one minute */
+    schedule_next_wakeup();
 }
 
 void module_fini(void)
