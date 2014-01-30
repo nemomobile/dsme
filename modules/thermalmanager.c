@@ -123,7 +123,7 @@ static THERMAL_STATUS worst_current_thermal_object_status(void)
   return overall_status;
 }
 
-static void send_thermal_status(t_dsme_thermal_status status)
+static void send_thermal_status(dsme_thermal_status_t status)
 {
   DSM_MSGTYPE_SET_THERMAL_STATUS msg =
     DSME_MSG_INIT(DSM_MSGTYPE_SET_THERMAL_STATUS);
