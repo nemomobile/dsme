@@ -786,13 +786,15 @@ DSME_HANDLER(DSM_MSGTYPE_SET_ALARM_STATE, conn, msg)
 }
 
 
-DSME_HANDLER(DSM_MSGTYPE_SET_THERMAL_STATE, conn, msg)
+DSME_HANDLER(DSM_MSGTYPE_SET_THERMAL_STATUS, conn, msg)
 {
   dsme_log(LOG_NOTICE,
            "%s state received",
-           msg->overheated ? "overheated" : "not overheated");
+           (msg->status == DSM_THERMAL_STATUS_OVERHEATED) ? "overheated" :
+           (msg->status == DSM_THERMAL_STATUS_LOWTEMP) ? "low temp warning" :
+           "normal temp");
 
-  if (msg->overheated) {
+  if (msg->status == DSM_THERMAL_STATUS_OVERHEATED) {
       start_overheat_timer();
   } else {
       /* there is no going back from being overheated */
@@ -958,7 +960,7 @@ module_fn_info_t message_handlers[] = {
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_ALARM_STATE),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_USB_STATE),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_CHARGER_STATE),
-      DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_THERMAL_STATE),
+      DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_THERMAL_STATUS),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_EMERGENCY_CALL_STATE),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_BATTERY_STATE),
       DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_CONNECT),

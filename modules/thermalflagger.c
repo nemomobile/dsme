@@ -65,9 +65,9 @@ static void remove_thermal_flag(void)
     }
 }
 
-DSME_HANDLER(DSM_MSGTYPE_SET_THERMAL_STATE, client, thermal_state)
+DSME_HANDLER(DSM_MSGTYPE_SET_THERMAL_STATUS, client, thermal_state)
 {
-    if (thermal_state->overheated) {
+    if (thermal_state->status == DSM_THERMAL_STATUS_OVERHEATED) {
         write_thermal_flag();
     } else {
         /* don't remove DSME_THERMAL_FLAG_FILE */
@@ -75,7 +75,7 @@ DSME_HANDLER(DSM_MSGTYPE_SET_THERMAL_STATE, client, thermal_state)
 }
 
 module_fn_info_t message_handlers[] = {
-  DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_THERMAL_STATE),
+  DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_THERMAL_STATUS),
   { 0 }
 };
 

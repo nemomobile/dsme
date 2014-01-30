@@ -27,7 +27,10 @@
 #include "dsme/timers.h"
 #include <stdbool.h>
 
+#define INVALID_TEMPERATURE -9999
+
 typedef enum {
+  THERMAL_STATUS_LOW,
   THERMAL_STATUS_NORMAL,
   THERMAL_STATUS_WARNING,
   THERMAL_STATUS_ALERT,
