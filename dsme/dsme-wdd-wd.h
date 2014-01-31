@@ -41,6 +41,7 @@ extern "C" {
 
 void dsme_wd_kick(void);
 bool dsme_wd_init(void);
+void dsme_wd_quit(void);
 
 #ifdef __cplusplus
 }

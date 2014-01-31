@@ -23,6 +23,8 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#define _GNU_SOURCE
+
 #include "dsme-wdd-wd.h"
 #include "dsme-wdd.h"
 
@@ -53,6 +55,8 @@ typedef struct wd_t {
 static const wd_t wd[] = {
     /* path,               timeout (s), disabling R&D flag */
     {  "/dev/watchdog",    SHORTEST,    "no-omap-wd" }, /* omap wd      */
+    {  "/dev/watchdog0",   SHORTEST,    "no-omap-wd" }, /* omap wd      */
+    {  "/dev/watchdog1",   SHORTEST,    "no-omap-wd" }, /* omap wd      */
     {  "/dev/twl4030_wdt", 30,          "no-ext-wd"  }, /* twl (ext) wd */
 };
 
@@ -124,7 +128,6 @@ bool dsme_wd_init(void)
     int  opened_wd_count = 0;
     bool wd_enabled[WD_COUNT];
     int  i;
-    char          tmp[16];
 
     for (i = 0; i < WD_COUNT; ++i) {
         wd_enabled[i] = true; /* enable all watchdogs by default */
@@ -139,19 +142,14 @@ bool dsme_wd_init(void)
         if (wd_enabled[i] == false)
             continue;
 
-        /* try to open watchdog core compatible device node */
-        snprintf(tmp, sizeof(tmp), "/dev/watchdog%d", i);
-        wd_fd[i] = open(tmp, O_RDWR);
-        if (wd_fd[i] == -1) {
-            /* fallback to legacy Nokia specific device nodes */
-            wd_fd[i] = open(wd[i].file, O_RDWR);
-            if (wd_fd[i] == -1) {
-                fprintf(stderr,
-                        ME "Error opening WD %s: %s\n",
-                        wd[i].file,
-                        strerror(errno));
-                continue;
-            }
+        /* try to open watchdog device node */
+	if( (wd_fd[i] = open(wd[i].file, O_RDWR)) == -1 ) {
+	    if( errno != ENOENT )
+		fprintf(stderr,
+			ME "Error opening WD %s: %s\n",
+			wd[i].file,
+			strerror(errno));
+	    continue;
         }
 
         ++opened_wd_count;
@@ -172,5 +170,33 @@ bool dsme_wd_init(void)
         }
     }
 
+    if( opened_wd_count < 1 )
+	fprintf(stderr, ME "Could not open any watchdog files");
+
     return (opened_wd_count != 0);
+}
+
+void dsme_wd_quit(void)
+{
+    for( size_t i = 0; i < WD_COUNT; ++i ) {
+	if( wd_fd[i] == -1 )
+	    continue;
+
+	if( TEMP_FAILURE_RETRY(write(wd_fd[i], "V", 1)) == -1 ) {
+	    fprintf(stderr, ME "%s: failed to clear nowayout: %m\n",
+		    wd[i].file);
+	}
+        else {
+	    fprintf(stderr, ME "%s: cleared nowayout state\n",
+		    wd[i].file);
+	}
+
+	if( TEMP_FAILURE_RETRY(close(wd_fd[i])) == -1 ) {
+	    fprintf(stderr, ME "%s: failed to close file: %m\n",
+		    wd[i].file);
+	}
+
+	/* Mark it as closed even if there were errors */
+	wd_fd[i] = -1;
+    }
 }
