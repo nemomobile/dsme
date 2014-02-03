@@ -80,6 +80,8 @@ static bool change_runlevel(dsme_runlevel_t runlevel)
  */
 static void shutdown(dsme_runlevel_t runlevel)
 {
+  char command[64];
+
   if ((runlevel != DSME_RUNLEVEL_REBOOT)   &&
       (runlevel != DSME_RUNLEVEL_SHUTDOWN) &&
       (runlevel != DSME_RUNLEVEL_MALF))
@@ -92,10 +94,25 @@ static void shutdown(dsme_runlevel_t runlevel)
            runlevel == DSME_RUNLEVEL_REBOOT   ? "Reboot"   :
                                                 "Malf");
 
+  /* If we have systemd, use systemctl commands */
+  if (access("/bin/systemctl", X_OK) == 0) {
+      if (runlevel == DSME_RUNLEVEL_SHUTDOWN) {
+          snprintf(command, sizeof(command), "/bin/systemctl --no-block poweroff");
+      } else if (runlevel == DSME_RUNLEVEL_REBOOT) {
+          snprintf(command, sizeof(command), "/bin/systemctl --no-block reboot");
+      } else {
+          dsme_log(LOG_WARNING, "MALF not supported by our systemd implementation");
+	  goto fail_and_exit;
+      }
+      dsme_log(LOG_NOTICE, "Issuing %s", command);
+      if (system(command) != 0) {
+          dsme_log(LOG_WARNING, "command %s failed: %m", command);
+          /* We ignore error. No retry or anything else */
+      }
+  }
   /* If runlevel change fails, handle the shutdown/reboot by DSME */
-  if (!change_runlevel(runlevel))
+  else if (!change_runlevel(runlevel))
   {
-      char command[32];
       dsme_log(LOG_CRIT, "Doing forced shutdown/reboot");
       sync();
 
