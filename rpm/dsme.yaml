@@ -28,7 +28,7 @@ PkgConfigBR:
     - dbus-1
     - dbus-glib-1
     - libiphb
-    - dsme
+    - dsme >= 0.62.0
     - systemd
     - mce >= 1.12.3
 

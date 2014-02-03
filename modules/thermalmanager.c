@@ -83,7 +83,7 @@ static bool is_in_ta_test = false;
 #endif
 
 static const char* const thermal_status_name[] = {
-  "normal", "warning", "alert", "fatal"
+  "low-temp-warning", "normal", "warning", "alert", "fatal"
 };
 
 
@@ -94,24 +94,41 @@ static const char* current_status_name()
 
 static THERMAL_STATUS worst_current_thermal_object_status(void)
 {
-  THERMAL_STATUS status = THERMAL_STATUS_NORMAL;
+  THERMAL_STATUS overall_status = THERMAL_STATUS_NORMAL;
+  THERMAL_STATUS highest_status = THERMAL_STATUS_NORMAL;
+  THERMAL_STATUS lowest_status = THERMAL_STATUS_NORMAL;
   GSList*        node;
 
   for (node = thermal_objects; node != 0; node = g_slist_next(node)) {
-      if (((thermal_object_t*)(node->data))->status > status) {
-          status = ((thermal_object_t*)(node->data))->status;
+      /* Find highest status */
+      if (((thermal_object_t*)(node->data))->status > highest_status) {
+          highest_status = ((thermal_object_t*)(node->data))->status;
+      }
+      /* Find lowest status */
+      if (((thermal_object_t*)(node->data))->status < lowest_status) {
+          lowest_status = ((thermal_object_t*)(node->data))->status;
       }
   }
-
-  return status;
+  /* Decide overall status */
+  /* If we have any ALERT of FATAL then that decides overall status */
+  /* During LOW, NORMAL or WARNING, any LOW wins */
+  /* Else status is highest */
+  if (highest_status >= THERMAL_STATUS_ALERT) {
+      overall_status = highest_status;
+  } else if (lowest_status == THERMAL_STATUS_LOW) {
+      overall_status = THERMAL_STATUS_LOW;
+  } else {
+      overall_status = highest_status;
+  }
+  return overall_status;
 }
 
-static void send_overheat_status(bool overheated)
+static void send_thermal_status(dsme_thermal_status_t status)
 {
-  DSM_MSGTYPE_SET_THERMAL_STATE msg =
-    DSME_MSG_INIT(DSM_MSGTYPE_SET_THERMAL_STATE);
+  DSM_MSGTYPE_SET_THERMAL_STATUS msg =
+    DSME_MSG_INIT(DSM_MSGTYPE_SET_THERMAL_STATUS);
 
-  msg.overheated = overheated;
+  msg.status = status;
 
   broadcast_internally(&msg);
 }
@@ -131,16 +148,20 @@ static void send_thermal_indication(void)
 
   /* then broadcast an indication internally */
   {
-      static bool overheated = false;
+      static bool temp_warning_sent = false;
 
       if (current_status == THERMAL_STATUS_FATAL) {
-          send_overheat_status(true);
-          overheated = true;
+          send_thermal_status(DSM_THERMAL_STATUS_OVERHEATED);
+          temp_warning_sent = true;
           dsme_log(LOG_CRIT, "thermalmanager: Device overheated");
-      } else if (overheated) {
-          send_overheat_status(false);
-          overheated = false;
-          dsme_log(LOG_NOTICE, "thermalmanager: Device no longer overheated");
+      } else if (current_status == THERMAL_STATUS_LOW) {
+          send_thermal_status(DSM_THERMAL_STATUS_LOWTEMP);
+          temp_warning_sent = true;
+          dsme_log(LOG_WARNING, "thermalmanager: Device temperature low");
+      } else if (temp_warning_sent) {
+          send_thermal_status(DSM_THERMAL_STATUS_NORMAL);
+          temp_warning_sent = false;
+          dsme_log(LOG_NOTICE, "thermalmanager: Device temperature back to normal");
       }
   }
 }
@@ -173,7 +194,7 @@ static void receive_temperature_response(thermal_object_t* thermal_object,
 {
   thermal_object->request_pending = false;
 
-  if (temperature == -1) {
+  if (temperature == INVALID_TEMPERATURE) {
       dsme_log(LOG_DEBUG,
                "thermalmanager: %s temperature request failed",
                thermal_object->conf->name);
@@ -201,7 +222,7 @@ static void receive_temperature_response(thermal_object_t* thermal_object,
 
   /* figure out the new thermal object status based on the temperature */
   if        (temperature < thermal_object->conf->state[new_status].min) {
-      while (new_status > THERMAL_STATUS_NORMAL &&
+      while (new_status > THERMAL_STATUS_LOW &&
              temperature < thermal_object->conf->state[new_status].min)
       {
           --new_status;
@@ -405,19 +426,19 @@ static bool thermal_object_config_read(
       }
       if (success) {
           /* Do some sanity checking for values 
-           * Temp values should be between 20-200, and in ascending order.
+           * Temp values should be between -40..+200, and in ascending order.
            * Min must be < max
            * Next min <= previous max
            * Polling times should also make sense  10-1000s
            */
-          if (((i > THERMAL_STATUS_NORMAL) && (new_config.state[i].min < 20)) ||
-              (new_config.state[i].max < 20) ||
+          if (((i > THERMAL_STATUS_LOW) && (new_config.state[i].min < -40)) ||
+              (new_config.state[i].max < -40) ||
               (new_config.state[i].min > 200) ||
               ((i > THERMAL_STATUS_FATAL) && (new_config.state[i].max > 200)) ||
               (new_config.state[i].min >= new_config.state[i].max) ||
-              ((i > THERMAL_STATUS_NORMAL) && (new_config.state[i].min <= new_config.state[i-1].min)) ||
-              ((i > THERMAL_STATUS_NORMAL) && (new_config.state[i].max <= new_config.state[i-1].max)) ||
-              ((i > THERMAL_STATUS_NORMAL) && (new_config.state[i].min > new_config.state[i-1].max)) ||
+              ((i > THERMAL_STATUS_LOW) && (new_config.state[i].min <= new_config.state[i-1].min)) ||
+              ((i > THERMAL_STATUS_LOW) && (new_config.state[i].max <= new_config.state[i-1].max)) ||
+              ((i > THERMAL_STATUS_LOW) && (new_config.state[i].min > new_config.state[i-1].max)) ||
               (new_config.state[i].maxtime < 10) ||
               (new_config.state[i].maxtime > 1000)) {
               success = false;
@@ -498,6 +519,7 @@ static thermal_object_t* thermal_object_copy(
 static const char* status_string(THERMAL_STATUS status)
 {
   switch (status) {
+  case THERMAL_STATUS_LOW:     return "LOW_WARNING";
   case THERMAL_STATUS_NORMAL:  return "NORMAL";
   case THERMAL_STATUS_WARNING: return "WARNING";
   case THERMAL_STATUS_ALERT:   return "ALERT";
