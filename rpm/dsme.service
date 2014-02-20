@@ -1,7 +1,7 @@
 [Unit]
 Description=DSME
 DefaultDependencies=no
-After=local-fs.target syslog.target usb-moded.service
+After=local-fs.target usb-moded.service
 Conflicts=shutdown.target
 
 [Service]

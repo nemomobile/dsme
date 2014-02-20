@@ -261,8 +261,6 @@ int main(int argc, char *argv[])
       fprintf(stderr, ME "Couldn't set dynamic priority: %s\n", strerror(errno));
   }
 
-  g_thread_init(0); /* notice that this spawns a thread */
-
   parse_options(argc, argv, &module_names);
 
   if (!module_names) {
