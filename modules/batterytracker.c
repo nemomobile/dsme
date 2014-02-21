@@ -47,6 +47,14 @@
 #define CHARGING_INFO_PATH         "/run/state/namespaces/Battery/IsCharging"
 #define BATTERY_LEVEL_CONFIG_FILE  "/etc/dsme/battery_levels.conf"
 
+/**
+ * Timer value for alarm shutdown timer. This is how long we wait before reporting
+ * empty battery when phone woke up for alarm and battery is empty.
+ * Note that actually user has little bit more because battery level is not checked
+ * during first wakeup minute.
+ */
+#define ALARM_DELAYED_TIMEOUT 60
+
 typedef enum {
   BATTERY_STATUS_FULL,
   BATTERY_STATUS_NORMAL,
@@ -91,6 +99,10 @@ typedef struct battery_state_t {
 static battery_state_t battery_state;
 static dsme_state_t dsme_state = DSME_STATE_NOT_SET;
 static bool battery_temp_normal = true;
+static bool alarm_active = false;
+static dsme_timer_t alarm_delayed_empty_timer = 0;
+
+static int delayed_empty_fn(void* unused);
 
 static void read_config_file(void)
 {
@@ -124,10 +136,10 @@ static void read_config_file(void)
 		    new_levels[i].wakeup = (wakeup != 0);
 
                 /* Do some sanity checking for values 
-                  * Battery level values should be between 2-99, and in descending order.
+                  * Battery level values should be between 1-99, and in descending order.
                   * Polling times should also make sense  10-1000s
                   */
-                if (((i <  BATTERY_STATUS_EMPTY) && (new_levels[i].min_level < 2)) ||
+                if (((i <  BATTERY_STATUS_EMPTY) && (new_levels[i].min_level < 1)) ||
                     (new_levels[i].min_level > 99 ) ||
                     ((i>0) && (new_levels[i].min_level >=  new_levels[i-1].min_level)) ||
                     (new_levels[i].polling_time < 10 ) ||
@@ -271,12 +283,25 @@ static void send_empty_if_needed()
         if (!battery_state.is_charging) {
             /* Charging is not goig on. Request shutdown */
             request_shutdown = true;
+
+            /* Except when phone woke up and alarm is active.
+             * In that case we wait couple of minutes extra before we report empty
+             */
+            if ((dsme_state == DSME_STATE_ACTDEAD) && alarm_active) {
+                if (! alarm_delayed_empty_timer) {
+                    alarm_delayed_empty_timer = dsme_create_timer(ALARM_DELAYED_TIMEOUT,
+                                                                  delayed_empty_fn, NULL);
+                    dsme_log(LOG_INFO, "batterytracker: Battery empty but shutdown delayed because of active alarm");
+                }
+                if (alarm_delayed_empty_timer)
+                    request_shutdown = false;
+            }
         } else if (dsme_state != DSME_STATE_ACTDEAD) {
             /* If charging in USER state, make sure level won't drop more and always keep min 1% */
             if ((battery_state.percentance < battery_level_when_empty_seen) ||
                 (battery_state.percentance < 1)) {
                 request_shutdown = true;
-                dsme_log(LOG_DEBUG, "batterytracker: Battery level keeps dropping. Must shutdown");
+                dsme_log(LOG_INFO, "batterytracker: Battery level keeps dropping. Must shutdown");
             } else {
                 dsme_log(LOG_DEBUG, "batterytracker: Charging is going on. We don't shutdown");
             }
@@ -379,6 +404,24 @@ DSME_HANDLER(DSM_MSGTYPE_STATE_CHANGE_IND, server, msg)
     dsme_state = msg->state;
 }
 
+DSME_HANDLER(DSM_MSGTYPE_SET_ALARM_STATE, conn, msg)
+{
+    dsme_log(LOG_DEBUG,
+             "batterytracker: alarm %s state received",
+             msg->alarm_set ? "set" : "not set");
+    alarm_active = msg->alarm_set;
+
+    /* When alarm was active, we might have postponed shutdown.
+     * Check current status now and stop possible timer
+     */
+    if ((!alarm_active) && alarm_delayed_empty_timer) {
+        dsme_destroy_timer(alarm_delayed_empty_timer);
+        alarm_delayed_empty_timer = 0;
+        dsme_log(LOG_INFO, "batterytracker: Empty state was earlier delayed due alarm. Now alarm is off");
+        send_empty_if_needed();
+    }
+}
+
 DSME_HANDLER(DSM_MSGTYPE_WAKEUP, client, msg)
 {
     dsme_log(LOG_DEBUG, "batterytracker: WAKEUP");
@@ -390,8 +433,18 @@ module_fn_info_t message_handlers[] = {
     DSME_HANDLER_BINDING(DSM_MSGTYPE_WAKEUP),
     DSME_HANDLER_BINDING(DSM_MSGTYPE_STATE_CHANGE_IND),
     DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_THERMAL_STATUS),
+    DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_ALARM_STATE),
     { 0 }
 };
+
+static int delayed_empty_fn(void* unused)
+{
+    alarm_delayed_empty_timer = 0;
+    alarm_active = false;
+    dsme_log(LOG_INFO, "batterytracker: Alarm hold off timeout is over");
+    send_empty_if_needed();
+    return 0; /* stop the interval */
+}
 
 
 static void query_current_state(void)
