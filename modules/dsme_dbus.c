@@ -31,6 +31,7 @@
 #include "dsme/logging.h"
 #include "dsme/modules.h"
 #include "dsme/modulebase.h"
+#include "dsme/state.h"
 
 #include <glib.h>
 #include <dbus/dbus.h>
@@ -82,13 +83,18 @@ static bool dsme_dbus_check_arg_type(DBusMessageIter* iter, int want_type)
     return false;
 }
 
-
 static DBusHandlerResult
 dsme_dbus_filter(DBusConnection *con, DBusMessage *msg, void *aptr)
 {
+    FILE* f;
+
     if( dbus_message_is_signal(msg, DBUS_INTERFACE_LOCAL, "Disconnected") ) {
-      dsme_log(LOG_CRIT, "Disconnected from system bus; terminating");
-      dsme_exit(EXIT_FAILURE);
+      dsme_log(LOG_CRIT, "Disconnected from system bus; rebooting");
+      /* mark failure and request reboot */
+      if ((f = fopen(DBUS_FAILED_FILE, "w+")) != NULL)
+	  fclose(f);
+      DSM_MSGTYPE_REBOOT_REQ req = DSME_MSG_INIT(DSM_MSGTYPE_REBOOT_REQ);
+      broadcast_internally(&req);
     }
     return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 }

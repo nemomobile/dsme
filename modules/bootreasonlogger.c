@@ -44,6 +44,7 @@
 typedef enum {
   SD_REASON_UNKNOWN,
   SD_SW_REBOOT,
+  SD_DBUS_FAILED_REBOOT,
   SD_SW_SHUTDOWN,
   SD_DEVICE_OVERHEAT,
   SD_BATTERY_EMPTY,
@@ -55,6 +56,7 @@ typedef enum {
 static const char* const shutdown_reason_string[SD_REASON_COUNT] = {
   "Reason Unknown",
   "SW reboot request",
+  "Dbus failed, reboot",
   "SW shutdown request",
   "Device overheated",
   "Battery empty",
@@ -102,20 +104,20 @@ static const char* state_name(dsme_state_t state)
 
 static bool sw_update_running(void)
 {
-  if (access("/tmp/os-update-running", F_OK) == 0)
-        return TRUE;
-    else
-        return FALSE;
+    return (access("/tmp/os-update-running", F_OK) == 0);
 }
 
 static bool system_still_booting(void)
 {
     /* Once system boot is over, init-done flag is set */
     /* If file is not there, we are still booting */ 
-    if (access("/run/systemd/boot-status/init-done", F_OK) != 0)
-        return TRUE;
-    else
-        return FALSE;
+    return (access("/run/systemd/boot-status/init-done", F_OK) != 0);
+}
+
+static bool dbus_has_failed(void)
+{
+    /* If dbus fails, dsme dbus has noticed it, marked and requested reboot */
+    return (access("/run/systemd/boot-status/dbus-failed", F_OK) == 0);
 }
 
 static const char * get_timestamp(void)
@@ -280,8 +282,12 @@ DSME_HANDLER(DSM_MSGTYPE_REBOOT_REQ, conn, msg)
     char* sender = endpoint_name(conn);
 
     write_log("Received: reboot request from", sender ? sender : "(unknown)");
-    if (saved_shutdown_reason == SD_REASON_UNKNOWN)
-        saved_shutdown_reason = SD_SW_REBOOT;
+    if (saved_shutdown_reason == SD_REASON_UNKNOWN) {
+        if (dbus_has_failed())
+            saved_shutdown_reason = SD_DBUS_FAILED_REBOOT;
+        else
+            saved_shutdown_reason = SD_SW_REBOOT;
+    }
     free(sender);
 }
 

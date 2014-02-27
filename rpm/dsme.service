@@ -1,7 +1,8 @@
 [Unit]
 Description=DSME
 DefaultDependencies=no
-After=local-fs.target usb-moded.service
+Requires=dbus.service
+After=local-fs.target usb-moded.service dbus.service
 Conflicts=shutdown.target
 
 [Service]
@@ -9,7 +10,6 @@ Type=notify
 # When starting dsme gets initial runlevel from the bootstate file
 # If it doesn't exist, we default to USER
 # This works because EnvironmentFile overrides Environment
-ControlGroup=cpu:/
 Environment=BOOTSTATE=USER
 EnvironmentFile=-/run/systemd/boot-status/bootstate
 EnvironmentFile=-/var/lib/environment/dsme/*.conf
