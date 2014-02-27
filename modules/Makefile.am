@@ -154,7 +154,7 @@ if WANT_HW_THERMAL_MGMT
 thermalobject_hw_la_SOURCES = thermalobject_hw.c \
                               thermalsensor_hw.c   \
                               thermalsensor_hw.h
-thermalobject_hw_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
+thermalobject_hw_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS)
 thermalobject_hw_la_LIBADD = $(GLIB_LIBS)
 endif
 
