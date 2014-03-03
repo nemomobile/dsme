@@ -79,10 +79,12 @@ static void usb_state_ind(const DsmeDbusMessage* ind)
     // dsme_log(LOG_DEBUG, "usbtracker: %s(state = %s)",__FUNCTION__, state);
 
     if (strcmp(state, "mass_storage") == 0 ||
-        strcmp(state, "data_in_use" ) == 0 ||
-        strcmp(state, "pc_suite" ) == 0)
+        strcmp(state, "data_in_use" ) == 0)
     {
 	mounted_to_pc_new = true;
+        /* Note that we have also mode "pc_suite" but in that mode we don't
+         * need to protect reboots and thus don't set this flag.
+	 */
     }
     if (strcmp(state, "USB connected") == 0 ||
 	strcmp(state, "charger_connected") == 0 )
