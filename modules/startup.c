@@ -115,6 +115,9 @@ const char *modules[] = {
 #ifdef DSME_PWRKEY_MONITOR
     "pwrkeymonitor.so",
 #endif
+#ifdef DSME_SHUTDOWN_FEEDBACK
+    "shutdownfeedback.so",
+#endif
     NULL
 };
 
