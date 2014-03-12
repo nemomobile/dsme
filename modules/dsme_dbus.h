@@ -28,6 +28,9 @@
 #include <stdbool.h>
 #include <dbus/dbus.h>
 
+
+#define DBUS_FAILED_FILE "/run/systemd/boot-status/dbus-failed"
+
 typedef struct DsmeDbusMessage DsmeDbusMessage;
 
 typedef void DsmeDbusMethod(const DsmeDbusMessage* request,

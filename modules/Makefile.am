@@ -75,6 +75,10 @@ if WANT_BOOTREASON_LOGGER
 pkglib_LTLIBRARIES += bootreasonlogger.la
 endif
 
+if WANT_SHUTDOWN_FEEDBACK
+pkglib_LTLIBRARIES += shutdownfeedback.la
+endif
+
 startup_la_SOURCES = startup.c
 
 # TODO: remove this
@@ -154,7 +158,7 @@ if WANT_HW_THERMAL_MGMT
 thermalobject_hw_la_SOURCES = thermalobject_hw.c \
                               thermalsensor_hw.c   \
                               thermalsensor_hw.h
-thermalobject_hw_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
+thermalobject_hw_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS)
 thermalobject_hw_la_LIBADD = $(GLIB_LIBS)
 endif
 
@@ -198,4 +202,10 @@ if WANT_BOOTREASON_LOGGER
 bootreasonlogger_la_SOURCES = bootreasonlogger.c
 bootreasonlogger_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS) -D_GNU_SOURCE
 bootreasonlogger_la_LIBADD = $(GLIB_LIBS)
+endif
+
+if WANT_SHUTDOWN_FEEDBACK
+shutdownfeedback_la_SOURCES = shutdownfeedback.c
+shutdownfeedback_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS) $(LIBNGF_CFLAGS) -D_GNU_SOURCE
+shutdownfeedback_la_LIBADD = $(GLIB_LIBS) $(LIBNGF_LIBS)
 endif

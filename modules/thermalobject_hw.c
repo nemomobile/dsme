@@ -30,6 +30,10 @@
 #include "dsme/modules.h"
 #include "dsme/logging.h"
 
+#include "dsme_dbus.h"
+#include "dbusproxy.h"
+#include <dsme/thermalmanager_dbus_if.h>
+
 static bool core_registered = false;
 static bool battery_registered = false;
 
@@ -78,6 +82,64 @@ static thermal_object_t battery_thermal_object = {
   0
 };
 
+static int measured_core_temp = INVALID_TEMPERATURE;
+static int measured_battery_temp = INVALID_TEMPERATURE;
+
+static void core_temp_cb(thermal_object_t* thermal_object, int temp)
+{
+    (void) thermal_object;
+    measured_core_temp = temp;
+}
+
+static void battery_temp_cb(thermal_object_t* thermal_object, int temp)
+{
+    (void) thermal_object;
+    measured_battery_temp = temp;
+}
+
+static void core_temperature(const DsmeDbusMessage* request,
+                             DsmeDbusMessage**      reply)
+{
+    dsme_hw_get_core_temperature(NULL, core_temp_cb);
+    *reply = dsme_dbus_reply_new(request);
+    dsme_dbus_message_append_int(*reply, measured_core_temp);
+}
+
+static void battery_temperature(const DsmeDbusMessage* request,
+                                DsmeDbusMessage**      reply)
+{
+    dsme_hw_get_battery_temperature(NULL, battery_temp_cb);
+    *reply = dsme_dbus_reply_new(request);
+    dsme_dbus_message_append_int(*reply, measured_battery_temp);
+}
+
+static const dsme_dbus_binding_t methods[] = {
+    { core_temperature, "core_temperature" },
+    { battery_temperature, "battery_temperature" },
+    { 0, 0 }
+};
+
+static bool bound = false;
+static const char* const service   = thermalmanager_service;
+static const char* const interface = thermalmanager_interface;
+
+DSME_HANDLER(DSM_MSGTYPE_DBUS_CONNECT, client, msg)
+{
+  dsme_log(LOG_DEBUG, "thermalobject_hw: DBUS_CONNECT");
+  dsme_dbus_bind_methods(&bound, methods, service, interface);
+}
+
+DSME_HANDLER(DSM_MSGTYPE_DBUS_DISCONNECT, client, msg)
+{
+  dsme_log(LOG_DEBUG, "thermalobject_hw: DBUS_DISCONNECT");
+  dsme_dbus_unbind_methods(&bound, methods, service, interface);
+}
+
+module_fn_info_t message_handlers[] = {
+  DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_CONNECT),
+  DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_DISCONNECT),
+  { 0 }
+};
 
 void module_init(module_t* handle)
 {

@@ -1,6 +1,6 @@
 Name:       dsme
 Summary:    Device State Management Entity
-Version:    0.64.7
+Version:    0.65.0
 Release:    0
 Group:      System/System Control
 License:    LGPLv2+
@@ -10,6 +10,7 @@ Source1:    dsme.service
 Source2:    dsme-rpmlintrc
 Requires:   systemd
 Requires:   statefs
+Requires:   ngfd
 Requires(preun): systemd
 Requires(post): systemd
 Requires(postun): systemd
@@ -20,6 +21,7 @@ BuildRequires:  pkgconfig(libiphb)
 BuildRequires:  pkgconfig(dsme) >= 0.62.0
 BuildRequires:  pkgconfig(systemd)
 BuildRequires:  pkgconfig(mce) >= 1.12.3
+BuildRequires:  pkgconfig(libngf0)
 BuildRequires:  python
 BuildRequires:  autoconf
 BuildRequires:  libtool
