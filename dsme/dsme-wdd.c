@@ -240,9 +240,9 @@ static bool set_nonblocking(int fd)
 
     errno = 0;
     if ((flags = fcntl(fd, F_GETFL)) == -1 && errno != 0) {
-        fprintf(stderr, ME "fcntl failed: %s", strerror(errno));
+        fprintf(stderr, ME "fcntl failed: %s\n", strerror(errno));
     } else if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
-        fprintf(stderr, ME "fcntl(O_NONBLOCK) failed: %s", strerror(errno));
+        fprintf(stderr, ME "fcntl(O_NONBLOCK) failed: %s\n", strerror(errno));
     } else {
         set = true;
     }
