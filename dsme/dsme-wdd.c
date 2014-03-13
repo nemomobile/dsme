@@ -515,11 +515,11 @@ int main(int argc, char *argv[])
         // child gets the pipes in stdin & stdout
         if (dup2(to_child[0], STDIN_FILENO) != STDIN_FILENO) {
             fprintf(stderr, ME "dup2 failed: %s\n", strerror(errno));
-            return EXIT_FAILURE;
+            _exit(EXIT_FAILURE);
         }
         if (dup2(from_child[1], STDOUT_FILENO) != STDOUT_FILENO) {
             fprintf(stderr, ME "dup2 failed: %s\n", strerror(errno));
-            return EXIT_FAILURE;
+            _exit(EXIT_FAILURE);
         }
 
         // close all the other descriptors
@@ -543,7 +543,7 @@ int main(int argc, char *argv[])
                 ME "execv failed: %s: %s\n",
                 DSME_SERVER_PATH,
                 strerror(errno));
-        return EXIT_FAILURE;
+        _exit(EXIT_FAILURE);
 
     } else {
         // parent
