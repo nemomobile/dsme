@@ -181,7 +181,7 @@ static void connect_bme()
 
       if (!(chan = g_io_channel_unix_new(request_fd)) ||
           !g_io_add_watch(chan,
-                          (G_IO_IN | G_IO_ERR | G_IO_HUP),
+                          G_IO_IN | G_IO_ERR | G_IO_HUP | G_IO_NVAL,
                           handle_battery_temperature_response,
                           0))
       {
@@ -252,7 +252,7 @@ static gboolean handle_battery_temperature_response(GIOChannel*  source,
           got_status = false;
       }
   }
-  if (condition & (G_IO_ERR | G_IO_HUP)) {
+  if (condition & (G_IO_ERR | G_IO_HUP | G_IO_NVAL)) {
       dsme_log(LOG_DEBUG, "bme connection ERR or HUP");
       keep_connection = false;
   }

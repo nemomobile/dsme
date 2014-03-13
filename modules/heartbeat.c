@@ -42,9 +42,9 @@ static gboolean emit_heartbeat_message(GIOChannel*  source,
                                        gpointer     data)
 {
     // handle errors
-    if (condition & (G_IO_ERR | G_IO_HUP)) {
+    if (condition & (G_IO_ERR | G_IO_HUP | G_IO_NVAL)) {
         // the wd process has probably died; remove the watch & quit
-        dsme_log(LOG_DEBUG, "heartbeat: I/O error or HUP");
+        dsme_log(LOG_CRIT, "heartbeat: I/O error or HUP, terminating");
         dsme_main_loop_quit(EXIT_FAILURE);
         return false;
     }
@@ -89,7 +89,7 @@ static bool start_heartbeat(void)
         goto fail;
     }
     if (!(watch = g_io_add_watch(chan,
-                                 (G_IO_IN | G_IO_ERR | G_IO_HUP),
+                                 G_IO_IN | G_IO_ERR | G_IO_HUP | G_IO_NVAL,
                                  emit_heartbeat_message,
                                  0)))
     {
