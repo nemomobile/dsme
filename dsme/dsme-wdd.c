@@ -240,9 +240,9 @@ static bool set_nonblocking(int fd)
 
     errno = 0;
     if ((flags = fcntl(fd, F_GETFL)) == -1 && errno != 0) {
-        fprintf(stderr, ME "fcntl failed: %s", strerror(errno));
+        fprintf(stderr, ME "fcntl failed: %s\n", strerror(errno));
     } else if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
-        fprintf(stderr, ME "fcntl(O_NONBLOCK) failed: %s", strerror(errno));
+        fprintf(stderr, ME "fcntl(O_NONBLOCK) failed: %s\n", strerror(errno));
     } else {
         set = true;
     }
@@ -346,6 +346,89 @@ done_running:
     return;
 }
 
+/** Flag for alarm timeout occured during waitpid() in kill_and_wait() */
+static volatile bool wait_and_kill_tmo = false;
+
+/** Alarm callback for terminating waitpid() in kill_and_wait()
+ *
+ * @param sig SIGALRM (not used)
+ */
+static void wait_and_kill_tmo_cb(int sig)
+{
+  wait_and_kill_tmo = true;
+}
+
+/** Try to kill a child process and wait for it to exit
+ *
+ * @param pid       process to kill
+ * @param sig       signal to send
+ * @param max_wait  seconds to wait for child exit
+ *
+ * return true if child exit was caught, false otherwise
+ */
+static bool kill_and_wait(pid_t pid, int sig, int max_wait)
+{
+  bool res = false;
+
+  /* Use alarm() to provide EINTR timeout for waitpid() via
+   * SIGALRM that explicitly does not use SA_RESTART flag */
+  struct sigaction sa =
+  {
+    .sa_flags = SA_RESETHAND,
+    .sa_handler = wait_and_kill_tmo_cb,
+  };
+  alarm(0);
+  sigaction(SIGALRM, &sa, 0);
+  wait_and_kill_tmo = false;
+  alarm(max_wait);
+
+  /* Send the signal to child process */
+  if( kill(pid, sig) == -1 ) {
+    fprintf(stderr, ME "failed to kill child process %d: %m\n", (int)pid);
+    goto EXIT;
+  }
+
+  /* Wait for child exit */
+  while( !wait_and_kill_tmo )
+  {
+    int status = 0;
+    int options = 0;
+    int rc = waitpid(pid, &status, options);
+
+    if( rc < 0 ) {
+      if( errno != EINTR ) {
+        fprintf(stderr, ME "process %d did not exit: %m; giving up\n", (int)pid);
+        goto EXIT;
+      }
+
+      if( wait_and_kill_tmo ) {
+        fprintf(stderr, ME "child process %d did not exit; timeout\n", (int)pid);
+        goto EXIT;
+      }
+
+      fprintf(stderr, ME "process %d did not exit: %m; retrying\n", (int)pid);
+    }
+    else if( rc == pid ) {
+      if( WIFEXITED(status) ) {
+        fprintf(stderr, ME "child exit value: %d\n", WEXITSTATUS(status));
+      }
+      if( WIFSIGNALED(status) ) {
+        fprintf(stderr, ME "child exit signal: %s\n",
+                 strsignal(WTERMSIG(status)));
+      }
+      res = true;
+      break;
+    }
+  }
+
+EXIT:
+
+  /* Cancel alarm and reset signal handler back to defaults */
+  alarm(0);
+  signal(SIGALRM, SIG_DFL);
+
+  return res;
+}
 
 /**
   @todo Possibility to alter priority of initial module somehow
@@ -432,11 +515,11 @@ int main(int argc, char *argv[])
         // child gets the pipes in stdin & stdout
         if (dup2(to_child[0], STDIN_FILENO) != STDIN_FILENO) {
             fprintf(stderr, ME "dup2 failed: %s\n", strerror(errno));
-            return EXIT_FAILURE;
+            _exit(EXIT_FAILURE);
         }
         if (dup2(from_child[1], STDOUT_FILENO) != STDOUT_FILENO) {
             fprintf(stderr, ME "dup2 failed: %s\n", strerror(errno));
-            return EXIT_FAILURE;
+            _exit(EXIT_FAILURE);
         }
 
         // close all the other descriptors
@@ -460,7 +543,7 @@ int main(int argc, char *argv[])
                 ME "execv failed: %s: %s\n",
                 DSME_SERVER_PATH,
                 strerror(errno));
-        return EXIT_FAILURE;
+        _exit(EXIT_FAILURE);
 
     } else {
         // parent
@@ -476,16 +559,35 @@ int main(int argc, char *argv[])
     mainloop(sleep_interval, to_child[1], from_child[0]);
     fprintf(stderr, ME "Exited main loop, quitting\n");
 
-    // clear nowayout states and close watchdog files
-    dsme_wd_quit();
 
-    // also bring dsme server down
-    kill(pid, SIGTERM);
-    (void)waitpid(pid, 0, 0);
+    /* Bring down the dsme-server child process
+     *
+     * Note: The maximum duration we can spend here must be shorter
+     *       than both hw watchdog kick period and the time systemd
+     *       allows for dsme itself to exit.
+     */
 
+    // kick watchdogs so we have time to wait for dsme-server to exit
+    dsme_wd_kick();
+
+    if( kill_and_wait(pid, SIGTERM, 8) || kill_and_wait(pid, SIGKILL, 3) ) {
+        // clear nowayout states and close watchdog files
+        dsme_wd_quit();
+    }
+    else {
+        // leave the nowayout states on so that we will get a wd reboot
+        // shortly after dsme exits, but kick the watchdogs one more time
+        // to give the system some time to make orderly shutdown
+        dsme_wd_kick();
+        fprintf(stderr, ME "dsme-server stop failed, leaving watchdogs"
+                " active\n");
+    }
+
+    /* Remove the PID file */
     if (remove(DSME_PID_FILE) < 0 && errno != ENOENT) {
         fprintf(stderr, ME "Couldn't remove lockfile: %m\n");
     }
 
+    fprintf(stderr, "DSME %s terminating\n", STRINGIFY(PRG_VERSION));
     return EXIT_SUCCESS;
 }
