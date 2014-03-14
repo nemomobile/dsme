@@ -106,7 +106,8 @@ int dsmesock_listen(dsmesock_callback* read_and_queue)
   if (!(as_chan = g_io_channel_unix_new(fd))) {
     goto close_and_fail;
   }
-  if (!g_io_add_watch(as_chan, G_IO_IN, accept_client, as_chan)) {
+  if (!g_io_add_watch(as_chan, G_IO_IN | G_IO_ERR | G_IO_HUP | G_IO_NVAL,
+		      accept_client, as_chan)) {
     goto close_channel_and_fail;
   }
 
@@ -135,6 +136,11 @@ static gboolean accept_client(GIOChannel*  source,
   int                    newfd;
   dsmesock_connection_t* newconn     = 0;
 
+  if( condition & (G_IO_ERR | G_IO_HUP | G_IO_NVAL) ) {
+    dsme_log(LOG_CRIT, "disabling client connect watcher");
+    return FALSE;
+  }
+
   newfd = accept(g_io_channel_unix_get_fd(source), 0, 0);
   if(newfd == -1) return TRUE;
 
@@ -162,7 +168,7 @@ static gboolean accept_client(GIOChannel*  source,
 
   if (!(newconn->channel = g_io_channel_unix_new(newfd)) ||
       !g_io_add_watch(newconn->channel,
-                      (G_IO_IN | G_IO_ERR | G_IO_HUP),
+		      G_IO_IN | G_IO_ERR | G_IO_HUP | G_IO_NVAL,
                       handle_client,
                       newconn))
   {
@@ -188,7 +194,7 @@ static gboolean handle_client(GIOChannel*  source,
           keep_connection = false;
       }
   }
-  if (condition & (G_IO_ERR | G_IO_HUP)) {
+  if (condition & (G_IO_ERR | G_IO_HUP | G_IO_NVAL)) {
       keep_connection = false;
   }
 

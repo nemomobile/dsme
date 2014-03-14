@@ -420,7 +420,9 @@ probe_evdev_device(const char *path)
     }
     g_io_channel_set_buffered(chan, false);
 
-    if( !(watch = g_io_add_watch(chan, G_IO_IN, process_kbevent, 0)) )
+    if( !(watch = g_io_add_watch(chan,
+				 G_IO_IN | G_IO_ERR | G_IO_HUP | G_IO_NVAL,
+				 process_kbevent, 0)) )
     {
         dsme_log(LOG_ERR, PFIX"%s: unable to add io channel watch", path);
         goto EXIT;

@@ -2406,6 +2406,14 @@ static gboolean epollfd_iowatch_cb(GIOChannel*  source,
     struct epoll_event events[DSME_MAX_EPOLL_EVENTS];
     int                nfds;
 
+    /* Abandon watch if we get abnorman conditions from glib */
+    if (condition & ~(G_IO_IN | G_IO_PRI))
+    {
+	dsme_log(LOG_ERR, PFIX"epoll waiting I/O error reported");
+	dsme_log(LOG_CRIT, PFIX"epoll waiting disabled");
+	return FALSE;
+    }
+
     dsme_log(LOG_DEBUG, PFIX"epollfd readable");
 
     nfds = epoll_wait(epollfd, events, DSME_MAX_EPOLL_EVENTS, 0);
@@ -2491,7 +2499,9 @@ static bool epollfd_init(void)
         goto cleanup;
     }
 
-    if( !(epoll_watch = g_io_add_watch(chan, G_IO_IN, epollfd_iowatch_cb, 0)) ) {
+    if( !(epoll_watch = g_io_add_watch(chan,
+				       G_IO_IN|G_IO_ERR|G_IO_HUP|G_IO_NVAL,
+				       epollfd_iowatch_cb, 0)) ) {
 	goto cleanup;
     }
 

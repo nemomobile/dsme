@@ -74,7 +74,8 @@ static bool set_up_signal_pipe(void)
     if (!(chan = g_io_channel_unix_new(signal_pipe[0]))) {
         goto close_and_fail;
     }
-    watch = g_io_add_watch(chan, G_IO_IN, handle_signal, 0);
+    watch = g_io_add_watch(chan, G_IO_IN | G_IO_ERR | G_IO_HUP | G_IO_NVAL,
+			   handle_signal, 0);
     g_io_channel_unref(chan);
     if (!watch) {
         goto close_and_fail;
