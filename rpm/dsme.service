@@ -7,6 +7,7 @@ Conflicts=shutdown.target
 
 [Service]
 Type=notify
+ControlGroup=cpu:/
 # When starting dsme gets initial runlevel from the bootstate file
 # If it doesn't exist, we default to USER
 # This works because EnvironmentFile overrides Environment
