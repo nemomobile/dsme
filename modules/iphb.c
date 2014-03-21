@@ -121,7 +121,9 @@ typedef struct _client_t {
  * Function prototypes
  * ------------------------------------------------------------------------- */
 
-static void clientlist_wakeup_clients_if(const struct timeval *now);
+static void clientlist_wakeup_clients_now(const struct timeval *now);
+static void clientlist_wakeup_clients_later(const struct timeval *now);
+static void clientlist_wakeup_clients_cancel(void);
 
 static bool epollfd_add_fd(int fd, void *ptr);
 static void epollfd_remove_fd(int fd);
@@ -182,6 +184,9 @@ static const char rtc_wakeup[] = "mce_rtc_wakeup";
 
 /** RTC input wakelock - acquired / released by dsme */
 static const char rtc_input[] = "dsme_rtc_input";
+
+/** IPHB delayed wakeup processing */
+static const char iphb_wakeup[] = "dsme_iphb_wakeup";
 
 /** When the next alarm that should powerup/resume the device is due [systime] */
 static time_t alarm_powerup = 0;
@@ -1926,12 +1931,12 @@ static gboolean clientlist_handle_wakeup_timeout(gpointer userdata)
 
     wakeup_timer = 0;
 
-    dsme_log(LOG_DEBUG, PFIX"*** TIMEOUT ***");
+    dsme_log(LOG_DEBUG, PFIX"wakeup via normal timer");
 
     struct timeval   tv_now;
     monotime_get_tv(&tv_now);
 
-    clientlist_wakeup_clients_if(&tv_now);
+    clientlist_wakeup_clients_now(&tv_now);
 
     return FALSE; /* stop the interval */
 }
@@ -1969,7 +1974,7 @@ static void clientlist_cancel_wakeup_timeout(void)
  * - we get heartbeat message (from hwwd kicker)
  * - intra heartbeat timer triggers (clients with short min-max range)
  */
-static void clientlist_wakeup_clients_if(const struct timeval *now)
+static void clientlist_wakeup_clients_now(const struct timeval *now)
 {
     struct timeval sleep_time = { INT_MAX, 0 };
 
@@ -1977,6 +1982,8 @@ static void clientlist_wakeup_clients_if(const struct timeval *now)
 
     struct timeval tv;
 
+    dsme_log(LOG_DEBUG, PFIX"check if clients need waking up");
+    clientlist_wakeup_clients_cancel();
     clientlist_cancel_wakeup_timeout();
 
     bool must_wake = false;
@@ -2063,6 +2070,85 @@ static void clientlist_wakeup_clients_if(const struct timeval *now)
     hwwd_feeder_sync();
 }
 
+
+/** Timer id for delayed wakeup checking
+ *
+ * Note: A wakelock must be held while waiting for timeout.
+ *       Otherwise the RTC wakeup might not get programmed
+ *       directly due to clients issuing wakeup requests.
+ */
+static guint clientlist_wakeup_clients_id = 0;
+
+/** Timer callback delayed wakeup checking
+ *
+ * @param aptr (not used)
+ *
+ * @return FALSE, to stop timer from repeating
+ */
+static gboolean clientlist_wakeup_clients_cb(gpointer aptr)
+{
+    (void)aptr;
+
+    struct timeval   tv_now;
+
+    if( !clientlist_wakeup_clients_id )
+	goto EXIT;
+
+    /* Mark timer has handled, this must be done prior to
+     * making the clientlist_wakeup_clients_now() call.
+     * Otherwise the wakelock might get released too early. */
+    clientlist_wakeup_clients_id = 0;
+
+    /* Handle client wakeups */
+    monotime_get_tv(&tv_now);
+    clientlist_wakeup_clients_now(&tv_now);
+
+    /* If the timer has not been reprogrammed, release wakelock */
+    if( !clientlist_wakeup_clients_id )
+	wakelock_unlock(iphb_wakeup);
+
+EXIT:
+    return FALSE;
+}
+
+/** Cancel delayed wakeup checking
+ */
+static void clientlist_wakeup_clients_cancel(void)
+{
+    if( clientlist_wakeup_clients_id ) {
+	dsme_log(LOG_DEBUG, PFIX"cancel delayed wakeup checking");
+	g_source_remove(clientlist_wakeup_clients_id),
+	    clientlist_wakeup_clients_id = 0;
+	wakelock_unlock(iphb_wakeup);
+    }
+}
+
+/** Schedule delayed wakeup checking
+ *
+ * This function starts a wakelock backed timer for delayed client
+ * wakeup check up. The purpose is to avoid going through the client
+ * list multiple times when
+ * a) a client issues several wakeup request
+ * b) several clients set new wakeups after synchronous wakeup
+ *
+ * Additionally it makes (a) or (b) happening comprehensible in the logs
+ *
+ * The delay must be long enough to be effective, but short enough
+ * not to cause wakeup skippage - for now 200 ms is used.
+ *
+ * @param now monotime stamp (not used at the moment)
+ */
+static void clientlist_wakeup_clients_later(const struct timeval *now)
+{
+    (void)now;
+
+    if( !clientlist_wakeup_clients_id ) {
+	dsme_log(LOG_DEBUG, PFIX"schedule delayed wakeup checking");
+	wakelock_lock(iphb_wakeup, -1);
+	clientlist_wakeup_clients_id =
+	    g_timeout_add(200, clientlist_wakeup_clients_cb, 0);
+    }
+}
 /* ------------------------------------------------------------------------- *
  * IPC with TIMED
  * ------------------------------------------------------------------------- */
@@ -2464,7 +2550,7 @@ static gboolean epollfd_iowatch_cb(GIOChannel*  source,
         }
     }
 
-    clientlist_wakeup_clients_if(&tv_now);
+    clientlist_wakeup_clients_later(&tv_now);
 
     if( wakeup_mce ) {
 	/* Allow mce some time to take over the wakeup, but ... */
@@ -2593,7 +2679,7 @@ DSME_HANDLER(DSM_MSGTYPE_HEARTBEAT, conn, msg)
 
     dsme_log(LOG_DEBUG, PFIX"HEARTBEAT from HWWD");
     monotime_get_tv(&tv_now);
-    clientlist_wakeup_clients_if(&tv_now);
+    clientlist_wakeup_clients_now(&tv_now);
 }
 
 /** Handle WAIT requests from internal clients */
@@ -2615,7 +2701,7 @@ DSME_HANDLER(DSM_MSGTYPE_WAIT, conn, msg)
     if( client_needs_resume(client) ) {
 	/* Internal requests with wakeup flag set are handled similarly
 	 * to external requests */
-	clientlist_wakeup_clients_if(&tv_now);
+	clientlist_wakeup_clients_later(&tv_now);
     }
     else {
 	/* We don't want to wake anyone else up for internal clients showing up.
@@ -2788,6 +2874,7 @@ void module_fini(void)
 {
     /* cancel timers */
     clientlist_cancel_wakeup_timeout();
+    clientlist_wakeup_clients_cancel();
 
     /* detach dbus handlers */
     dsme_dbus_unbind_signals(&bound, signals);
