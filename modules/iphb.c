@@ -1614,8 +1614,20 @@ static bool client_handle_wait_req(client_t                      *self,
 {
     bool client_woken = false;
 
-    int mintime = req->mintime;
-    int maxtime = req->maxtime;
+    int req_mintime = req->mintime;
+    int req_maxtime = req->maxtime;
+
+    if( req->version >= 1 ) {
+	/* Time range is expanded to 32 bits */
+	req_mintime |= (req->mintime_hi << 16);
+	req_maxtime |= (req->maxtime_hi << 16);
+
+	/* Also external clients can choose not to resume */
+	self->wakeup = req->wakeup;
+    }
+
+    int mintime = req_mintime;
+    int maxtime = req_maxtime;
 
     if( self->pid != req->pid ) {
 	free(self->pidtxt);
@@ -1641,9 +1653,9 @@ static bool client_handle_wait_req(client_t                      *self,
 	/* wakeup in aligned slot */
 	mintime = client_adjust_period(mintime);
 
-	if( mintime != req->mintime )
+	if( mintime != req_mintime )
 	    dsme_log(LOG_DEBUG, PFIX"client %s, adjusted slot: %d -> %d",
-		     self->pidtxt, req->mintime, mintime);
+		     self->pidtxt, req_mintime, mintime);
 
 	dsme_log(LOG_DEBUG, PFIX"client %s, wakeup at %d slot",
 		 self->pidtxt, mintime);
@@ -1658,9 +1670,9 @@ static bool client_handle_wait_req(client_t                      *self,
 	/* wakeup in [min, max] range */
 	mintime = client_adjust_mintime(mintime, maxtime);
 
-	if( mintime != req->mintime )
+	if( mintime != req_mintime )
 	    dsme_log(LOG_DEBUG, PFIX"client %s, adjusted mintime: %d -> %d",
-		     self->pidtxt, req->mintime, mintime);
+		     self->pidtxt, req_mintime, mintime);
 
 	dsme_log(LOG_DEBUG, PFIX"client %s, wakeup at %d-%d range",
 		 self->pidtxt, mintime, maxtime);
