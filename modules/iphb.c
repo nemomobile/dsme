@@ -121,7 +121,9 @@ typedef struct _client_t {
  * Function prototypes
  * ------------------------------------------------------------------------- */
 
-static void clientlist_wakeup_clients_if(const struct timeval *now);
+static void clientlist_wakeup_clients_now(const struct timeval *now);
+static void clientlist_wakeup_clients_later(const struct timeval *now);
+static void clientlist_wakeup_clients_cancel(void);
 
 static bool epollfd_add_fd(int fd, void *ptr);
 static void epollfd_remove_fd(int fd);
@@ -182,6 +184,9 @@ static const char rtc_wakeup[] = "mce_rtc_wakeup";
 
 /** RTC input wakelock - acquired / released by dsme */
 static const char rtc_input[] = "dsme_rtc_input";
+
+/** IPHB delayed wakeup processing */
+static const char iphb_wakeup[] = "dsme_iphb_wakeup";
 
 /** When the next alarm that should powerup/resume the device is due [systime] */
 static time_t alarm_powerup = 0;
@@ -1175,7 +1180,7 @@ static bool rtc_handle_input(void)
 
     wakelock_lock(rtc_input, -1);
 
-    dsme_log(LOG_INFO, PFIX"woke up to handle rtc wakeup alarm");
+    dsme_log(LOG_INFO, PFIX"wakeup via RTC alarm");
 
     if( rtc_fd == -1 ) {
 	dsme_log(LOG_WARNING, PFIX"failed to read %s: %s",  rtc_path,
@@ -1191,8 +1196,6 @@ static bool rtc_handle_input(void)
 	dsme_log(LOG_WARNING, PFIX"failed to read %s: %m",  rtc_path);
 	goto cleanup;
     }
-
-    dsme_log(LOG_INFO, PFIX"handling RTC wakeup");
 
     /* set system time and disable update interrupts */
     if( rtc_to_system_time ) {
@@ -1614,8 +1617,20 @@ static bool client_handle_wait_req(client_t                      *self,
 {
     bool client_woken = false;
 
-    int mintime = req->mintime;
-    int maxtime = req->maxtime;
+    int req_mintime = req->mintime;
+    int req_maxtime = req->maxtime;
+
+    if( req->version >= 1 ) {
+	/* Time range is expanded to 32 bits */
+	req_mintime |= (req->mintime_hi << 16);
+	req_maxtime |= (req->maxtime_hi << 16);
+
+	/* Also external clients can choose not to resume */
+	self->wakeup = req->wakeup;
+    }
+
+    int mintime = req_mintime;
+    int maxtime = req_maxtime;
 
     if( self->pid != req->pid ) {
 	free(self->pidtxt);
@@ -1641,11 +1656,11 @@ static bool client_handle_wait_req(client_t                      *self,
 	/* wakeup in aligned slot */
 	mintime = client_adjust_period(mintime);
 
-	if( mintime != req->mintime )
-	    dsme_log(LOG_DEBUG, PFIX"client %s, adjusted slot: %d -> %d",
-		     self->pidtxt, req->mintime, mintime);
+	if( mintime != req_mintime )
+	    dsme_log(LOG_DEBUG, PFIX"client %s adjusted slot: %d -> %d",
+		     self->pidtxt, req_mintime, mintime);
 
-	dsme_log(LOG_DEBUG, PFIX"client %s, wakeup at %d slot",
+	dsme_log(LOG_DEBUG, PFIX"client %s wakeup at %d slot",
 		 self->pidtxt, mintime);
 
 	mintime = maxtime = mintime - (mintime + now->tv_sec) % mintime;
@@ -1658,11 +1673,11 @@ static bool client_handle_wait_req(client_t                      *self,
 	/* wakeup in [min, max] range */
 	mintime = client_adjust_mintime(mintime, maxtime);
 
-	if( mintime != req->mintime )
-	    dsme_log(LOG_DEBUG, PFIX"client %s, adjusted mintime: %d -> %d",
-		     self->pidtxt, req->mintime, mintime);
+	if( mintime != req_mintime )
+	    dsme_log(LOG_DEBUG, PFIX"client %s adjusted mintime: %d -> %d",
+		     self->pidtxt, req_mintime, mintime);
 
-	dsme_log(LOG_DEBUG, PFIX"client %s, wakeup at %d-%d range",
+	dsme_log(LOG_DEBUG, PFIX"client %s wakeup at %d-%d range",
 		 self->pidtxt, mintime, maxtime);
     }
 
@@ -1677,7 +1692,7 @@ static bool client_handle_wait_req(client_t                      *self,
 	self->wakeup = (req->wakeup != 0);
 
     if( self->wakeup )
-	dsme_log(LOG_DEBUG, PFIX"client %s, wakeup flag set", self->pidtxt);
+	dsme_log(LOG_DEBUG, PFIX"client %s wakeup flag set", self->pidtxt);
 
     return client_woken;
 }
@@ -1914,12 +1929,12 @@ static gboolean clientlist_handle_wakeup_timeout(gpointer userdata)
 
     wakeup_timer = 0;
 
-    dsme_log(LOG_DEBUG, PFIX"*** TIMEOUT ***");
+    dsme_log(LOG_DEBUG, PFIX"wakeup via normal timer");
 
     struct timeval   tv_now;
     monotime_get_tv(&tv_now);
 
-    clientlist_wakeup_clients_if(&tv_now);
+    clientlist_wakeup_clients_now(&tv_now);
 
     return FALSE; /* stop the interval */
 }
@@ -1948,6 +1963,50 @@ static void clientlist_cancel_wakeup_timeout(void)
 	g_source_remove(wakeup_timer), wakeup_timer = 0;
 }
 
+/** Helper for formatting time-to values for logging purposes
+ *
+ * @param tv   timeval, from timersub(target_time, current_time, time_diff)
+ * @param buff buffer to format time remaining string to
+ * @param size size of the output buffer
+ */
+static char *time_minus(const struct timeval *tv, char *buff, size_t size)
+{
+    char *pos = buff;
+    char *end = buff + size - 1;
+    char  tmp[32];
+
+    auto void add(const char *str)
+    {
+	while( pos < end && *str ) *pos++ = *str++;
+    }
+
+    const char *n = "T-";
+    long s  = tv->tv_sec;
+    long ms = tv->tv_usec / 1000;
+
+    if( s < 0 ) {
+	n = "T+";
+	// N.B. -0.7s as timeval: tv_sec = -1, tv_usec = 300000
+	s = -(s + 1);
+	ms = 1000 - ms;
+    }
+
+    long m = s / 60; s %= 60;
+    long h = m / 60; m %= 60;
+    long d = h / 24; h %= 24;
+
+    add(n);
+    if( d )
+    {
+	snprintf(tmp, sizeof tmp, "%ld days, ", d);
+	add(tmp);
+    }
+    snprintf(tmp, sizeof tmp, "%02ld:%02ld:%02ld.%03ld", h, m, s, ms);
+    add(tmp);
+    return *pos = 0, buff;
+}
+
+
 /** Wakeup clients if conditions are met
  *
  * We should arrive here if:
@@ -1957,14 +2016,18 @@ static void clientlist_cancel_wakeup_timeout(void)
  * - we get heartbeat message (from hwwd kicker)
  * - intra heartbeat timer triggers (clients with short min-max range)
  */
-static void clientlist_wakeup_clients_if(const struct timeval *now)
+static void clientlist_wakeup_clients_now(const struct timeval *now)
 {
     struct timeval sleep_time = { INT_MAX, 0 };
 
     int externals_left = 0;
 
-    struct timeval tv;
+    struct timeval tv_to_max;
+    struct timeval tv_to_min;
+    char stamp[64];
 
+    dsme_log(LOG_DEBUG, PFIX"check if clients need waking up");
+    clientlist_wakeup_clients_cancel();
     clientlist_cancel_wakeup_timeout();
 
     bool must_wake = false;
@@ -1980,8 +2043,8 @@ static void clientlist_wakeup_clients_if(const struct timeval *now)
 	if( tv_lt(now, &client->mintime) )
 	    continue;
 
-	timersub(&client->maxtime, now, &tv);
-	if( tv.tv_sec >= DSME_HEARTBEAT_INTERVAL )
+	timersub(&client->maxtime, now, &tv_to_max);
+	if( tv_to_max.tv_sec >= DSME_HEARTBEAT_INTERVAL )
 	    continue;
 
 	/* mintime passed and maxtime is less than heartbeat away */
@@ -1996,28 +2059,33 @@ static void clientlist_wakeup_clients_if(const struct timeval *now)
 	next = client->next;
 
         if( !client_wait_started(client) ) {
-            dsme_log(LOG_DEBUG, PFIX"client %s is active, not to be woken up", client->pidtxt);
+            dsme_log(LOG_DEBUG, PFIX"client %s not scheduled", client->pidtxt);
 	    continue;
         }
 
-	timersub(&client->maxtime, now, &tv);
+	timersub(&client->maxtime, now, &tv_to_max);
 
 	if( tv_lt(now, &client->mintime) ) {
+	    timersub(&client->mintime, now, &tv_to_min);
+	    dsme_log(LOG_DEBUG, PFIX"client %s min wakeup %s",
+		     client->pidtxt,
+		     time_minus(&tv_to_min, stamp, sizeof stamp));
+
 	    /* mintime not reached yet */
-	    if( tv.tv_sec >= DSME_HEARTBEAT_INTERVAL || !client_needs_resume(client) ) {
+	    if( tv_to_max.tv_sec >= DSME_HEARTBEAT_INTERVAL || !client_needs_resume(client) ) {
 		/* timer is not used for internal clients */
-		dsme_log(LOG_DEBUG, PFIX"client %s is not yet due", client->pidtxt);
 	    }
 	    else {
-		dsme_log(LOG_DEBUG, PFIX"client %s is due in %ld seconds", client->pidtxt, (long)tv.tv_sec);
 		/* we need timer if maxtime is before the next heartbeat */
-		if( tv_gt(&sleep_time, &tv) )
-		    sleep_time = tv;
+		if( tv_gt(&sleep_time, &tv_to_max) )
+		    sleep_time = tv_to_max;
 	    }
 	}
-	else if( !must_wake && tv.tv_sec >= DSME_HEARTBEAT_INTERVAL ) {
+	else if( !must_wake && tv_to_max.tv_sec >= DSME_HEARTBEAT_INTERVAL ) {
 	    /* maxtime is at least one heartbeat away */
-            dsme_log(LOG_DEBUG, PFIX"client %s can still wait", client->pidtxt);
+	    dsme_log(LOG_DEBUG, PFIX"client %s max wakeup %s",
+		     client->pidtxt,
+		     time_minus(&tv_to_max, stamp, sizeof stamp));
 	}
 	else {
 	    /* due now, wakeup */
@@ -2051,6 +2119,85 @@ static void clientlist_wakeup_clients_if(const struct timeval *now)
     hwwd_feeder_sync();
 }
 
+
+/** Timer id for delayed wakeup checking
+ *
+ * Note: A wakelock must be held while waiting for timeout.
+ *       Otherwise the RTC wakeup might not get programmed
+ *       directly due to clients issuing wakeup requests.
+ */
+static guint clientlist_wakeup_clients_id = 0;
+
+/** Timer callback delayed wakeup checking
+ *
+ * @param aptr (not used)
+ *
+ * @return FALSE, to stop timer from repeating
+ */
+static gboolean clientlist_wakeup_clients_cb(gpointer aptr)
+{
+    (void)aptr;
+
+    struct timeval   tv_now;
+
+    if( !clientlist_wakeup_clients_id )
+	goto EXIT;
+
+    /* Mark timer has handled, this must be done prior to
+     * making the clientlist_wakeup_clients_now() call.
+     * Otherwise the wakelock might get released too early. */
+    clientlist_wakeup_clients_id = 0;
+
+    /* Handle client wakeups */
+    monotime_get_tv(&tv_now);
+    clientlist_wakeup_clients_now(&tv_now);
+
+    /* If the timer has not been reprogrammed, release wakelock */
+    if( !clientlist_wakeup_clients_id )
+	wakelock_unlock(iphb_wakeup);
+
+EXIT:
+    return FALSE;
+}
+
+/** Cancel delayed wakeup checking
+ */
+static void clientlist_wakeup_clients_cancel(void)
+{
+    if( clientlist_wakeup_clients_id ) {
+	dsme_log(LOG_DEBUG, PFIX"cancel delayed wakeup checking");
+	g_source_remove(clientlist_wakeup_clients_id),
+	    clientlist_wakeup_clients_id = 0;
+	wakelock_unlock(iphb_wakeup);
+    }
+}
+
+/** Schedule delayed wakeup checking
+ *
+ * This function starts a wakelock backed timer for delayed client
+ * wakeup check up. The purpose is to avoid going through the client
+ * list multiple times when
+ * a) a client issues several wakeup request
+ * b) several clients set new wakeups after synchronous wakeup
+ *
+ * Additionally it makes (a) or (b) happening comprehensible in the logs
+ *
+ * The delay must be long enough to be effective, but short enough
+ * not to cause wakeup skippage - for now 200 ms is used.
+ *
+ * @param now monotime stamp (not used at the moment)
+ */
+static void clientlist_wakeup_clients_later(const struct timeval *now)
+{
+    (void)now;
+
+    if( !clientlist_wakeup_clients_id ) {
+	dsme_log(LOG_DEBUG, PFIX"schedule delayed wakeup checking");
+	wakelock_lock(iphb_wakeup, -1);
+	clientlist_wakeup_clients_id =
+	    g_timeout_add(200, clientlist_wakeup_clients_cb, 0);
+    }
+}
 /* ------------------------------------------------------------------------- *
  * IPC with TIMED
  * ------------------------------------------------------------------------- */
@@ -2348,9 +2495,6 @@ static bool epollfd_handle_client_req(struct epoll_event* event,
         goto drop_client_and_fail;
     }
 
-    dsme_log(LOG_DEBUG, PFIX"client with PID %lu is active",
-             (unsigned long)client->pid);
-
     struct _iphb_req_t req = { 0 };
 
     if( recv(client->fd, &req, sizeof req, MSG_WAITALL) <= 0 ) {
@@ -2414,8 +2558,6 @@ static gboolean epollfd_iowatch_cb(GIOChannel*  source,
 	return FALSE;
     }
 
-    dsme_log(LOG_DEBUG, PFIX"epollfd readable");
-
     nfds = epoll_wait(epollfd, events, DSME_MAX_EPOLL_EVENTS, 0);
 
     if( nfds == -1 ) {
@@ -2426,8 +2568,6 @@ static gboolean epollfd_iowatch_cb(GIOChannel*  source,
         dsme_log(LOG_CRIT, PFIX"epoll waiting disabled");
 	return FALSE;
     }
-
-    dsme_log(LOG_DEBUG, PFIX"epollfd_wait => %d events", nfds);
 
     monotime_get_tv(&tv_now);
 
@@ -2452,7 +2592,7 @@ static gboolean epollfd_iowatch_cb(GIOChannel*  source,
         }
     }
 
-    clientlist_wakeup_clients_if(&tv_now);
+    clientlist_wakeup_clients_later(&tv_now);
 
     if( wakeup_mce ) {
 	/* Allow mce some time to take over the wakeup, but ... */
@@ -2581,7 +2721,7 @@ DSME_HANDLER(DSM_MSGTYPE_HEARTBEAT, conn, msg)
 
     dsme_log(LOG_DEBUG, PFIX"HEARTBEAT from HWWD");
     monotime_get_tv(&tv_now);
-    clientlist_wakeup_clients_if(&tv_now);
+    clientlist_wakeup_clients_now(&tv_now);
 }
 
 /** Handle WAIT requests from internal clients */
@@ -2603,7 +2743,7 @@ DSME_HANDLER(DSM_MSGTYPE_WAIT, conn, msg)
     if( client_needs_resume(client) ) {
 	/* Internal requests with wakeup flag set are handled similarly
 	 * to external requests */
-	clientlist_wakeup_clients_if(&tv_now);
+	clientlist_wakeup_clients_later(&tv_now);
     }
     else {
 	/* We don't want to wake anyone else up for internal clients showing up.
@@ -2776,6 +2916,7 @@ void module_fini(void)
 {
     /* cancel timers */
     clientlist_cancel_wakeup_timeout();
+    clientlist_wakeup_clients_cancel();
 
     /* detach dbus handlers */
     dsme_dbus_unbind_signals(&bound, signals);

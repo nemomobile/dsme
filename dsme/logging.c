@@ -69,7 +69,7 @@ static struct {
 
 
 #define DSME_MAX_LOG_MESSAGE_LENGTH 123
-#define DSME_MAX_LOG_BUFFER_ENTRIES  64 /* must be a power of 2! */
+#define DSME_MAX_LOG_BUFFER_ENTRIES 128 /* must be a power of 2! */
 
 typedef struct log_entry {
     int  prio;
@@ -258,29 +258,53 @@ static void log_to_file(int prio, const char* message)
  */
 void dsme_log_txt(int level, const char* fmt, ...)
 {
-    va_list         ap;
+    static bool     overflow = false;
+    static unsigned skipped  = 0;
 
-    va_start(ap, fmt);
+    log_entry* entry;
 
-    if (logopt.verbosity >= level) {
-        /* buffer for the logging thread to log */
-        log_entry* entry =
-            &ring_buffer[write_count % DSME_MAX_LOG_BUFFER_ENTRIES];
+    /* Do verbosity filtering first */
+    if( logopt.verbosity < level )
+	goto EXIT;
 
-        entry->prio = level;
-        vsnprintf(entry->message,
-                  DSME_MAX_LOG_MESSAGE_LENGTH + 1,
-                  fmt,
-                  ap);
-        entry->message[DSME_MAX_LOG_MESSAGE_LENGTH] = '\0';
+    /* Handle ring buffer overflows */
+    unsigned buffered = write_count - read_count;
 
-        ++write_count;
-
-        /* wake up the logging thread */
-        sem_post(&ring_buffer_sem);
+    if( buffered >= DSME_MAX_LOG_BUFFER_ENTRIES ) {
+	overflow = true;
+	++skipped;
+	goto EXIT;
     }
 
+    if( overflow ) {
+	/* must go down enough before overflow is cleared */
+	if( buffered >= DSME_MAX_LOG_BUFFER_ENTRIES * 7 / 8 ) {
+	    ++skipped;
+	    goto EXIT;
+	}
+
+	/* Add log entry about the overflow itself */
+        entry = &ring_buffer[write_count++ % DSME_MAX_LOG_BUFFER_ENTRIES];
+        entry->prio = LOG_ERR;
+        snprintf(entry->message, sizeof entry->message,
+		 "logging ringbuffer overflow; %u messages lost", skipped);
+	sem_post(&ring_buffer_sem);
+
+	overflow = false;
+	skipped = 0;
+    }
+
+    /* Add log entry to the ring buffer */
+    entry = &ring_buffer[write_count++ % DSME_MAX_LOG_BUFFER_ENTRIES];
+    entry->prio = level;
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(entry->message, sizeof entry->message, fmt, ap);
     va_end(ap);
+    sem_post(&ring_buffer_sem);
+
+EXIT:
+    return;
 }
 
 /*
