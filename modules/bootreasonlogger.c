@@ -258,6 +258,7 @@ DSME_HANDLER(DSM_MSGTYPE_SET_THERMAL_STATUS, conn, msg)
 {
     bool overheated = false;
     const char *temp_status;
+    char  str[80];
 
     if (msg->status == DSM_THERMAL_STATUS_OVERHEATED) {
         temp_status = "overheated";
@@ -268,9 +269,9 @@ DSME_HANDLER(DSM_MSGTYPE_SET_THERMAL_STATUS, conn, msg)
         temp_status = "normal";
 
     dsme_log(LOG_DEBUG,
-             PFIX"temp state: %s received", temp_status);
-
-    write_log("Received: device temp",  temp_status);
+             PFIX"temp (%s) state: %s (%dC)", msg->sensor_name, temp_status, msg->temperature);
+    snprintf(str, sizeof(str), "device (%s) temp status %s (%dC)", msg->sensor_name, temp_status, msg->temperature);
+    write_log("Received:", str);
     if (overheated)
         saved_shutdown_reason = SD_DEVICE_OVERHEAT;
     else  // Device is no more overheated. Shutdown won't happen
