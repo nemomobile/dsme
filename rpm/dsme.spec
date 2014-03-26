@@ -18,7 +18,7 @@ BuildRequires:  pkgconfig(glib-2.0) >= 2.32.0
 BuildRequires:  pkgconfig(dbus-1)
 BuildRequires:  pkgconfig(dbus-glib-1)
 BuildRequires:  pkgconfig(libiphb) >= 1.2.0
-BuildRequires:  pkgconfig(dsme) >= 0.62.0
+BuildRequires:  pkgconfig(dsme) >= 0.63.0
 BuildRequires:  pkgconfig(systemd)
 BuildRequires:  pkgconfig(mce) >= 1.12.3
 BuildRequires:  pkgconfig(libngf0)

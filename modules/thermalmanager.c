@@ -51,7 +51,7 @@
 
 #include <glib.h>
 #include <stdlib.h>
-
+#include <string.h>
 
 static void receive_temperature_response(thermal_object_t* thermal_object,
                                          int               temperature);
@@ -123,17 +123,21 @@ static THERMAL_STATUS worst_current_thermal_object_status(void)
   return overall_status;
 }
 
-static void send_thermal_status(dsme_thermal_status_t status)
+static void send_thermal_status(dsme_thermal_status_t status, 
+                                const char *sensor_name, int temperature)
 {
   DSM_MSGTYPE_SET_THERMAL_STATUS msg =
     DSME_MSG_INIT(DSM_MSGTYPE_SET_THERMAL_STATUS);
 
   msg.status = status;
+  msg.temperature = temperature;
+  strncpy(msg.sensor_name, sensor_name, DSM_TEMP_SENSOR_MAX_NAME_LEN); 
+  msg.sensor_name[DSM_TEMP_SENSOR_MAX_NAME_LEN - 1] = 0;
 
   broadcast_internally(&msg);
 }
 
-static void send_thermal_indication(void)
+static void send_thermal_indication(const char *sensor_name, int temperature)
 {
   /* first send an indication to D-Bus */
   {
@@ -143,7 +147,7 @@ static void send_thermal_indication(void)
                                thermalmanager_state_change_ind);
       dsme_dbus_message_append_string(sig, current_status_name());
       dsme_dbus_signal_emit(sig);
-      dsme_log(LOG_NOTICE, "thermalmanager: Device thermal status: %s", current_status_name());
+      dsme_log(LOG_NOTICE, "thermalmanager: Device (%s) thermal status: %s (%dC)", sensor_name, current_status_name(), temperature);
   }
 
   /* then broadcast an indication internally */
@@ -151,17 +155,17 @@ static void send_thermal_indication(void)
       static bool temp_warning_sent = false;
 
       if (current_status == THERMAL_STATUS_FATAL) {
-          send_thermal_status(DSM_THERMAL_STATUS_OVERHEATED);
+          send_thermal_status(DSM_THERMAL_STATUS_OVERHEATED, sensor_name, temperature);
           temp_warning_sent = true;
-          dsme_log(LOG_CRIT, "thermalmanager: Device overheated");
+          dsme_log(LOG_CRIT, "thermalmanager: Device (%s) overheated (%dC)", sensor_name, temperature);
       } else if (current_status == THERMAL_STATUS_LOW) {
-          send_thermal_status(DSM_THERMAL_STATUS_LOWTEMP);
+          send_thermal_status(DSM_THERMAL_STATUS_LOWTEMP, sensor_name, temperature);
           temp_warning_sent = true;
-          dsme_log(LOG_WARNING, "thermalmanager: Device temperature low");
+          dsme_log(LOG_WARNING, "thermalmanager: Device (%s) temperature low (%dC)", sensor_name, temperature);
       } else if (temp_warning_sent) {
-          send_thermal_status(DSM_THERMAL_STATUS_NORMAL);
+          send_thermal_status(DSM_THERMAL_STATUS_NORMAL, sensor_name, temperature);
           temp_warning_sent = false;
-          dsme_log(LOG_NOTICE, "thermalmanager: Device temperature back to normal");
+          dsme_log(LOG_NOTICE, "thermalmanager: Device (%s) temperature back to normal (%dC)", sensor_name, temperature);
       }
   }
 }
@@ -253,7 +257,7 @@ static void receive_temperature_response(thermal_object_t* thermal_object,
 
       if (current_status != previously_indicated_status) {
           /* global thermal status has changed; send indication */
-          send_thermal_indication();
+          send_thermal_indication(thermal_object->conf->name, temperature);
       }
   }
 
