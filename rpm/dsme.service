@@ -17,6 +17,9 @@ EnvironmentFile=-/var/lib/environment/dsme/*.conf
 ExecStart=/usr/sbin/dsme -p /usr/lib/dsme/libstartup.so --systemd
 Restart=always
 RestartSec=1
+StartLimitInterval=600
+StartLimitBurst=2
+StartLimitAction=reboot
 
 [Install]
 WantedBy=multi-user.target
