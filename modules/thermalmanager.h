@@ -62,6 +62,8 @@ typedef struct thermal_object_configuration_t {
 struct thermal_object_t {
   thermal_object_configuration_t* conf;
   THERMAL_STATUS                  status;
+  THERMAL_STATUS                  new_status;
+  int                             status_change_count;
   bool                            request_pending;
 };
 
