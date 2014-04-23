@@ -1,3 +1,10 @@
+dsme (0.66.4) unstable; urgency=low
+
+  * [dsme] Block suspend for 60 seconds if dsme makes abnormal exit. Fixes
+    JB#16301
+
+ -- Simo Piiroinen <simo.piiroinen@jollamobile.com>  Wed, 23 Apr 2014 09:29:29 +0300
+
 dsme (0.66.0) unstable; urgency=low
 
   * [iphb] Handle iphb wait requests with 32bit time ranges. Contributes to JB#16116
