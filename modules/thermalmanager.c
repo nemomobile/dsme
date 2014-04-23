@@ -214,18 +214,19 @@ static void receive_temperature_response(thermal_object_t* thermal_object,
   }
 #endif
 
-  /* heuristics to convert to degrees C */
-  if (temperature > 1000) {
-      /* convert from millidegrees to degrees */
-      temperature = temperature / 1000;
-  }
-  if (temperature > 223) { /* 223 K ~ -50 degrees C */
-      /* convert from kelvin to degrees celsius */
-      temperature = temperature - 273;
+  /* We require that temp readings are C degrees integers
+   * and we drop obviously wrong values
+   */
+  if ((temperature > 250) || (temperature < -50)) { 
+      dsme_log(LOG_WARNING,
+               "thermalmanager: invalid temperature reading: %s %dC",
+               thermal_object->conf->name,
+               temperature);
+      return;
   }
 
   /* figure out the new thermal object status based on the temperature */
-  if        (temperature < thermal_object->conf->state[new_status].min) {
+  if (temperature < thermal_object->conf->state[new_status].min) {
       while (new_status > THERMAL_STATUS_LOW &&
              temperature < thermal_object->conf->state[new_status].min)
       {
@@ -238,26 +239,44 @@ static void receive_temperature_response(thermal_object_t* thermal_object,
           ++new_status;
       }
   }
-  thermal_object->status = new_status;
 
-#ifndef DSME_THERMAL_LOGGING
   dsme_log(LOG_DEBUG,
            "thermalmanager: %s temperature: %d %s",
            thermal_object->conf->name,
            temperature,
-           thermal_status_name[thermal_object->status]);
-#endif
+           thermal_status_name[new_status]);
 
-  if (new_status != previous_status) {
-      /* thermal object status has changed*/
-
-      /* see if the new status affects global thermal status */
-      THERMAL_STATUS previously_indicated_status = current_status;
-      current_status = worst_current_thermal_object_status();
-
-      if (current_status != previously_indicated_status) {
-          /* global thermal status has changed; send indication */
-          send_thermal_indication(thermal_object->conf->name, temperature);
+  if ((new_status != previous_status) || thermal_object->status_change_count) {
+      /* Thermal object status has changed, but it can be because of bad reading. 
+       * Before accepting new status, make sure it is not a glitch.
+         We want 3 concecutive readings indicating same status before we change it.
+       */
+      if (thermal_object->status_change_count == 0) {
+          /* This is first reading for new status */
+          thermal_object->status_change_count = 1;
+          thermal_object->new_status = new_status;
+          dsme_log(LOG_DEBUG,
+                   "thermalmanager: New status in transition started");
+      } else {
+          /* We are in transtion. Make sure all new readings want same status */
+          if (thermal_object->new_status != new_status) {
+              thermal_object->status_change_count = 0;
+              dsme_log(LOG_DEBUG,
+                       "thermalmanager: New status in transition did not remain same");
+          } else if (++(thermal_object->status_change_count) >= 3) {
+              /* We got 3 readings all indicating new status, better believe it */
+              dsme_log(LOG_DEBUG,
+                       "thermalmanager: New status accepted: %s", thermal_status_name[new_status]);
+              thermal_object->status = new_status;
+              thermal_object->status_change_count = 0;
+              /* see if the new status affects global thermal status */
+              THERMAL_STATUS previously_indicated_status = current_status;
+              current_status = worst_current_thermal_object_status();
+              if (current_status != previously_indicated_status) {
+                  /* global thermal status has changed; send indication */
+                  send_thermal_indication(thermal_object->conf->name, temperature);
+              }
+          }
       }
   }
 
@@ -277,8 +296,17 @@ static void thermal_object_polling_interval_expired(void* object)
       &thermal_object->conf->state[thermal_object->status];
 
   DSM_MSGTYPE_WAIT msg = DSME_MSG_INIT(DSM_MSGTYPE_WAIT);
-  msg.req.mintime = conf->mintime;
-  msg.req.maxtime = conf->maxtime;
+  /* If thermal status is in transition and we are taking several
+   * readings before change, then use speed up values for
+   * next readings. Ohterwise use configured values
+   */
+  if (thermal_object->status_change_count) {
+      msg.req.mintime = 2;
+      msg.req.maxtime = 5;
+  } else {
+      msg.req.mintime = conf->mintime;
+      msg.req.maxtime = conf->maxtime;
+  }
   msg.req.pid     = 0;
   msg.data        = thermal_object;
 

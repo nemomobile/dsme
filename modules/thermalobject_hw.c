@@ -57,6 +57,8 @@ static thermal_object_configuration_t core_thermal_conf = {
 static thermal_object_t core_thermal_object = {
   &core_thermal_conf,
   THERMAL_STATUS_NORMAL,
+  THERMAL_STATUS_NORMAL,
+  0,
   0
 };
 
@@ -79,6 +81,8 @@ static thermal_object_configuration_t battery_thermal_conf = {
 static thermal_object_t battery_thermal_object = {
   &battery_thermal_conf,
   THERMAL_STATUS_NORMAL,
+  THERMAL_STATUS_NORMAL,
+  0,
   0
 };
 
