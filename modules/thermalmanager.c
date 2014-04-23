@@ -217,7 +217,7 @@ static void receive_temperature_response(thermal_object_t* thermal_object,
   /* We require that temp readings are C degrees integers
    * and we drop obviously wrong values
    */
-  if ((temperature > 250) || (temperature < -50)) { 
+  if ((temperature > 200) || (temperature < -50)) { 
       dsme_log(LOG_WARNING,
                "thermalmanager: invalid temperature reading: %s %dC",
                thermal_object->conf->name,
@@ -249,7 +249,7 @@ static void receive_temperature_response(thermal_object_t* thermal_object,
   if ((new_status != previous_status) || thermal_object->status_change_count) {
       /* Thermal object status has changed, but it can be because of bad reading. 
        * Before accepting new status, make sure it is not a glitch.
-         We want 3 concecutive readings indicating same status before we change it.
+         We want 3 consecutive readings indicating same status before we change it.
        */
       if (thermal_object->status_change_count == 0) {
           /* This is first reading for new status */
@@ -258,7 +258,7 @@ static void receive_temperature_response(thermal_object_t* thermal_object,
           dsme_log(LOG_DEBUG,
                    "thermalmanager: New status in transition started");
       } else {
-          /* We are in transtion. Make sure all new readings want same status */
+          /* We are in transition. Make sure all new readings want same status */
           if (thermal_object->new_status != new_status) {
               thermal_object->status_change_count = 0;
               dsme_log(LOG_DEBUG,
@@ -298,7 +298,7 @@ static void thermal_object_polling_interval_expired(void* object)
   DSM_MSGTYPE_WAIT msg = DSME_MSG_INIT(DSM_MSGTYPE_WAIT);
   /* If thermal status is in transition and we are taking several
    * readings before change, then use speed up values for
-   * next readings. Ohterwise use configured values
+   * next readings. Otherwise use configured values
    */
   if (thermal_object->status_change_count) {
       msg.req.mintime = 2;
