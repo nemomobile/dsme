@@ -525,10 +525,10 @@ static void trap_terminating_signals(void)
     static const int lut[] =
     {
         SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGABRT, SIGFPE, SIGSEGV,
-        SIGPIPE, SIGALRM, SIGTERM, SIGUSR1, SIGUSR2, SIGBUS, -1
+        SIGPIPE, SIGALRM, SIGTERM, SIGUSR1, SIGUSR2, SIGBUS
     };
 
-    for( size_t i = 0; lut[i] != -1; ++i )
+    for( size_t i = 0; i < sizeof lut / sizeof *lut; ++i )
         signal(lut[i], handle_terminating_signal);
 }
 /**
