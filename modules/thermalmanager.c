@@ -249,7 +249,7 @@ static void receive_temperature_response(thermal_object_t* thermal_object,
   if ((new_status != previous_status) || thermal_object->status_change_count) {
       /* Thermal object status has changed, but it can be because of bad reading. 
        * Before accepting new status, make sure it is not a glitch.
-         We want 3 consecutive readings indicating same status before we change it.
+       * We want 3 consecutive readings indicating same status before we change it.
        */
       if (thermal_object->status_change_count == 0) {
           /* This is first reading for new status */
