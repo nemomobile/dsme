@@ -99,6 +99,19 @@ void dsme_wd_kick(void)
   }
 }
 
+void dsme_wd_kick_from_sighnd(void)
+{
+    // NOTE: called from signal handler - must stay async-signal-safe
+
+    for( size_t i = 0; i < WD_COUNT; ++i) {
+        if( wd_fd[i] == -1 )
+            continue;
+        if( write(wd_fd[i], "*", 1) == -1 ) {
+            /* dontcare, but need to keep the compiler happy */
+        }
+    }
+}
+
 static void check_for_wd_flags(bool wd_enabled[])
 {
     unsigned long len  = 0;
@@ -179,24 +192,28 @@ bool dsme_wd_init(void)
 void dsme_wd_quit(void)
 {
     for( size_t i = 0; i < WD_COUNT; ++i ) {
-	if( wd_fd[i] == -1 )
+	int fd = wd_fd[i];
+
+	if( fd == -1 )
 	    continue;
 
-	if( TEMP_FAILURE_RETRY(write(wd_fd[i], "V", 1)) == -1 ) {
+	/* Remove the fd from the array already before attempting to
+	 * close it so that dsme_wd_kick_from_sighnd() does not have
+	 * a chance to use stale file descriptors */
+	wd_fd[i] = -1;
+
+	if( TEMP_FAILURE_RETRY(write(fd, "V", 1)) == -1 ) {
 	    fprintf(stderr, ME "%s: failed to clear nowayout: %m\n",
 		    wd[i].file);
 	}
-        else {
+	else {
 	    fprintf(stderr, ME "%s: cleared nowayout state\n",
 		    wd[i].file);
 	}
 
-	if( TEMP_FAILURE_RETRY(close(wd_fd[i])) == -1 ) {
+	if( TEMP_FAILURE_RETRY(close(fd)) == -1 ) {
 	    fprintf(stderr, ME "%s: failed to close file: %m\n",
 		    wd[i].file);
 	}
-
-	/* Mark it as closed even if there were errors */
-	wd_fd[i] = -1;
     }
 }

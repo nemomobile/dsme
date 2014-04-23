@@ -40,6 +40,7 @@ extern "C" {
 #endif
 
 void dsme_wd_kick(void);
+void dsme_wd_kick_from_sighnd(void);
 bool dsme_wd_init(void);
 void dsme_wd_quit(void);
 

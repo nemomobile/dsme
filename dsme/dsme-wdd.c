@@ -70,6 +70,7 @@ static void mainloop(unsigned sleep_interval,
 
 static volatile bool run = true;
 
+static volatile bool dsme_abnormal_exit = false;
 
 /**
    Usage
@@ -334,6 +335,7 @@ static void mainloop(unsigned sleep_interval,
             // dsme server has failed to respond in due time
             fprintf(stderr, ME "dsme-server nonresponsive; quitting\n");
             run = false;
+            dsme_abnormal_exit = true;
             goto done_running;
         }
 
@@ -430,6 +432,105 @@ EXIT:
   return res;
 }
 
+/** Wakelock that DSME "leaks" on abnormal exit
+ *
+ * The purpose of the leak is to block late suspend while
+ * dsme is not running, so that:
+ * 1) suspend does not inhibit systemd from restarting dsme
+ *    or rebooting the device
+ * 2) repeating suspend/resume cycles do not feed the hw
+ *    watchdog and we get the watchdog reboot if dsme restart
+ *    does not succeed
+ */
+#define DSME_RESTART_WAKELOCK "dsme_restart"
+
+/** Sysfs helper for wakelock manipulation
+ */
+static void wakelock_write(const char *path, const char *data, size_t size)
+{
+    // NOTE: called from signal handler - must stay async-signal-safe
+
+    int fd = open(path, O_WRONLY);
+    if( fd != -1 ) {
+        if( write(fd, data, size) == -1 ) {
+            /* dontcare, but need to keep the compiler happy */
+        }
+        close(fd);
+    }
+}
+
+/** Get restart wakelock
+ *
+ * Used for blocking suspend for one minute when dsme restart
+ * or watchdog reboot is expected to happen.
+ */
+static void obtain_restart_wakelock(void)
+{
+    // NOTE: called from signal handler - must stay async-signal-safe
+
+    static const char path[] = "/sys/power/wake_lock";
+    static const char text[] = DSME_RESTART_WAKELOCK " 60000000000\n";
+    wakelock_write(path, text, sizeof text - 1);
+}
+
+/** Clear restart wakelock
+ *
+ * Used when dsme makes successful startup or normal exit
+ */
+static void release_restart_wakelock(void)
+{
+    static const char path[] = "/sys/power/wake_unlock";
+    static const char text[] = DSME_RESTART_WAKELOCK "\n";
+    wakelock_write(path, text, sizeof text - 1);
+}
+
+/** Set wakelock before invoking default signal handler
+ *
+ * If dsme dies due to signal, set wakelock with timeout before
+ * invoking default signal handler.
+ *
+ * The wakelock will be cleared on dsme restart.
+ *
+ * The timeout must be long enough to allow watchdog reboot to
+ * happen if dsme restart fails.
+ */
+static void handle_terminating_signal(int sig)
+{
+    // NOTE: signal handler - must stay async-signal-safe
+
+    /* Do not try anything fancy if we have been here
+     * before or are already on abnormal exit path */
+    if( !dsme_abnormal_exit ) {
+        dsme_abnormal_exit = true;
+
+        /* restore default signal handler */
+        signal(sig, SIG_DFL);
+
+        /* get a wakelock and kick the watchdogs */
+        obtain_restart_wakelock();
+        dsme_wd_kick_from_sighnd();
+
+        /* invoke default signal handler */
+        raise(sig);
+    }
+    _exit(EXIT_FAILURE);
+}
+
+/** Trap signals that normally terminate a process
+ *
+ * Some of these will be overridden later on.
+ */
+static void trap_terminating_signals(void)
+{
+    static const int lut[] =
+    {
+        SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGABRT, SIGFPE, SIGSEGV,
+        SIGPIPE, SIGALRM, SIGTERM, SIGUSR1, SIGUSR2, SIGBUS
+    };
+
+    for( size_t i = 0; i < sizeof lut / sizeof *lut; ++i )
+        signal(lut[i], handle_terminating_signal);
+}
 /**
   @todo Possibility to alter priority of initial module somehow
   */
@@ -442,6 +543,8 @@ int main(int argc, char *argv[])
         fprintf(stderr, ME "no WD's opened; WD kicking disabled\n");
     }
     dsme_wd_kick();
+
+    trap_terminating_signals();
 
     // set up signal handler
     signal(SIGHUP,  signal_handler);
@@ -555,10 +658,17 @@ int main(int argc, char *argv[])
         set_nonblocking(from_child[0]);
     }
 
+    /* Before entering the mainloop, clear wakelock that might be set if dsme
+     * is restarting after signal / watchdog pingpong failure */
+    release_restart_wakelock();
+
     unsigned sleep_interval = DSME_HEARTBEAT_INTERVAL;
     mainloop(sleep_interval, to_child[1], from_child[0]);
     fprintf(stderr, ME "Exited main loop, quitting\n");
 
+    /* Get wakelock after exiting the mainloop, will be cleared
+     * if we make orderly normal exit */
+    obtain_restart_wakelock();
 
     /* Bring down the dsme-server child process
      *
@@ -581,6 +691,7 @@ int main(int argc, char *argv[])
         dsme_wd_kick();
         fprintf(stderr, ME "dsme-server stop failed, leaving watchdogs"
                 " active\n");
+        dsme_abnormal_exit = true;
     }
 
     /* Remove the PID file */
@@ -588,6 +699,12 @@ int main(int argc, char *argv[])
         fprintf(stderr, ME "Couldn't remove lockfile: %m\n");
     }
 
+    /* Clear wakelock on normal, successful exit */
+    if( dsme_abnormal_exit )
+        fprintf(stderr, ME "abnormal exit, leaving wakelock active\n");
+    else
+        release_restart_wakelock();
+
     fprintf(stderr, "DSME %s terminating\n", STRINGIFY(PRG_VERSION));
-    return EXIT_SUCCESS;
+    return dsme_abnormal_exit ? EXIT_FAILURE : EXIT_SUCCESS;
 }
