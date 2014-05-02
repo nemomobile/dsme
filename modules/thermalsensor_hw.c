@@ -129,6 +129,7 @@ extern bool dsme_hw_get_battery_temperature(thermal_object_t*         thermal_ob
 {
     int temperature;
     bool ret;
+    static int previous_temp = -999;
 
     // dsme_log(LOG_DEBUG, "thermal: %s", __FUNCTION__);
 
@@ -141,6 +142,17 @@ extern bool dsme_hw_get_battery_temperature(thermal_object_t*         thermal_ob
         temperature = INVALID_TEMPERATURE;
         ret = false;
     }
+
+    /* Log unsual temp readings */
+    if ((previous_temp != -999) &&
+        ((temperature < -30)  ||
+         (temperature > 70)   ||
+         (temperature > (previous_temp + 4)) ||
+	 (temperature < (previous_temp - 4)))) {
+        dsme_log(LOG_WARNING, "thermal: Suspicious battery temperature %d (previous %d)",temperature, previous_temp );
+    } 
+    previous_temp = temperature;
+
     if (callback) 
         callback(thermal_object, temperature);
     return ret;
