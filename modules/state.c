@@ -86,6 +86,14 @@
 #define DSME_THERMAL_SHUTDOWN_TIMER       8
 #define DSME_BATTERY_EMPTY_SHUTDOWN_TIMER 8
 
+/** 
+ * Minimum battery level % that is needed before we allow
+ * switch from ACTDEAD to USER
+ * TODO: don't hard code this but support config value
+ */
+#define DSME_MINIMUM_BATTERY_TO_USER    5
+
+#define BATTERY_LEVEL_PATH   "/run/state/namespaces/Battery/ChargePercentage"
 
 typedef enum {
     CHARGER_STATE_UNKNOWN,
@@ -147,7 +155,7 @@ static void stop_charger_disconnect_timer(void);
 static bool rd_mode_enabled(void);
 
 static void runlevel_switch_ind(const DsmeDbusMessage* ind);
-
+static int  get_battery_level(void);
 
 static const struct {
     int         value;
@@ -283,12 +291,23 @@ static void try_to_change_state(dsme_state_t new_state)
       start_delayed_shutdown_timer(SHUTDOWN_TIMER_TIMEOUT);
       break;
 
-    case DSME_STATE_USER:    /* Runlevel 2 */ /* FALL THROUGH */
-    case DSME_STATE_ACTDEAD: /* Runlevel 5 */
+    case DSME_STATE_USER:    /* Runlevel 5 */ /* FALL THROUGH */
+    case DSME_STATE_ACTDEAD: /* Runlevel 4 */
       if (current_state == DSME_STATE_NOT_SET) {
           /* we have just booted up; simply change the state */
           change_state(new_state);
       } else if (current_state == DSME_STATE_ACTDEAD) {
+          /* We are in actdead and user state is wanted
+           * We don't allow that to happen if battery level is too low
+           */
+          if (get_battery_level() < DSME_MINIMUM_BATTERY_TO_USER ) {
+              dsme_log(LOG_WARNING,
+                 "Battery level %d%% too low for %s state",
+                 get_battery_level(),
+                 state_name(new_state));
+              break;
+          }
+          /* Battery ok, lets do it */
           user_switch_done = false;
 #ifndef DSME_SUPPORT_DIRECT_USER_ACTDEAD
           /* We don't support direct transfer from ACTDEAD to USER
@@ -1093,6 +1112,27 @@ static void set_initial_state_bits(const char* bootstate)
           dsme_log(LOG_NOTICE, "R&D mode enabled, not entering MALF '%s'", p);
       }
   }
+}
+
+static int  get_battery_level(void)
+{
+    FILE* f;
+    bool ok = false;
+    int batterylevel;
+
+
+    f = fopen(BATTERY_LEVEL_PATH, "r");
+    if (f) {
+        if (fscanf(f, "%d", &batterylevel) == 1) {
+            ok = true;
+        }
+        fclose(f);
+    }
+    if (!ok) {
+        dsme_log(LOG_ERR, "state: FAILED to read %s", BATTERY_LEVEL_PATH);
+        batterylevel = 66; /* return fake value, don't block state change */
+    }
+    return batterylevel;
 }
 
 void module_init(module_t* handle)
