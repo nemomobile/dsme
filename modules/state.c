@@ -91,7 +91,7 @@
  * switch from ACTDEAD to USER
  * TODO: don't hard code this but support config value
  */
-#define DSME_MINIMUM_BATTERY_TO_USER    5
+#define DSME_MINIMUM_BATTERY_TO_USER    3
 
 #define BATTERY_LEVEL_PATH   "/run/state/namespaces/Battery/ChargePercentage"
 
@@ -1130,7 +1130,7 @@ static int  get_battery_level(void)
     }
     if (!ok) {
         dsme_log(LOG_ERR, "state: FAILED to read %s", BATTERY_LEVEL_PATH);
-        batterylevel = 66; /* return fake value, don't block state change */
+        batterylevel = DSME_MINIMUM_BATTERY_TO_USER; /* return fake, don't block state change */
     }
     return batterylevel;
 }
