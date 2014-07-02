@@ -259,7 +259,6 @@ static void send_empty_if_needed()
 {
     static bool battery_empty_sent = false;
     static bool battery_empty_seen = false;
-    static int  battery_level_when_empty_seen = 0;
 
     bool request_shutdown = false;
 
@@ -268,11 +267,8 @@ static void send_empty_if_needed()
     if (battery_state.status == BATTERY_STATUS_EMPTY) {
         dsme_log(LOG_DEBUG, "batterytracker: Battery level %d%% EMPTY", battery_state.percentance);
         if (! battery_empty_seen) {
-            /* We have first time reached battery level empty.
-             * Remember the level we saw it
-             */
+            /* We have first time reached battery level empty */
             battery_empty_seen = true;
-            battery_level_when_empty_seen = battery_state.percentance;
             dsme_log(LOG_INFO, "batterytracker: Battery low level seen at %d%%", battery_state.percentance);
         }
         /* Before starting shutdown, check charging. If charging is
@@ -297,9 +293,8 @@ static void send_empty_if_needed()
                     request_shutdown = false;
             }
         } else if (dsme_state != DSME_STATE_ACTDEAD) {
-            /* If charging in USER state, make sure level won't drop more and always keep min 1% */
-            if ((battery_state.percentance < battery_level_when_empty_seen) ||
-                (battery_state.percentance < 1)) {
+            /* If charging in USER state, make sure level won't drop too much, keep min 1% */
+            if (battery_state.percentance < 1) {
                 request_shutdown = true;
                 dsme_log(LOG_INFO, "batterytracker: Battery level keeps dropping. Must shutdown");
             } else {
@@ -309,7 +304,7 @@ static void send_empty_if_needed()
             /* If charging in ACTDEAD state, let it charge even if not enough power is coming.
              * There is no point of shutting down because usb connection would wake up the device anyway
              * and that would result reboot loop. Better stay still in actdead and hope we get
-             * some juice from chager.
+             * some juice from charger.
              */
             dsme_log(LOG_DEBUG, "batterytracker: Charging in ACTDEAD. We don't shutdown");
         }
