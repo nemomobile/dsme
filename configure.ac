@@ -159,15 +159,15 @@ AM_CONDITIONAL([WANT_BOOTREASON_LOGGER], [test x$enable_bootreason_logger != xno
 #
 # Shutdown feedback
 #
-AC_ARG_ENABLE([shutdown-feedback],
-  [AS_HELP_STRING([--disable-shutdown-feedback],
-    [disable bootreason logger (libshutdownfeedback)])],
+AC_ARG_ENABLE([vibra-feedback],
+  [AS_HELP_STRING([--disable-vibra-feedback],
+    [disable vibra feedback (libshutdownfeedback)])],
   [],
-  [enable_shutdown_feedback=yes])
+  [enable_vibra_feedback=yes])
 
-AS_IF([test "x$enable_shutdown_feedback" != xno],
-  [AC_DEFINE([DSME_SHUTDOWN_FEEDBACK], [1])])
-AM_CONDITIONAL([WANT_SHUTDOWN_FEEDBACK], [test x$enable_shutdown_feedback != xno])
+AS_IF([test "x$enable_vibra_feedback" != xno],
+  [AC_DEFINE([DSME_VIBRA_FEEDBACK], [1])])
+AM_CONDITIONAL([WANT_VIBRA_FEEDBACK], [test x$enable_vibra_feedback != xno])
 
 #
 # Compiler and linker flags
@@ -211,7 +211,7 @@ AM_PROG_CC_C_O()
 PKG_CHECK_MODULES(GLIB, glib-2.0)
 PKG_CHECK_MODULES(DBUS, dbus-1)
 PKG_CHECK_MODULES(DBUSGLIB, dbus-glib-1)
-if test "x$enable_shutdown_feedback" != xno; then
+if test "x$enable_vibra_feedback" != xno; then
 PKG_CHECK_MODULES(LIBNGF, libngf0)
 fi
 

@@ -75,7 +75,7 @@ if WANT_BOOTREASON_LOGGER
 pkglib_LTLIBRARIES += bootreasonlogger.la
 endif
 
-if WANT_SHUTDOWN_FEEDBACK
+if WANT_VIBRA_FEEDBACK
 pkglib_LTLIBRARIES += shutdownfeedback.la
 endif
 
@@ -92,7 +92,13 @@ heartbeat_la_SOURCES = heartbeat.c
 heartbeat_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
 
 state_la_SOURCES = state.c
-state_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS)
+state_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS) -D_GNU_SOURCE
+state_la_LIBADD =
+if WANT_VIBRA_FEEDBACK
+state_la_SOURCES += vibrafeedback.c vibrafeedback.h
+state_la_CFLAGS += $(GLIB_CFLAGS) $(LIBNGF_CFLAGS)
+state_la_LIBADD += $(GLIB_LIBS) $(LIBNGF_LIBS)
+endif
 
 if WANT_RUNLEVEL
 runlevel_la_SOURCES = runlevel.c
@@ -204,8 +210,8 @@ bootreasonlogger_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS) -D_GNU_S
 bootreasonlogger_la_LIBADD = $(GLIB_LIBS)
 endif
 
-if WANT_SHUTDOWN_FEEDBACK
-shutdownfeedback_la_SOURCES = shutdownfeedback.c
+if WANT_VIBRA_FEEDBACK
+shutdownfeedback_la_SOURCES = shutdownfeedback.c vibrafeedback.c vibrafeedback.h
 shutdownfeedback_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS) $(LIBNGF_CFLAGS) -D_GNU_SOURCE
 shutdownfeedback_la_LIBADD = $(GLIB_LIBS) $(LIBNGF_LIBS)
 endif
