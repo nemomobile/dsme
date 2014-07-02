@@ -31,7 +31,6 @@
  */
 
 #define _POSIX_SOURCE
-#define _GNU_SOURCE
 
 #include "dbusproxy.h"
 #include "dsme_dbus.h"
@@ -56,6 +55,11 @@
 #include <unistd.h>
 #include <sys/types.h>
 
+#ifdef DSME_VIBRA_FEEDBACK
+#include "vibrafeedback.h"
+#endif
+
+#define PFIX "state: "
 
 /**
  * Timer value for actdead shutdown timer. This is how long we wait before doing a
@@ -127,6 +131,10 @@ static dsme_timer_t charger_disconnect_timer = 0;
 static dsme_timer_t delayed_shutdown_timer   = 0;
 static dsme_timer_t delayed_actdead_timer    = 0;
 static dsme_timer_t delayed_user_timer       = 0;
+
+#ifdef DSME_VIBRA_FEEDBACK
+static const char low_battery_event_name[] = "low_battery_vibra_only";
+#endif
 
 static void change_state_if_necessary(void);
 static void try_to_change_state(dsme_state_t new_state);
@@ -231,14 +239,14 @@ static dsme_state_t select_state(void)
       if (test) {
           state = DSME_STATE_TEST;
       } else if (battery_empty) {
-          dsme_log(LOG_CRIT, "Battery empty shutdown!");
+          dsme_log(LOG_CRIT, PFIX"Battery empty shutdown!");
           state = DSME_STATE_SHUTDOWN;
       } else if (device_overheated) {
-          dsme_log(LOG_CRIT, "Thermal shutdown!");
+          dsme_log(LOG_CRIT, PFIX"Thermal shutdown!");
           state = DSME_STATE_SHUTDOWN;
       } else if (actdead_requested) {
           /* favor actdead requests over shutdown & reboot */
-          dsme_log(LOG_NOTICE, "Actdead by request");
+          dsme_log(LOG_NOTICE, PFIX"Actdead by request");
           state = DSME_STATE_ACTDEAD;
       } else if (shutdown_requested || reboot_requested) {
           /* favor normal shutdown over reboot over actdead */
@@ -246,14 +254,14 @@ static dsme_state_t select_state(void)
               (charger_state == CHARGER_DISCONNECTED) &&
               !alarm_set)
           {
-              dsme_log(LOG_NOTICE, "Normal shutdown");
+              dsme_log(LOG_NOTICE, PFIX"Normal shutdown");
               state = DSME_STATE_SHUTDOWN;
           } else if (reboot_requested) {
-              dsme_log(LOG_NOTICE, "Reboot");
+              dsme_log(LOG_NOTICE, PFIX"Reboot");
               state = DSME_STATE_REBOOT;
           } else{
               dsme_log(LOG_NOTICE,
-                       "Actdead (charger: %s, alarm: %s)",
+                       PFIX"Actdead (charger: %s, alarm: %s)",
                        charger_state == CHARGER_CONNECTED ? "on"  : "off(?)",
                        alarm_set                          ? "set" : "not set");
               state = DSME_STATE_ACTDEAD;
@@ -263,7 +271,6 @@ static dsme_state_t select_state(void)
       }
 
   }
-
   return state;
 }
 
@@ -279,7 +286,7 @@ static void change_state_if_necessary(void)
 static void try_to_change_state(dsme_state_t new_state)
 {
   dsme_log(LOG_INFO,
-           "state change request: %s -> %s",
+           PFIX"state change request: %s -> %s",
            state_name(current_state),
            state_name(new_state));
 
@@ -302,9 +309,17 @@ static void try_to_change_state(dsme_state_t new_state)
            */
           if (get_battery_level() < DSME_MINIMUM_BATTERY_TO_USER ) {
               dsme_log(LOG_WARNING,
-                 "Battery level %d%% too low for %s state",
+                 PFIX"Battery level %d%% too low for %s state",
                  get_battery_level(),
                  state_name(new_state));
+#ifdef DSME_VIBRA_FEEDBACK
+              /* Indicate by vibra that boot is not possible */
+              dsme_play_vibra(low_battery_event_name);
+#endif
+              /* We need to return initial ACT_DEAD shutdown_reqest
+               * as it got cleared when USER state transfer was requested
+               */
+              shutdown_requested = true;
               break;
           }
           /* Battery ok, lets do it */
@@ -313,7 +328,7 @@ static void try_to_change_state(dsme_state_t new_state)
           /* We don't support direct transfer from ACTDEAD to USER
            * but do it via reboot.
            */
-          dsme_log(LOG_DEBUG, "USER state requested, we do it via REBOOT");
+          dsme_log(LOG_DEBUG, PFIX"USER state requested, we do it via REBOOT");
           change_state(DSME_STATE_REBOOT);
           start_delayed_shutdown_timer(SHUTDOWN_TIMER_TIMEOUT);
 #else
@@ -337,7 +352,7 @@ static void try_to_change_state(dsme_state_t new_state)
            * and then we will boot to ACTDEAD
            * Force SHUTDOWN
            */
-          dsme_log(LOG_DEBUG, "ACTDEAD state requested, we do it via SHUTDOWN");
+          dsme_log(LOG_DEBUG, PFIX"ACTDEAD state requested, we do it via SHUTDOWN");
           change_state(DSME_STATE_SHUTDOWN);
           start_delayed_shutdown_timer(SHUTDOWN_TIMER_TIMEOUT);
 #else
@@ -365,7 +380,7 @@ static void try_to_change_state(dsme_state_t new_state)
 
     default:
       dsme_log(LOG_WARNING,
-               "not possible to change to state %s (%d)",
+               PFIX"not possible to change to state %s (%d)",
                state_name(new_state),
                new_state);
       break;
@@ -387,7 +402,7 @@ static void change_state(dsme_state_t new_state)
       DSM_MSGTYPE_SAVE_DATA_IND save_msg =
         DSME_MSG_INIT(DSM_MSGTYPE_SAVE_DATA_IND);
 
-      dsme_log(LOG_DEBUG, "sending SAVE_DATA");
+      dsme_log(LOG_DEBUG, PFIX"sending SAVE_DATA");
       broadcast(&save_msg);
   }
 
@@ -395,10 +410,10 @@ static void change_state(dsme_state_t new_state)
     DSME_MSG_INIT(DSM_MSGTYPE_STATE_CHANGE_IND);
 
   ind_msg.state = new_state;
-  dsme_log(LOG_DEBUG, "STATE_CHANGE_IND sent (%s)", state_name(new_state));
+  dsme_log(LOG_DEBUG, PFIX"STATE_CHANGE_IND sent (%s)", state_name(new_state));
   broadcast(&ind_msg);
 
-  dsme_log(LOG_NOTICE, "new state: %s", state_name(new_state));
+  dsme_log(LOG_NOTICE, PFIX"new state: %s", state_name(new_state));
   current_state = new_state;
 }
 
@@ -429,7 +444,7 @@ static void deny_state_change_request(dsme_state_t denied_state,
   ind.state = denied_state;
   broadcast_with_extra(&ind, strlen(reason) + 1, reason);
   dsme_log(LOG_CRIT,
-           "%s denied due to: %s",
+           PFIX"%s denied due to: %s",
            (denied_state == DSME_STATE_SHUTDOWN ? "shutdown" : "reboot"),
            reason);
 }
@@ -443,11 +458,11 @@ static void start_delayed_shutdown_timer(unsigned seconds)
                                                        delayed_shutdown_fn,
                                                        NULL)))
       {
-          dsme_log(LOG_CRIT, "Could not create a shutdown timer; exit!");
+          dsme_log(LOG_CRIT, PFIX"Could not create a shutdown timer; exit!");
           dsme_exit(EXIT_FAILURE);
           return;
       }
-      dsme_log(LOG_NOTICE, "Shutdown or reboot in %i seconds", seconds);
+      dsme_log(LOG_NOTICE, PFIX"Shutdown or reboot in %i seconds", seconds);
   }
 }
 
@@ -469,12 +484,12 @@ static bool start_delayed_actdead_timer(unsigned seconds)
                                                       delayed_actdead_fn,
                                                       NULL)))
       {
-          dsme_log(LOG_CRIT, "Could not create an actdead timer; exit!");
+          dsme_log(LOG_CRIT, PFIX"Could not create an actdead timer; exit!");
           dsme_exit(EXIT_FAILURE);
           return false;
       }
       success = true;
-      dsme_log(LOG_NOTICE, "Actdead in %i seconds", seconds);
+      dsme_log(LOG_NOTICE, PFIX"Actdead in %i seconds", seconds);
   }
   return success;
 }
@@ -482,6 +497,7 @@ static bool start_delayed_actdead_timer(unsigned seconds)
 
 static int delayed_actdead_fn(void* unused)
 {
+
   change_runlevel(DSME_STATE_ACTDEAD);
 
   delayed_actdead_timer = 0;
@@ -498,12 +514,12 @@ static bool start_delayed_user_timer(unsigned seconds)
                                                    delayed_user_fn,
                                                    NULL)))
       {
-          dsme_log(LOG_CRIT, "Could not create a user timer; exit!");
+          dsme_log(LOG_CRIT, PFIX"Could not create a user timer; exit!");
           dsme_exit(EXIT_FAILURE);
           return false;
       }
       success = true;
-      dsme_log(LOG_NOTICE, "User in %i seconds", seconds);
+      dsme_log(LOG_NOTICE, PFIX"User in %i seconds", seconds);
   }
   return success;
 }
@@ -530,17 +546,17 @@ static void stop_delayed_runlevel_timers(void)
     if (delayed_shutdown_timer) {
         dsme_destroy_timer(delayed_shutdown_timer);
         delayed_shutdown_timer = 0;
-        dsme_log(LOG_NOTICE, "Delayed shutdown timer stopped");
+        dsme_log(LOG_NOTICE, PFIX"Delayed shutdown timer stopped");
     }
     if (delayed_actdead_timer) {
         dsme_destroy_timer(delayed_actdead_timer);
         delayed_actdead_timer = 0;
-        dsme_log(LOG_NOTICE, "Delayed actdead timer stopped");
+        dsme_log(LOG_NOTICE, PFIX"Delayed actdead timer stopped");
     }
     if (delayed_user_timer) {
         dsme_destroy_timer(delayed_user_timer);
         delayed_user_timer = 0;
-        dsme_log(LOG_NOTICE, "Delayed user timer stopped");
+        dsme_log(LOG_NOTICE, PFIX"Delayed user timer stopped");
     }
 }
 
@@ -552,11 +568,11 @@ static void start_overheat_timer(void)
                                                delayed_overheat_fn,
                                                NULL)))
       {
-          dsme_log(LOG_CRIT, "Could not create a timer; overheat immediately!");
+          dsme_log(LOG_CRIT, PFIX"Could not create a timer; overheat immediately!");
           delayed_overheat_fn(0);
       } else {
           dsme_log(LOG_CRIT,
-                   "Thermal shutdown in %d seconds",
+                   PFIX"Thermal shutdown in %d seconds",
                    DSME_THERMAL_SHUTDOWN_TIMER);
       }
   }
@@ -579,11 +595,11 @@ static void start_charger_disconnect_timer(void)
                                            NULL)))
       {
           dsme_log(LOG_ERR,
-                   "Could not create a timer; disconnect immediately!");
+                   PFIX"Could not create a timer; disconnect immediately!");
           delayed_charger_disconnect_fn(0);
       } else {
           dsme_log(LOG_DEBUG,
-                   "Handle charger disconnect in %d seconds",
+                   PFIX"Handle charger disconnect in %d seconds",
                    CHARGER_DISCONNECT_TIMEOUT);
       }
   }
@@ -591,6 +607,7 @@ static void start_charger_disconnect_timer(void)
 
 static int delayed_charger_disconnect_fn(void* unused)
 {
+
   charger_state = CHARGER_DISCONNECTED;
   change_state_if_necessary();
 
@@ -602,7 +619,7 @@ static void stop_charger_disconnect_timer(void)
   if (charger_disconnect_timer) {
       dsme_destroy_timer(charger_disconnect_timer);
       charger_disconnect_timer = 0;
-      dsme_log(LOG_DEBUG, "Charger disconnect timer stopped");
+      dsme_log(LOG_DEBUG, PFIX"Charger disconnect timer stopped");
 
       /* the last we heard, the charger had just been disconnected */
       charger_state = CHARGER_DISCONNECTED;
@@ -615,7 +632,7 @@ DSME_HANDLER(DSM_MSGTYPE_SET_CHARGER_STATE, conn, msg)
   charger_state_t new_charger_state;
 
   dsme_log(LOG_DEBUG,
-           "charger %s state received",
+           PFIX"charger %s state received",
            msg->connected ? "connected" : "disconnected");
 
   new_charger_state = msg->connected ? CHARGER_CONNECTED : CHARGER_DISCONNECTED;
@@ -644,7 +661,7 @@ DSME_HANDLER(DSM_MSGTYPE_SET_USB_STATE, conn, msg)
     if (mounted_to_pc != msg->mounted_to_pc) {
         mounted_to_pc  = msg->mounted_to_pc;
 
-        dsme_log(LOG_INFO, "%smounted over USB", mounted_to_pc ? "" : "not ");
+        dsme_log(LOG_INFO, PFIX"%smounted over USB", mounted_to_pc ? "" : "not ");
     }
 }
 
@@ -652,7 +669,7 @@ DSME_HANDLER(DSM_MSGTYPE_SET_USB_STATE, conn, msg)
 // handlers for telinit requests
 static void handle_telinit_NOT_SET(endpoint_t* conn)
 {
-    dsme_log(LOG_WARNING, "ignoring unknown telinit runlevel request");
+    dsme_log(LOG_WARNING, PFIX"ignoring unknown telinit runlevel request");
 }
 
 static void handle_telinit_SHUTDOWN(endpoint_t* conn)
@@ -690,22 +707,22 @@ static void handle_telinit_REBOOT(endpoint_t* conn)
 
 static void handle_telinit_TEST(endpoint_t* conn)
 {
-    dsme_log(LOG_WARNING, "telinit TEST unimplemented");
+    dsme_log(LOG_WARNING, PFIX"telinit TEST unimplemented");
 }
 
 static void handle_telinit_MALF(endpoint_t* conn)
 {
-    dsme_log(LOG_WARNING, "telinit MALF unimplemented");
+    dsme_log(LOG_WARNING, PFIX"telinit MALF unimplemented");
 }
 
 static void handle_telinit_BOOT(endpoint_t* conn)
 {
-    dsme_log(LOG_WARNING, "telinit BOOT unimplemented");
+    dsme_log(LOG_WARNING, PFIX"telinit BOOT unimplemented");
 }
 
 static void handle_telinit_LOCAL(endpoint_t* conn)
 {
-    dsme_log(LOG_WARNING, "telinit LOCAL unimplemented");
+    dsme_log(LOG_WARNING, PFIX"telinit LOCAL unimplemented");
 }
 
 typedef void (telinit_handler_fn_t)(endpoint_t* conn);
@@ -741,7 +758,7 @@ DSME_HANDLER(DSM_MSGTYPE_TELINIT, conn, msg)
     char*       sender   = endpoint_name(conn);
 
     dsme_log(LOG_NOTICE,
-             "got telinit '%s' from %s",
+             PFIX"got telinit '%s' from %s",
              runlevel ? runlevel : "(null)",
              sender   ? sender   : "(unknown)");
     free(sender);
@@ -759,7 +776,7 @@ DSME_HANDLER(DSM_MSGTYPE_SHUTDOWN_REQ, conn, msg)
 {
   char* sender = endpoint_name(conn);
   dsme_log(LOG_NOTICE,
-           "shutdown request received from %s",
+           PFIX"shutdown request received from %s",
            (sender ? sender : "(unknown)"));
   free(sender);
 
@@ -770,7 +787,7 @@ DSME_HANDLER(DSM_MSGTYPE_REBOOT_REQ, conn, msg)
 {
   char* sender = endpoint_name(conn);
   dsme_log(LOG_NOTICE,
-           "reboot request received from %s",
+           PFIX"reboot request received from %s",
            (sender ? sender : "(unknown)"));
   free(sender);
 
@@ -785,7 +802,7 @@ DSME_HANDLER(DSM_MSGTYPE_POWERUP_REQ, conn, msg)
 {
   char* sender = endpoint_name(conn);
   dsme_log(LOG_NOTICE,
-           "powerup request received from %s",
+           PFIX"powerup request received from %s",
            (sender ? sender : "(unknown)"));
   free(sender);
 
@@ -796,7 +813,7 @@ DSME_HANDLER(DSM_MSGTYPE_POWERUP_REQ, conn, msg)
 DSME_HANDLER(DSM_MSGTYPE_SET_ALARM_STATE, conn, msg)
 {
   dsme_log(LOG_DEBUG,
-           "alarm %s state received",
+           PFIX"alarm %s state received",
            msg->alarm_set ? "set or snoozed" : "not set");
 
   alarm_set = msg->alarm_set;
@@ -808,7 +825,7 @@ DSME_HANDLER(DSM_MSGTYPE_SET_ALARM_STATE, conn, msg)
 DSME_HANDLER(DSM_MSGTYPE_SET_THERMAL_STATUS, conn, msg)
 {
   dsme_log(LOG_NOTICE,
-           "%s state received",
+           PFIX"%s state received",
            (msg->status == DSM_THERMAL_STATUS_OVERHEATED) ? "overheated" :
            (msg->status == DSM_THERMAL_STATUS_LOWTEMP) ? "low temp warning" :
            "normal temp");
@@ -824,7 +841,7 @@ DSME_HANDLER(DSM_MSGTYPE_SET_THERMAL_STATUS, conn, msg)
 DSME_HANDLER(DSM_MSGTYPE_SET_EMERGENCY_CALL_STATE, conn, msg)
 {
   dsme_log(LOG_NOTICE,
-           "emergency call %s state received",
+           PFIX"emergency call %s state received",
            msg->ongoing ? "on" : "off");
 
   emergency_call_ongoing = msg->ongoing;
@@ -848,7 +865,7 @@ static int delayed_battery_empty_fn(void* unused)
 DSME_HANDLER(DSM_MSGTYPE_SET_BATTERY_STATE, conn, battery)
 {
   dsme_log(LOG_NOTICE,
-           "battery %s state received",
+           PFIX"battery %s state received",
            battery->empty ? "empty" : "not empty");
 
   if (battery->empty) {
@@ -864,11 +881,11 @@ DSME_HANDLER(DSM_MSGTYPE_SET_BATTERY_STATE, conn, battery)
                              NULL))
       {
           dsme_log(LOG_ERR,
-                   "Cannot create timer; battery empty shutdown immediately!");
+                   PFIX"Cannot create timer; battery empty shutdown immediately!");
           delayed_battery_empty_fn(0);
       } else {
           dsme_log(LOG_CRIT,
-                   "Battery empty shutdown in %d seconds",
+                   PFIX"Battery empty shutdown in %d seconds",
                    DSME_BATTERY_EMPTY_SHUTDOWN_TIMER);
       }
   }
@@ -880,7 +897,7 @@ DSME_HANDLER(DSM_MSGTYPE_STATE_QUERY, client, msg)
   DSM_MSGTYPE_STATE_CHANGE_IND ind_msg =
     DSME_MSG_INIT(DSM_MSGTYPE_STATE_CHANGE_IND);
 
-  dsme_log(LOG_DEBUG, "state_query, state: %s", state_name(current_state));
+  dsme_log(LOG_DEBUG, PFIX"state_query, state: %s", state_name(current_state));
 
   ind_msg.state = current_state;
   endpoint_send(client, &ind_msg);
@@ -895,11 +912,11 @@ static bool rd_mode_enabled(void)
   bool          enabled;
 
   if (dsme_rd_mode_enabled()) {
-      dsme_log(LOG_NOTICE, "R&D mode enabled");
+      dsme_log(LOG_NOTICE, PFIX"R&D mode enabled");
       enabled = true;
   } else {
       enabled = false;
-      dsme_log(LOG_DEBUG, "R&D mode disabled");
+      dsme_log(LOG_DEBUG, PFIX"R&D mode disabled");
   }
 
   return enabled;
@@ -918,7 +935,7 @@ static void runlevel_switch_ind(const DsmeDbusMessage* ind)
         case DSME_RUNLEVEL_ACTDEAD: {
             /*  USER -> ACTDEAD runlevel change done */
             actdead_switch_done = true;
-            dsme_log(LOG_DEBUG, "USER -> ACTDEAD runlevel change done");
+            dsme_log(LOG_DEBUG, PFIX"USER -> ACTDEAD runlevel change done");
 
             /* Do we have a pending ACTDEAD -> USER timer? */
             if (delayed_user_timer) {
@@ -931,7 +948,7 @@ static void runlevel_switch_ind(const DsmeDbusMessage* ind)
         case DSME_RUNLEVEL_USER: {
             /* ACTDEAD -> USER runlevel change done */
             user_switch_done = true;
-            dsme_log(LOG_DEBUG, "ACTDEAD -> USER runlevel change done");
+            dsme_log(LOG_DEBUG, PFIX"ACTDEAD -> USER runlevel change done");
 
             /* Do we have a pending USER -> ACTDEAD timer? */
             if (delayed_actdead_timer) {
@@ -945,7 +962,7 @@ static void runlevel_switch_ind(const DsmeDbusMessage* ind)
             /*
              * Currently, we only get a runlevel switch signal for USER and ACTDEAD (NB#199301)
              */
-            dsme_log(LOG_NOTICE, "Unhandled runlevel switch indicator signal. runlevel: %i", runlevel_ind);
+            dsme_log(LOG_NOTICE, PFIX"Unhandled runlevel switch indicator signal. runlevel: %i", runlevel_ind);
             break;
         }
     }
@@ -960,13 +977,16 @@ static const dsme_dbus_signal_binding_t signals[] = {
 
 DSME_HANDLER(DSM_MSGTYPE_DBUS_CONNECT, client, msg)
 {
-  dsme_log(LOG_DEBUG, "state: DBUS_CONNECT");
+  dsme_log(LOG_DEBUG, PFIX"DBUS_CONNECT");
   dsme_dbus_bind_signals(&bound, signals);
+#ifdef DSME_VIBRA_FEEDBACK
+  dsme_ini_vibrafeedback();
+#endif // DSME_VIBRA_FEEDBACK
 }
 
 DSME_HANDLER(DSM_MSGTYPE_DBUS_DISCONNECT, client, msg)
 {
-  dsme_log(LOG_DEBUG, "state: DBUS_DISCONNECT");
+  dsme_log(LOG_DEBUG, PFIX"DBUS_DISCONNECT");
   dsme_dbus_unbind_signals(&bound, signals);
 }
 
@@ -1109,7 +1129,7 @@ static void set_initial_state_bits(const char* bootstate)
           free(malf_info);
 
       } else {
-          dsme_log(LOG_NOTICE, "R&D mode enabled, not entering MALF '%s'", p);
+          dsme_log(LOG_NOTICE, PFIX"R&D mode enabled, not entering MALF '%s'", p);
       }
   }
 }
@@ -1129,7 +1149,7 @@ static int  get_battery_level(void)
         fclose(f);
     }
     if (!ok) {
-        dsme_log(LOG_ERR, "state: FAILED to read %s", BATTERY_LEVEL_PATH);
+        dsme_log(LOG_ERR, PFIX"FAILED to read %s", BATTERY_LEVEL_PATH);
         batterylevel = DSME_MINIMUM_BATTERY_TO_USER; /* return fake, don't block state change */
     }
     return batterylevel;
@@ -1147,21 +1167,23 @@ void module_init(module_t* handle)
   if (!bootstate) {
       bootstate = "USER";
       dsme_log(LOG_NOTICE,
-               "BOOTSTATE: No such environment variable, using '%s'",
+               PFIX"BOOTSTATE: No such environment variable, using '%s'",
                bootstate);
   } else {
-      dsme_log(LOG_INFO, "BOOTSTATE: '%s'", bootstate);
+      dsme_log(LOG_INFO, PFIX"BOOTSTATE: '%s'", bootstate);
   }
 
   set_initial_state_bits(bootstate);
   change_state_if_necessary();
 
-  dsme_log(LOG_DEBUG, "Startup state: %s", state_name(current_state));
+  dsme_log(LOG_DEBUG, PFIX"Startup state: %s", state_name(current_state));
 }
 
 void module_fini(void)
 {
   dsme_dbus_unbind_signals(&bound, signals);
-
+#ifdef DSME_VIBRA_FEEDBACK
+  dsme_fini_vibrafeedback();
+#endif  // DSME_VIBRA_FEEDBACK
   dsme_log(LOG_DEBUG, "state.so unloaded");
 }
