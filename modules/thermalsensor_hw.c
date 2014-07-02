@@ -30,11 +30,14 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 /* TODO: These should be changed to use statefs once we have it */
 #define CORE_SENSOR_MODE "/sys/devices/virtual/thermal/thermal_zone9/mode"
 #define CORE_SENSOR_TEMP "/sys/devices/virtual/thermal/thermal_zone9/temp"
 #define BATTERY_TEMP     "/sys/class/power_supply/battery/temp"
+
+static int get_current_time(void);
 
 static bool read_temperature(const char *path, int *temperature)
 {
@@ -130,28 +133,43 @@ extern bool dsme_hw_get_battery_temperature(thermal_object_t*         thermal_ob
     int temperature;
     bool ret;
     static int previous_temp = -999;
+    static int previous_time = 0;
+    int current_time = 0;
 
     // dsme_log(LOG_DEBUG, "thermal: %s", __FUNCTION__);
 
     if (read_temperature(BATTERY_TEMP, &temperature)) {
         /* We get the temp in one tens */
-        temperature = (temperature + 5 ) / 10;
+        temperature = (temperature > 0) ? (temperature + 5 ) / 10 : (temperature - 5 ) / 10;
         ret = true;
+        /* Log reading time */
+        current_time = get_current_time();
     } else {
         dsme_log(LOG_WARNING, "thermal: Can't get battery temperature readings");
         temperature = INVALID_TEMPERATURE;
         ret = false;
     }
 
-    /* Log unsual temp readings */
-    if ((previous_temp != -999) &&
-        ((temperature < -30)  ||
-         (temperature > 70)   ||
-         (temperature > (previous_temp + 4)) ||
-	 (temperature < (previous_temp - 4)))) {
-        dsme_log(LOG_WARNING, "thermal: Suspicious battery temperature %d (previous %d)",temperature, previous_temp );
-    } 
-    previous_temp = temperature;
+    if (ret) {
+        /* Log unsual low or high temp readings */
+        if ((temperature < -30) ||
+            (temperature > 70)) {
+            dsme_log(LOG_WARNING, "thermal: Suspicious battery temperature level %d",temperature);
+        }
+        if ((previous_temp != -999) &&
+            ((temperature > (previous_temp + 4)) ||
+             (temperature < (previous_temp - 4)))) {
+            /* Battery temp has changed a lot between two readings 
+             * Log it as warning if this change happened in short time (~ 2 minutes)
+             */
+            int delta_time = (current_time > previous_time) ? current_time - previous_time : 0;
+            if (delta_time <= 140 ) {
+                dsme_log(LOG_WARNING, "thermal: Suspicious battery temperature change from %d to %d in %ds",previous_temp, temperature, delta_time);
+            }
+        }
+        previous_temp = temperature;
+        previous_time = current_time;
+    }
 
     if (callback) 
         callback(thermal_object, temperature);
@@ -165,4 +183,16 @@ extern bool dsme_hw_supports_battery_temp(void)
     if (dsme_hw_get_battery_temperature(NULL, NULL))
         return true;
     return false;
+}
+
+static int get_current_time(void)
+{
+
+    struct timespec t;
+    int now = 0;
+
+    if (clock_gettime(CLOCK_BOOTTIME, &t) == 0) {
+        now = t.tv_sec;
+    }
+    return now;
 }
