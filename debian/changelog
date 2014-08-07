@@ -1,3 +1,9 @@
+dsme (0.66.11) unstable; urgency=low
+  * [iphb] Work around read only rtc time by using persistently stored time
+    delta. Fixes JB#21810
+
+ -- Simo Piiroinen <simo.piiroinen@jollamobile.com>  Thu, 07 Aug 2014 13:37:40 +0300
+
 dsme (0.66.4) unstable; urgency=low
 
   * [dsme] Block suspend for 60 seconds if dsme makes abnormal exit. Fixes
