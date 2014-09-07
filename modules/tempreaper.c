@@ -39,6 +39,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sys/resource.h>
 
 #define GETPWNAM_BUFLEN 1024
 #define MIN_PRIORITY 5

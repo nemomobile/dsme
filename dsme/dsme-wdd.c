@@ -47,6 +47,7 @@
 #ifdef DSME_SYSTEMD_ENABLE
 #include <systemd/sd-daemon.h>
 #endif
+#include <sys/resource.h>
 
 #define STRINGIFY(x)  STRINGIFY2(x)
 #define STRINGIFY2(x) #x
