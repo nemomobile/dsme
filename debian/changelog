@@ -1,3 +1,9 @@
+dsme (0.66.12) unstable; urgency=low
+
+  * [dsme] Fix GCC 4.8 related build errors, Contributes to JB#22700
+
+ -- Simo Piiroinen <simo.piiroinen@jollamobile.com>  Sun, 07 Sep 2014 19:17:58 +0300
+
 dsme (0.66.11) unstable; urgency=low
   * [iphb] Work around read only rtc time by using persistently stored time
     delta. Fixes JB#21810
