@@ -86,6 +86,7 @@ systemctl daemon-reload || :
 
 %files
 %defattr(-,root,root,-)
+%dir %{_libdir}/dsme
 %{_libdir}/dsme/*
 %attr(755,root,root)%{_sbindir}/*
 %dir %{_sysconfdir}/dsme/
