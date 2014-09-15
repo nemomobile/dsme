@@ -88,6 +88,7 @@ systemctl daemon-reload || :
 %defattr(-,root,root,-)
 %{_libdir}/dsme/*
 %attr(755,root,root)%{_sbindir}/*
+%dir %{_sysconfdir}/dsme/
 %config %{_sysconfdir}/dsme/lifeguard.uids
 %config %{_sysconfdir}/dbus-1/system.d/dsme.conf
 %doc debian/copyright COPYING
