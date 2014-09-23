@@ -118,6 +118,9 @@ const char *modules[] = {
 #ifdef DSME_VIBRA_FEEDBACK
     "shutdownfeedback.so",
 #endif
+#ifdef DSME_WLAN_LOADER
+    "wlanloader.so",
+#endif
     NULL
 };
 
