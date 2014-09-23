@@ -79,6 +79,10 @@ if WANT_VIBRA_FEEDBACK
 pkglib_LTLIBRARIES += shutdownfeedback.la
 endif
 
+if WANT_WLAN_LOADER
+pkglib_LTLIBRARIES += wlanloader.la
+endif
+
 startup_la_SOURCES = startup.c
 
 # TODO: remove this
@@ -214,4 +218,9 @@ if WANT_VIBRA_FEEDBACK
 shutdownfeedback_la_SOURCES = shutdownfeedback.c vibrafeedback.c vibrafeedback.h
 shutdownfeedback_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS) $(LIBNGF_CFLAGS) -D_GNU_SOURCE
 shutdownfeedback_la_LIBADD = $(GLIB_LIBS) $(LIBNGF_LIBS)
+endif
+
+if WANT_WLAN_LOADER
+wlanloader_la_SOURCES = wlanloader.c
+wlanloader_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS) -D_GNU_SOURCE
 endif

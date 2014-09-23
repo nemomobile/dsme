@@ -81,6 +81,7 @@ void dsme_dbus_message_append_int(DsmeDbusMessage* msg, int i);
 int         dsme_dbus_message_get_int(const DsmeDbusMessage* msg);
 const char* dsme_dbus_message_get_string(const DsmeDbusMessage* msg);
 bool        dsme_dbus_message_get_bool(const DsmeDbusMessage* msg);
+bool        dsme_dbus_message_get_variant_bool(const DsmeDbusMessage* msg);
 
 // NOTE: frees the signal; hence not const
 void dsme_dbus_signal_emit(DsmeDbusMessage* sig);

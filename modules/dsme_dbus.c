@@ -243,6 +243,28 @@ bool dsme_dbus_message_get_bool(const DsmeDbusMessage* msg)
   return b;
 }
 
+bool dsme_dbus_message_get_variant_bool(const DsmeDbusMessage* msg)
+{
+  // FIXME: caller can't tell apart FALSE from error
+  dbus_bool_t b = FALSE;
+
+  if( msg ) {
+      DBusMessageIter *iter = (DBusMessageIter *)&msg->iter;
+      DBusMessageIter subiter;
+
+      if( dsme_dbus_check_arg_type(iter, DBUS_TYPE_VARIANT) ) {
+          dbus_message_iter_recurse (iter, &subiter);
+          if( dsme_dbus_check_arg_type(&subiter, DBUS_TYPE_BOOLEAN) ) {
+	      dbus_message_iter_get_basic(&subiter, &b);
+          }
+      }
+
+      dbus_message_iter_next(iter);
+  }
+
+  return b;
+}
+
 static void message_send_and_delete(DsmeDbusMessage* msg)
 {
   // TODO: check for errors and log them
