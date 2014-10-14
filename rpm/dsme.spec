@@ -11,6 +11,7 @@ Source2:    dsme-rpmlintrc
 Requires:   systemd
 Requires:   statefs
 Requires:   ngfd
+Requires:   usb-moded
 Requires(preun): systemd
 Requires(post): systemd
 Requires(postun): systemd
