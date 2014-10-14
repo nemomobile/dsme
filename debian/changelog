@@ -1,3 +1,9 @@
+dsme (0.67.1) unstable; urgency=low
+
+  * [build] Add usb-moded requirement
+
+ -- Simo Piiroinen <simo.piiroinen@jollamobile.com>  Tue, 14 Oct 2014 08:01:12 +0300
+
 dsme (0.66.12) unstable; urgency=low
 
   * [dsme] Fix GCC 4.8 related build errors, Contributes to JB#22700
