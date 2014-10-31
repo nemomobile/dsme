@@ -536,6 +536,9 @@ xmce_verify_name(void)
     if( !dbus_connection_send_with_reply(systembus, req, &pc, -1) )
 	goto cleanup;
 
+    if( !pc )
+        goto cleanup;
+
     if( !dbus_pending_call_set_notify(pc, xmce_verify_name_cb, 0, 0) )
 	goto cleanup;
 
