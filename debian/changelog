@@ -1,3 +1,12 @@
+dsme (0.67.2) precise; urgency=low
+
+  * [usbtracker] Do not assume usb_moded D-Bus service is always available.
+    Fixes JB#22603
+  * [systemd] Allow dsme startup without waiting for usb_moded
+  * [packaging] Do not require usb-moded package to be installed
+
+ -- Simo Piiroinen <simo.piiroinen@jollamobile.com>  Thu, 06 Nov 2014 13:58:43 +0200
+
 dsme (0.67.1) unstable; urgency=low
 
   * [build] Add usb-moded requirement
