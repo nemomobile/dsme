@@ -138,8 +138,8 @@ emergencycalltracker_la_SOURCES = emergencycalltracker.c
 emergencycalltracker_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS)
 
 usbtracker_la_SOURCES = usbtracker.c
-usbtracker_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS)
-usbtracker_la_LIBADD = $(DBUS_LIBS)
+usbtracker_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS)
+usbtracker_la_LIBADD = $(GLIB_LIBS) $(DBUS_LIBS)
 
 iphb_la_SOURCES = iphb.c
 iphb_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS)

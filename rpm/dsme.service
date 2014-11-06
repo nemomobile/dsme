@@ -2,7 +2,7 @@
 Description=DSME
 DefaultDependencies=no
 Requires=dbus.service
-After=local-fs.target usb-moded.service dbus.service
+After=local-fs.target dbus.service
 Conflicts=shutdown.target
 
 [Service]
