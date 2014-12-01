@@ -21,7 +21,7 @@ BuildRequires:  pkgconfig(libiphb) >= 1.2.0
 BuildRequires:  pkgconfig(dsme) >= 0.63.0
 BuildRequires:  pkgconfig(systemd)
 BuildRequires:  pkgconfig(mce) >= 1.12.3
-BuildRequires:  pkgconfig(libngf0)
+BuildRequires:  pkgconfig(libngf0) >= 0.24
 BuildRequires:  python
 BuildRequires:  autoconf
 BuildRequires:  libtool
