@@ -1,3 +1,10 @@
+dsme (0.67.3) precise; urgency=low
+
+  * [vibrafeedback] Remove non-existing NGF states.
+  * [packaging] Add build dependency version for libngf.
+
+ -- Simo Piiroinen <simo.piiroinen@jollamobile.com>  Mon, 01 Dec 2014 13:46:00 +0200
+
 dsme (0.67.2) precise; urgency=low
 
   * [usbtracker] Do not assume usb_moded D-Bus service is always available.
