@@ -225,7 +225,7 @@ PKG_CHECK_MODULES(GLIB, glib-2.0)
 PKG_CHECK_MODULES(DBUS, dbus-1)
 PKG_CHECK_MODULES(DBUSGLIB, dbus-glib-1)
 if test "x$enable_vibra_feedback" != xno; then
-PKG_CHECK_MODULES(LIBNGF, libngf0)
+PKG_CHECK_MODULES(LIBNGF, libngf0 >= 0.24)
 fi
 
 # Check libs (that are not yet checked)
