@@ -105,12 +105,6 @@ ngf_callback(NgfClient *client, uint32_t event_id, NgfEventState state, void *us
             state_name = "Playing";   break;
         case NGF_EVENT_PAUSED:
             state_name = "Paused";    break;
-        case NGF_EVENT_BUSY:
-            state_name = "Busy";      break;
-        case NGF_EVENT_LONG:
-            state_name = "Long";      break;
-        case NGF_EVENT_SHORT:
-            state_name = "Short";     break;
         default:
             state_name = "Unknown";
             play_done = true;
