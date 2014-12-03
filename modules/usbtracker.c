@@ -81,18 +81,21 @@ static const struct
     bool        mounted;
 } mode_attrs[] =
 {
-    // mode                  charging mounted
-    { "undefined",            false, false },
-    { "mass_storage",         true,  true  },
-    { "data_in_use",          true,  true  },
-    { "mtp_mode",             true,  true  },
-    { "pc_suite",             true,  false },
-    { "USB connected",        true,  false },
-    { "charger_connected",    true,  false },
-    { "USB disconnected",     false, false },
-    { "charger_disconnected", false, false },
-    { "developer_mode",       true,  false },
-    { "charging_only",        true,  false },
+    // mode                        charging mounted
+    { "undefined",                  false, false },
+    { "mass_storage",               true,  true  },
+    { "data_in_use",                true,  true  },
+    { "mtp_mode",                   true,  true  },
+    { "pc_suite",                   true,  false },
+    { "USB connected",              true,  false },
+    { "charger_connected",          true,  false },
+    { "USB disconnected",           false, false },
+    { "charger_disconnected",       false, false },
+    { "developer_mode",             true,  false },
+    { "charging_only",              true,  false },
+    { "dedicated_charger",          true,  false },
+    { "mode_requested_show_dialog", true,  false },
+    { "ask",                        true,  false },
 };
 
 static void evaluate_status (const char *mode, bool *is_charging, bool *is_mounted);
