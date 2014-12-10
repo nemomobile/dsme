@@ -1,3 +1,9 @@
+dsme (0.67.4) precise; urgency=low
+
+  * [usbtracker] Add more usb mode name configuration entries. Fixes JB#24839
+
+ -- Simo Piiroinen <simo.piiroinen@jollamobile.com>  Wed, 10 Dec 2014 11:49:38 +0200
+
 dsme (0.67.3) precise; urgency=low
 
   * [vibrafeedback] Remove non-existing NGF states.
