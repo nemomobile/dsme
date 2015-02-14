@@ -8,6 +8,7 @@
    @author Ismo Laitinen <ismo.laitinen@nokia.com>
    @author Semi Malinen <semi.malinen@nokia.com>
    @author Matias Muhonen <ext-matias.muhonen@nokia.com>
+   @author Simo Piiroinen <simo.piiroinen@jollamobile.com>
 
    This file is part of Dsme.
 
@@ -43,6 +44,7 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <string.h>
+#include <poll.h>
 #include <sys/select.h>
 #include <sys/ioctl.h>
 #include <linux/rtc.h>
@@ -62,13 +64,17 @@ static void usage(const char* name)
 {
     printf("USAGE: %s <options>\n", name);
     printf(
-"Note that the <cmd> should include absolute path.\n"
 "  -d --start-dbus                 Start DSME's D-Bus services\n"
 "  -b --reboot                     Reboot the device\n"
+"  -o --shutdown                   Shutdown (or switch to ACTDEAD)\n"
+"  -u --powerup                    Switch from ACTDEAD to USER state\n"
 "  -v --version                    Print the versions of DSME and dsmetool\n"
 "  -t --telinit <runlevel name>    Change runlevel\n"
 "  -l --loglevel <0..7>            Change DSME's logging verbosity\n"
 "  -c --clear-rtc                  Clear RTC alarms\n"
+"  -g --get-state                  Print device state, i.e. one of\n"
+"                                   SHUTDOWN USER ACTDEAD REBOOT BOOT NOT_SET\n"
+"                                   TEST MALF LOCAL or UNKNOWN\n"
 "  -h --help                       Print usage\n");
 }
 
@@ -108,6 +114,27 @@ static void send_to_dsme(const void* msg)
     }
 }
 
+static bool wait_message_from_dsme(void)
+{
+    struct pollfd pfd =
+    {
+	.fd = conn->fd,
+	.events = POLLIN,
+    };
+
+    return poll(&pfd, 1, 5000) == 1;
+}
+
+static dsmemsg_generic_t *read_message_from_dsme(void)
+{
+    dsmemsg_generic_t *msg = dsmesock_receive(conn);
+    if( !msg ) {
+        perror("dsmesock_receive");
+        exit(EXIT_FAILURE);
+    }
+    return msg;
+}
+
 static void send_to_dsme_with_string(const void* msg, const char* s)
 {
     if (dsmesock_send_with_extra(conn, msg, strlen(s) + 1, s) == -1) {
@@ -115,7 +142,6 @@ static void send_to_dsme_with_string(const void* msg, const char* s)
         exit(EXIT_FAILURE);
     }
 }
-
 
 static int get_version(bool testmode)
 {
@@ -217,6 +243,28 @@ static int send_reboot_request()
     return EXIT_SUCCESS;
 }
 
+static int send_shutdown_request()
+{
+    DSM_MSGTYPE_SHUTDOWN_REQ msg = DSME_MSG_INIT(DSM_MSGTYPE_SHUTDOWN_REQ);
+
+    connect_to_dsme();
+    send_to_dsme(&msg);
+    disconnect_from_dsme();
+
+    return EXIT_SUCCESS;
+}
+
+static int send_powerup_request()
+{
+    DSM_MSGTYPE_POWERUP_REQ msg = DSME_MSG_INIT(DSM_MSGTYPE_POWERUP_REQ);
+
+    connect_to_dsme();
+    send_to_dsme(&msg);
+    disconnect_from_dsme();
+
+    return EXIT_SUCCESS;
+}
+
 static int send_ta_test_request()
 {
     DSM_MSGTYPE_SET_TA_TEST_MODE msg =
@@ -224,6 +272,55 @@ static int send_ta_test_request()
 
     connect_to_dsme();
     send_to_dsme(&msg);
+    disconnect_from_dsme();
+
+    return EXIT_SUCCESS;
+}
+
+static const char *dsme_state_repr(dsme_state_t state)
+{
+    const char *repr = "UNKNOWN";
+
+    switch( state ) {
+    case DSME_STATE_SHUTDOWN:	repr = "SHUTDOWN"; break;
+    case DSME_STATE_USER:	repr = "USER";     break;
+    case DSME_STATE_ACTDEAD:	repr = "ACTDEAD";  break;
+    case DSME_STATE_REBOOT:	repr = "REBOOT";   break;
+    case DSME_STATE_BOOT:	repr = "BOOT";     break;
+    case DSME_STATE_NOT_SET:	repr = "NOT_SET";  break;
+    case DSME_STATE_TEST:	repr = "TEST";     break;
+    case DSME_STATE_MALF:	repr = "MALF";     break;
+    case DSME_STATE_LOCAL:	repr = "LOCAL";    break;
+    default: break;
+    }
+
+    return repr;
+}
+
+static int dsme_state_query()
+{
+    DSM_MSGTYPE_STATE_QUERY req = DSME_MSG_INIT(DSM_MSGTYPE_STATE_QUERY);
+    dsme_state_t state = DSME_STATE_NOT_SET;
+
+    connect_to_dsme();
+    send_to_dsme(&req);
+
+    while( wait_message_from_dsme() ) {
+	dsmemsg_generic_t *msg = read_message_from_dsme();
+	DSM_MSGTYPE_STATE_CHANGE_IND *rsp =
+	    DSMEMSG_CAST(DSM_MSGTYPE_STATE_CHANGE_IND, msg);
+
+	if( rsp )
+	    state = rsp->state;
+
+	free(msg);
+
+	if( rsp )
+	    break;
+    }
+
+    printf("%s\n", dsme_state_repr(state));
+
     disconnect_from_dsme();
 
     return EXIT_SUCCESS;
@@ -303,12 +400,36 @@ static int clear_rtc()
     return EXIT_SUCCESS;
 }
 
+static unsigned parse_unsigned(char *str)
+{
+    char     *pos = str;
+    unsigned  val = strtoul(str, &pos, 0);
+
+    if( pos == str || *pos != 0 ) {
+	fprintf(stderr, "%s: not a valid unsigned integer\n", str);
+	exit(EXIT_FAILURE);
+    }
+
+    return val;
+}
+
+static unsigned parse_loglevel(char *str)
+{
+    unsigned val = parse_unsigned(str);
+
+    if( val > 7 ) {
+	fprintf(stderr, "%s: not a valid log level\n", str);
+	exit(EXIT_FAILURE);
+    }
+
+    return val;
+}
+
 int main(int argc, char* argv[])
 {
     const char* program_name  = argv[0];
-    int         next_option;
     int         retval        = EXIT_SUCCESS;
-    const char* short_options = "hdsbvact:l:";
+    const char* short_options = "hdsbvact:l:guo";
     const struct option long_options[] = {
         {"help",       no_argument,       NULL, 'h'},
         {"start-dbus", no_argument,       NULL, 'd'},
@@ -317,56 +438,63 @@ int main(int argc, char* argv[])
         {"version",    no_argument,       NULL, 'v'},
         {"ta-test",    no_argument,       NULL, 'a'},
         {"clear-rtc",  no_argument,       NULL, 'c'},
+        {"get-state",  no_argument,       NULL, 'g'},
+        {"powerup",    no_argument,       NULL, 'u'},
+        {"shutdown",   no_argument,       NULL, 'o'},
         {"telinit",    required_argument, NULL, 't'},
         {"loglevel",   required_argument, NULL, 'l'},
         {0, 0, 0, 0}
     };
 
-    do {
-        next_option = getopt_long(argc, argv, short_options, long_options, 0);
-        switch (next_option) {
-            case 'd':
-                return send_dbus_service_start_request();
-                break;
-            case 's':
-                return send_dbus_service_stop_request();
-                break;
-            case 'b':
-                return send_reboot_request();
-                break;
-            case 'v':
-                return get_version(false);
-                break;
-            case 'a':
-                return send_ta_test_request();
-                break;
-            case 't':
-                return telinit(optarg);
-                break;
-            case 'l':
-                {
-                    unsigned long level;
-                    errno = 0;
-                    level = strtoul(optarg, 0, 10);
-                    if (errno != 0 || level > 7) {
-                        usage(program_name);
-                        return EXIT_FAILURE;
-                    }
-                    return loglevel(atoi(optarg));
-                }
-            case 'c':
-                return clear_rtc();
-                break;
-            case 'h':
-                usage(program_name);
-                return EXIT_SUCCESS;
-                break;
-            case '?':
-                usage(program_name);
-                return EXIT_FAILURE;
-                break;
+    for( ;; ) {
+	int opt = getopt_long(argc, argv, short_options, long_options, 0);
+
+	if( opt == -1 )
+	    break;
+
+        switch( opt ) {
+	case 'd':
+	    return send_dbus_service_start_request();
+
+	case 's':
+	    return send_dbus_service_stop_request();
+
+	case 'b':
+	    return send_reboot_request();
+
+	case 'u':
+	    return send_powerup_request();
+
+	case 'o':
+	    return send_shutdown_request();
+
+	case 'v':
+	    return get_version(false);
+
+	case 'a':
+	    return send_ta_test_request();
+
+	case 't':
+	    return telinit(optarg);
+
+	case 'g':
+	    return dsme_state_query();
+
+	case 'l':
+	    return loglevel(parse_loglevel(optarg));
+
+	case 'c':
+	    return clear_rtc();
+
+	case 'h':
+	    usage(program_name);
+	    return EXIT_SUCCESS;
+
+	case '?':
+	    fprintf(stderr, "(use --help for instructions)\n");
+	    return EXIT_FAILURE;
         }
-    } while (next_option != -1);
+    }
 
     /* check if unknown parameters or no parameters at all were given */
     if (argc == 1 || optind < argc) {
