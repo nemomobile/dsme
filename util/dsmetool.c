@@ -1,280 +1,201 @@
 /**
-   @file dsmetool.c
-
-   Dsmetool can be used to send commands to DSME.
-   <p>
-   Copyright (C) 2004-2011 Nokia Corporation.
-
-   @author Ismo Laitinen <ismo.laitinen@nokia.com>
-   @author Semi Malinen <semi.malinen@nokia.com>
-   @author Matias Muhonen <ext-matias.muhonen@nokia.com>
-   @author Simo Piiroinen <simo.piiroinen@jollamobile.com>
-
-   This file is part of Dsme.
-
-   Dsme is free software; you can redistribute it and/or modify
-   it under the terms of the GNU Lesser General Public License
-   version 2.1 as published by the Free Software Foundation.
-
-   Dsme is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-   Lesser General Public License for more details.
-
-   You should have received a copy of the GNU Lesser General Public
-   License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * @file dsmetool.c
+ *
+ * Dsmetool can be used to send commands to DSME.
+ * <p>
+ * Copyright (C) 2004-2011 Nokia Corporation.
+ *
+ * @author Ismo Laitinen <ismo.laitinen@nokia.com>
+ * @author Semi Malinen <semi.malinen@nokia.com>
+ * @author Matias Muhonen <ext-matias.muhonen@nokia.com>
+ * @author Simo Piiroinen <simo.piiroinen@jollamobile.com>
+ *
+ * This file is part of Dsme.
+ *
+ * Dsme is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License
+ * version 2.1 as published by the Free Software Foundation.
+ *
+ * Dsme is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #define _GNU_SOURCE
 
 #include "../modules/dbusproxy.h"
 #include "../modules/state-internal.h"
 #include "../include/dsme/logging.h"
+
 #include <dsme/state.h>
 #include <dsme/protocol.h>
 
-#include <stdlib.h>
-#include <stdbool.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/fcntl.h>
-#include <sys/time.h>
-#include <unistd.h>
-#include <errno.h>
-#include <getopt.h>
-#include <stdio.h>
-#include <string.h>
-#include <poll.h>
-#include <sys/select.h>
-#include <sys/ioctl.h>
 #include <linux/rtc.h>
 
-#include <pwd.h>
-#include <grp.h>
+#include <sys/types.h>
+#include <sys/ioctl.h>
+
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <poll.h>
+#include <time.h>
+#include <fcntl.h>
+#include <getopt.h>
 
 #define STRINGIFY(x)  STRINGIFY2(x)
 #define STRINGIFY2(x) #x
 
+/* ========================================================================= *
+ * DIAGNOSTIC_OUTPUT
+ * ========================================================================= */
 
-static dsmesock_connection_t* conn;
+static bool log_verbose = false;
 
-static int get_version(bool testmode);
+#define log_error(FMT,ARGS...)\
+     fprintf(stderr, "E: "FMT"\n", ## ARGS)
 
-static void usage(const char* name)
+#define log_debug(FMT,ARGS...)\
+     do {\
+         if( log_verbose )\
+             fprintf(stderr, "D: "FMT"\n", ## ARGS);\
+     }while(0)
+
+/* ========================================================================= *
+ * PROTOTYPES
+ * ========================================================================= */
+
+/* ------------------------------------------------------------------------- *
+ * MISC_UTILS
+ * ------------------------------------------------------------------------- */
+
+static const char        *dsme_msg_type_repr(int type);
+static const char        *dsme_state_repr(dsme_state_t state);
+
+/* ------------------------------------------------------------------------- *
+ * DSMEIPC_CONNECTION
+ * ------------------------------------------------------------------------- */
+
+#define DSMEIPC_WAIT_DEFAULT -1
+
+static void               dsmeipc_connect(void);
+static void               dsmeipc_disconnect(void);
+static void               dsmeipc_send_full(const void *msg, const void *data, size_t size);
+static void               dsmeipc_send(const void *msg);
+static void               dsmeipc_send_with_string(const void *msg, const char *str);
+static bool               dsmeipc_wait(int64_t *tmo);
+static dsmemsg_generic_t *dsmeipc_read(void);
+
+/* ------------------------------------------------------------------------- *
+ * DSME_OPTIONS
+ * ------------------------------------------------------------------------- */
+
+static void               xdsme_query_version(bool testmode);
+static void               xdsme_query_runlevel(void);
+static void               xdsme_request_dbus_connect(void);
+static void               xdsme_request_dbus_disconnect(void);
+static void               xdsme_request_reboot(void);
+static void               xdsme_request_shutdown(void);
+static void               xdsme_request_powerup(void);
+static void               xdsme_request_ta_test_mode(void);
+static void               xdsme_request_runlevel(const char *runlevel);
+static void               xdsme_request_loglevel(unsigned level);
+
+/* ------------------------------------------------------------------------- *
+ * RTC_OPTIONS
+ * ------------------------------------------------------------------------- */
+
+static bool               rtc_clear_alarm(void);
+
+/* ------------------------------------------------------------------------- *
+ * OPTION_PARSING
+ * ------------------------------------------------------------------------- */
+
+static unsigned           parse_unsigned(char *str);
+static unsigned           parse_loglevel(char *str);
+static const char        *parse_runlevel(char *str);
+
+static void               output_usage(const char *name);
+
+/* ------------------------------------------------------------------------- *
+ * MAIN_ENTRY_POINT
+ * ------------------------------------------------------------------------- */
+int main(int argc, char *argv[]);
+
+/* ========================================================================= *
+ * MISC_UTILS
+ * ========================================================================= */
+
+static int64_t boottime_get_ms(void)
 {
-    printf("USAGE: %s <options>\n", name);
-    printf(
-"  -d --start-dbus                 Start DSME's D-Bus services\n"
-"  -b --reboot                     Reboot the device\n"
-"  -o --shutdown                   Shutdown (or switch to ACTDEAD)\n"
-"  -u --powerup                    Switch from ACTDEAD to USER state\n"
-"  -v --version                    Print the versions of DSME and dsmetool\n"
-"  -t --telinit <runlevel name>    Change runlevel\n"
-"  -l --loglevel <0..7>            Change DSME's logging verbosity\n"
-"  -c --clear-rtc                  Clear RTC alarms\n"
-"  -g --get-state                  Print device state, i.e. one of\n"
-"                                   SHUTDOWN USER ACTDEAD REBOOT BOOT NOT_SET\n"
-"                                   TEST MALF LOCAL or UNKNOWN\n"
-"  -h --help                       Print usage\n");
-}
+        int64_t res = 0;
 
-static void connect_to_dsme(void)
-{
-    if( conn != 0 ) {
-        /* If we ever get here, there is something
-         * wrong with logic somewhere ... */
-        fprintf(stderr, "Double connect detected\n");
-        exit(EXIT_FAILURE);
-    }
-    conn = dsmesock_connect();
-    if (conn == 0) {
-        perror("dsmesock_connect");
-        exit(EXIT_FAILURE);
-    }
-    if (conn->fd < 0) {
-        perror("dsmesock_connect");
-        exit(EXIT_FAILURE);
-    }
-    /* This gives enough time for DSME to check
-       the socket permissions before we close the socket
-       connection */
-    (void)get_version(true);
-}
+        struct timespec ts;
 
-static void disconnect_from_dsme(void)
-{
-    dsmesock_close(conn), conn = 0;
-}
-
-static void send_to_dsme(const void* msg)
-{
-    if (dsmesock_send(conn, msg) == -1) {
-        perror("dsmesock_send");
-        exit(EXIT_FAILURE);
-    }
-}
-
-static bool wait_message_from_dsme(void)
-{
-    struct pollfd pfd =
-    {
-	.fd = conn->fd,
-	.events = POLLIN,
-    };
-
-    return poll(&pfd, 1, 5000) == 1;
-}
-
-static dsmemsg_generic_t *read_message_from_dsme(void)
-{
-    dsmemsg_generic_t *msg = dsmesock_receive(conn);
-    if( !msg ) {
-        perror("dsmesock_receive");
-        exit(EXIT_FAILURE);
-    }
-    return msg;
-}
-
-static void send_to_dsme_with_string(const void* msg, const char* s)
-{
-    if (dsmesock_send_with_extra(conn, msg, strlen(s) + 1, s) == -1) {
-        perror("dsmesock_send_with_extra");
-        exit(EXIT_FAILURE);
-    }
-}
-
-static int get_version(bool testmode)
-{
-    DSM_MSGTYPE_GET_VERSION   req_msg =
-          DSME_MSG_INIT(DSM_MSGTYPE_GET_VERSION);
-    void*                     p = NULL;
-    DSM_MSGTYPE_DSME_VERSION* retmsg = NULL;
-    fd_set                    rfds;
-    int                       ret = -1;
-    int                       err = -1; /* assume failure */
-
-    if (!testmode) {
-        printf("dsmetool version: %s\n", STRINGIFY(PRG_VERSION));
-        connect_to_dsme();
-    }
-
-    send_to_dsme(&req_msg);
-
-    while (conn != 0 && conn->fd >= 0) {
-        FD_ZERO(&rfds);
-        FD_SET(conn->fd, &rfds);
-        struct timeval tv;
-
-        tv.tv_sec = 5;
-        tv.tv_usec = 0;
-
-        ret = select(conn->fd+1, &rfds, NULL, NULL, &tv);
-        if (ret == -1) {
-            fprintf(stderr, "Error in select()\n");
-            break;
-        }
-        if (ret == 0) {
-            fprintf(stderr, "Timeout when getting the DSME version\n");
-            break;
+        if( clock_gettime(CLOCK_BOOTTIME, &ts) == 0 ) {
+                res = ts.tv_sec;
+                res *= 1000;
+                res += ts.tv_nsec / 1000000;
         }
 
-        p = dsmesock_receive(conn);
-        if (p == 0) {
-            fprintf(stderr, "Received NULL message\n");
-            break;
-        }
-        if ((retmsg = DSMEMSG_CAST(DSM_MSGTYPE_DSME_VERSION, p)) == 0) {
-            fprintf(stderr, "Received invalid message\n");
-            free(p), p = 0;
-            continue;
-        }
-        /* we got a valid reply message */
-        err = 0;
-        break;
-    }
-
-    if (!testmode && retmsg) {
-        char* version = (char*)DSMEMSG_EXTRA(retmsg);
-        if (version != 0) {
-            version[DSMEMSG_EXTRA_SIZE(retmsg) - 1] = '\0';
-            printf("DSME version: %s\n", version);
-        }
-    }
-
-    free(p);
-    if (!testmode) {
-        disconnect_from_dsme();
-    }
-
-    return err;
+        return res;
 }
 
-static int send_dbus_service_start_request()
+static const char *dsme_msg_type_repr(int type)
 {
-    DSM_MSGTYPE_DBUS_CONNECT msg = DSME_MSG_INIT(DSM_MSGTYPE_DBUS_CONNECT);
+#define X(name,value) if( type == value ) return #name
 
-    connect_to_dsme();
-    send_to_dsme(&msg);
-    disconnect_from_dsme();
+    // public
+    X(CLOSE,                        0x00000001);
+    X(STATE_CHANGE_IND,             0x00000301);
+    X(STATE_QUERY,                  0x00000302);
+    X(SAVE_DATA_IND,                0x00000304);
+    X(POWERUP_REQ,                  0x00000305);
+    X(SHUTDOWN_REQ,                 0x00000306);
+    X(SET_ALARM_STATE,              0x00000307);
+    X(REBOOT_REQ,                   0x00000308);
+    X(STATE_REQ_DENIED_IND,         0x00000309);
+    X(THERMAL_SHUTDOWN_IND,         0x00000310);
+    X(SET_CHARGER_STATE,            0x00000311);
+    X(SET_THERMAL_STATE,            0x00000312);
+    X(SET_EMERGENCY_CALL_STATE,     0x00000313);
+    X(SET_BATTERY_STATE,            0x00000314);
+    X(BATTERY_EMPTY_IND,            0x00000315);
+    X(PROCESSWD_CREATE,             0x00000500);
+    X(PROCESSWD_DELETE,             0x00000501);
+    X(PROCESSWD_CLEAR,              0x00000502);
+    X(PROCESSWD_SET_INTERVAL,       0x00000503);
+    X(PROCESSWD_PING,               0x00000504);
+    X(PROCESSWD_PONG,               0x00000504);
+    X(PROCESSWD_MANUAL_PING,        0x00000505);
+    X(WAIT,                         0x00000600);
+    X(WAKEUP,                       0x00000601);
+    X(GET_VERSION,                  0x00001100);
+    X(DSME_VERSION,                 0x00001101);
+    X(SET_TA_TEST_MODE,             0x00001102);
 
-    return EXIT_SUCCESS;
-}
+    //internal
+    X(DBUS_CONNECT,                 0x00000100);
+    X(DBUS_DISCONNECT,              0x00000101);
+    X(SHUTDOWN,                     0x00000316);
+    X(SET_USB_STATE,                0x00000317);
+    X(TELINIT,                      0x00000318);
+    X(CHANGE_RUNLEVEL,              0x00000319);
+    X(HEARTBEAT,                    0x00000702);
+    X(ENTER_MALF,                   0x00000900);
+    X(SET_LOGGING_VERBOSITY,        0x00001103);
+    X(IDLE,                         0x00001337);
+    X(DISK_SPACE,                   0x00002000);
 
-static int send_dbus_service_stop_request()
-{
-    DSM_MSGTYPE_DBUS_DISCONNECT msg =
-      DSME_MSG_INIT(DSM_MSGTYPE_DBUS_DISCONNECT);
+#undef X
 
-    connect_to_dsme();
-    send_to_dsme(&msg);
-    disconnect_from_dsme();
-
-    return EXIT_SUCCESS;
-}
-
-static int send_reboot_request()
-{
-    DSM_MSGTYPE_REBOOT_REQ msg = DSME_MSG_INIT(DSM_MSGTYPE_REBOOT_REQ);
-
-    connect_to_dsme();
-    send_to_dsme(&msg);
-    disconnect_from_dsme();
-
-    return EXIT_SUCCESS;
-}
-
-static int send_shutdown_request()
-{
-    DSM_MSGTYPE_SHUTDOWN_REQ msg = DSME_MSG_INIT(DSM_MSGTYPE_SHUTDOWN_REQ);
-
-    connect_to_dsme();
-    send_to_dsme(&msg);
-    disconnect_from_dsme();
-
-    return EXIT_SUCCESS;
-}
-
-static int send_powerup_request()
-{
-    DSM_MSGTYPE_POWERUP_REQ msg = DSME_MSG_INIT(DSM_MSGTYPE_POWERUP_REQ);
-
-    connect_to_dsme();
-    send_to_dsme(&msg);
-    disconnect_from_dsme();
-
-    return EXIT_SUCCESS;
-}
-
-static int send_ta_test_request()
-{
-    DSM_MSGTYPE_SET_TA_TEST_MODE msg =
-        DSME_MSG_INIT(DSM_MSGTYPE_SET_TA_TEST_MODE);
-
-    connect_to_dsme();
-    send_to_dsme(&msg);
-    disconnect_from_dsme();
-
-    return EXIT_SUCCESS;
+    return "UNKNOWN";
 }
 
 static const char *dsme_state_repr(dsme_state_t state)
@@ -282,123 +203,321 @@ static const char *dsme_state_repr(dsme_state_t state)
     const char *repr = "UNKNOWN";
 
     switch( state ) {
-    case DSME_STATE_SHUTDOWN:	repr = "SHUTDOWN"; break;
-    case DSME_STATE_USER:	repr = "USER";     break;
-    case DSME_STATE_ACTDEAD:	repr = "ACTDEAD";  break;
-    case DSME_STATE_REBOOT:	repr = "REBOOT";   break;
-    case DSME_STATE_BOOT:	repr = "BOOT";     break;
-    case DSME_STATE_NOT_SET:	repr = "NOT_SET";  break;
-    case DSME_STATE_TEST:	repr = "TEST";     break;
-    case DSME_STATE_MALF:	repr = "MALF";     break;
-    case DSME_STATE_LOCAL:	repr = "LOCAL";    break;
+    case DSME_STATE_SHUTDOWN:   repr = "SHUTDOWN"; break;
+    case DSME_STATE_USER:       repr = "USER";     break;
+    case DSME_STATE_ACTDEAD:    repr = "ACTDEAD";  break;
+    case DSME_STATE_REBOOT:     repr = "REBOOT";   break;
+    case DSME_STATE_BOOT:       repr = "BOOT";     break;
+    case DSME_STATE_NOT_SET:    repr = "NOT_SET";  break;
+    case DSME_STATE_TEST:       repr = "TEST";     break;
+    case DSME_STATE_MALF:       repr = "MALF";     break;
+    case DSME_STATE_LOCAL:      repr = "LOCAL";    break;
     default: break;
     }
 
     return repr;
 }
 
-static int dsme_state_query()
+/* ========================================================================= *
+ * DSMEIPC_CONNECTION
+ * ========================================================================= */
+
+static dsmesock_connection_t *dsmeipc_conn = 0;
+
+static void dsmeipc_connect(void)
+{
+    /* Already connected? */
+    if( dsmeipc_conn )
+        goto EXIT;
+
+    if( !(dsmeipc_conn = dsmesock_connect()) ) {
+        log_error("dsmesock_connect: %m");
+        exit(EXIT_FAILURE);
+    }
+
+    log_debug("connected");
+
+    /* This gives enough time for DSME to check
+     * the socket permissions before we close the socket
+     * connection */
+    (void)xdsme_query_version(true);
+
+EXIT:
+    return;
+}
+
+static void dsmeipc_disconnect(void)
+{
+    if( !dsmeipc_conn )
+        goto EXIT;
+
+    log_debug("disconnecting");
+    dsmesock_close(dsmeipc_conn), dsmeipc_conn = 0;
+
+EXIT:
+    return;
+}
+
+static void dsmeipc_send_full(const void *msg_, const void *data, size_t size)
+{
+    const dsmemsg_generic_t *msg = msg_;
+
+    dsmeipc_connect();
+
+    log_debug("send: %s", dsme_msg_type_repr(msg->type_));
+
+    if( dsmesock_send_with_extra(dsmeipc_conn, msg, size, data) == -1 ) {
+        log_error("dsmesock_send: %m");
+        exit(EXIT_FAILURE);
+    }
+
+}
+
+static void dsmeipc_send(const void *msg)
+{
+    dsmeipc_send_full(msg, 0, 0);
+}
+
+static void dsmeipc_send_with_string(const void *msg, const char *str)
+{
+    dsmeipc_send_full(msg, str, strlen(str) + 1);
+}
+
+static bool dsmeipc_wait(int64_t *tmo)
+{
+    bool have_input = false;
+    int  wait_input = 0;
+
+    struct pollfd pfd =
+    {
+        .fd = dsmeipc_conn->fd,
+        .events = POLLIN,
+    };
+
+    int64_t now = boottime_get_ms();
+
+    /* Called with uninitialized timeout; use now + 5 seconds */
+    if( *tmo == DSMEIPC_WAIT_DEFAULT )
+        *tmo = now + 5000;
+
+    /* If timeout is in the future, wait for input - otherwise
+     * just check if there already is something to read */
+    if( *tmo > now )
+        wait_input = (int)(now - *tmo);
+
+    if( poll(&pfd, 1, wait_input) == 1 )
+        have_input = true;
+
+    return have_input;
+}
+
+static dsmemsg_generic_t *dsmeipc_read(void)
+{
+    dsmemsg_generic_t *msg = dsmesock_receive(dsmeipc_conn);
+    if( !msg ) {
+        log_error("dsmesock_receive: %m");
+        exit(EXIT_FAILURE);
+    }
+
+    log_debug("recv: %s", dsme_msg_type_repr(msg->type_));
+
+    return msg;
+}
+
+/* ========================================================================= *
+ * DSME_OPTIONS
+ * ========================================================================= */
+
+static void xdsme_query_version(bool testmode)
+{
+    DSM_MSGTYPE_GET_VERSION req =
+          DSME_MSG_INIT(DSM_MSGTYPE_GET_VERSION);
+
+    int64_t timeout = DSMEIPC_WAIT_DEFAULT;
+    char   *version = 0;
+
+    dsmeipc_send(&req);
+
+    while( dsmeipc_wait(&timeout) ) {
+        dsmemsg_generic_t *msg = dsmeipc_read();
+
+        DSM_MSGTYPE_DSME_VERSION *rsp =
+            DSMEMSG_CAST(DSM_MSGTYPE_DSME_VERSION, msg);
+
+        if( rsp ) {
+            const char *data = DSMEMSG_EXTRA(rsp);
+            size_t      size = DSMEMSG_EXTRA_SIZE(rsp);
+            version = strndup(data, size);
+        }
+
+        free(msg);
+
+        if( rsp )
+            break;
+    }
+
+    if( !testmode ) {
+        printf("dsmetool version: %s\n", STRINGIFY(PRG_VERSION));
+        printf("DSME version: %s\n", version ?: "unknown");
+    }
+
+    free(version);
+}
+
+static void xdsme_query_runlevel(void)
 {
     DSM_MSGTYPE_STATE_QUERY req = DSME_MSG_INIT(DSM_MSGTYPE_STATE_QUERY);
-    dsme_state_t state = DSME_STATE_NOT_SET;
 
-    connect_to_dsme();
-    send_to_dsme(&req);
+    int64_t      timeout = DSMEIPC_WAIT_DEFAULT;
+    dsme_state_t state   = DSME_STATE_NOT_SET;
 
-    while( wait_message_from_dsme() ) {
-	dsmemsg_generic_t *msg = read_message_from_dsme();
-	DSM_MSGTYPE_STATE_CHANGE_IND *rsp =
-	    DSMEMSG_CAST(DSM_MSGTYPE_STATE_CHANGE_IND, msg);
+    dsmeipc_send(&req);
 
-	if( rsp )
-	    state = rsp->state;
+    while( dsmeipc_wait(&timeout) ) {
+        dsmemsg_generic_t *msg = dsmeipc_read();
+        DSM_MSGTYPE_STATE_CHANGE_IND *rsp =
+            DSMEMSG_CAST(DSM_MSGTYPE_STATE_CHANGE_IND, msg);
 
-	free(msg);
+        if( rsp )
+            state = rsp->state;
 
-	if( rsp )
-	    break;
+        free(msg);
+
+        if( rsp )
+            break;
     }
 
     printf("%s\n", dsme_state_repr(state));
-
-    disconnect_from_dsme();
-
-    return EXIT_SUCCESS;
 }
 
-static int telinit(const char* runlevel)
+static void xdsme_request_dbus_connect(void)
 {
-    DSM_MSGTYPE_TELINIT msg = DSME_MSG_INIT(DSM_MSGTYPE_TELINIT);
+    DSM_MSGTYPE_DBUS_CONNECT req = DSME_MSG_INIT(DSM_MSGTYPE_DBUS_CONNECT);
 
-    connect_to_dsme();
-    send_to_dsme_with_string(&msg, runlevel);
-    // TODO: wait for OK/NOK from dsme
-    disconnect_from_dsme();
-
-    return EXIT_SUCCESS;
+    dsmeipc_send(&req);
 }
 
-static int loglevel(unsigned level)
+static void xdsme_request_dbus_disconnect(void)
 {
-    DSM_MSGTYPE_SET_LOGGING_VERBOSITY msg =
+    DSM_MSGTYPE_DBUS_DISCONNECT req =
+        DSME_MSG_INIT(DSM_MSGTYPE_DBUS_DISCONNECT);
+
+    dsmeipc_send(&req);
+}
+
+static void xdsme_request_reboot(void)
+{
+    DSM_MSGTYPE_REBOOT_REQ req = DSME_MSG_INIT(DSM_MSGTYPE_REBOOT_REQ);
+
+    dsmeipc_send(&req);
+}
+
+static void xdsme_request_shutdown(void)
+{
+    DSM_MSGTYPE_SHUTDOWN_REQ req = DSME_MSG_INIT(DSM_MSGTYPE_SHUTDOWN_REQ);
+
+    dsmeipc_send(&req);
+}
+
+static void xdsme_request_powerup(void)
+{
+    DSM_MSGTYPE_POWERUP_REQ req = DSME_MSG_INIT(DSM_MSGTYPE_POWERUP_REQ);
+
+    dsmeipc_send(&req);
+}
+
+static void xdsme_request_ta_test_mode(void)
+{
+    DSM_MSGTYPE_SET_TA_TEST_MODE req =
+        DSME_MSG_INIT(DSM_MSGTYPE_SET_TA_TEST_MODE);
+
+    dsmeipc_send(&req);
+}
+
+static void xdsme_request_runlevel(const char *runlevel)
+{
+    DSM_MSGTYPE_TELINIT req = DSME_MSG_INIT(DSM_MSGTYPE_TELINIT);
+
+    dsmeipc_send_with_string(&req, runlevel);
+}
+
+static void xdsme_request_loglevel(unsigned level)
+{
+    DSM_MSGTYPE_SET_LOGGING_VERBOSITY req =
         DSME_MSG_INIT(DSM_MSGTYPE_SET_LOGGING_VERBOSITY);
-    msg.verbosity = level;
+    req.verbosity = level;
 
-    connect_to_dsme();
-    send_to_dsme(&msg);
-    disconnect_from_dsme();
-
-    return EXIT_SUCCESS;
+    dsmeipc_send(&req);
 }
 
-static int clear_rtc()
-{
-  /* Clear possible RTC alarm wakeup*/
+/* ========================================================================= *
+ * RTC_OPTIONS
+ * ========================================================================= */
 
+/** Clear possible RTC alarm wakeup */
+static bool rtc_clear_alarm(void)
+{
     static const char rtc_path[] = "/dev/rtc0";
-    int rtc_fd = -1;
+
+    bool cleared = false;
+    int  rtc_fd  = -1;
+
     struct rtc_wkalrm alrm;
 
     if ((rtc_fd = open(rtc_path, O_RDONLY)) == -1) {
-        /* TODO:
-         * If open fails reason is most likely that dsme is running and has opened rtc.
-         * In that case we should send message to dsme and ask it to do the clearing.
-         * This functionality is not now needed because rtc alarms are cleared
-         * only during preinit and there dsme is not running.
-         * But to make this complete, that functionality should be added.
+        /* TODO: If open fails reason is most likely that dsme is running
+         * and has opened rtc. In that case we should send message to dsme
+         * and ask it to do the clearing. This functionality is not now
+         * needed because rtc alarms are cleared only during preinit and
+         * there dsme is not running. But to make this complete, that
+         * functionality should be added.
          */
-        printf("Failed to open %s: %m\n", rtc_path);
-        return EXIT_FAILURE;
+        log_error("Failed to open %s: %m", rtc_path);
+        goto EXIT;
     }
 
     memset(&alrm, 0, sizeof(alrm));
     if (ioctl(rtc_fd, RTC_WKALM_RD, &alrm) == -1) {
-        printf("Failed to read rtc alarms %s: %s: %m\n", rtc_path, "RTC_WKALM_RD");
-        close(rtc_fd);
-        return EXIT_FAILURE;
+        log_error("Failed to read rtc alarms %s: %s: %m", rtc_path,
+                  "RTC_WKALM_RD");
+        goto EXIT;
     }
     printf("Alarm was %s at %d.%d.%d %02d:%02d:%02d UTC\n",
            alrm.enabled ? "Enabled" : "Disabled",
-           1900+alrm.time.tm_year, 1+alrm.time.tm_mon, alrm.time.tm_mday, 
+           1900+alrm.time.tm_year, 1+alrm.time.tm_mon, alrm.time.tm_mday,
            alrm.time.tm_hour, alrm.time.tm_min, alrm.time.tm_sec);
 
-    /* Because of bug? we need to enable alarm first before we can disable it */
+    /* Kernel side bug in Jolla phone?
+     * We need to enable alarm first before we can disable it.
+     */
     alrm.enabled = 1;
     alrm.pending = 0;
     if (ioctl(rtc_fd, RTC_WKALM_SET, &alrm) == -1)
-        printf("Failed to enable rtc alarms %s: %s: %m\n", rtc_path, "RTC_WKALM_SET");
+        log_error("Failed to enable rtc alarms %s: %s: %m", rtc_path,
+                  "RTC_WKALM_SET");
+
     /* Now disable the alarm */
     alrm.enabled = 0;
     alrm.pending = 0;
     if (ioctl(rtc_fd, RTC_WKALM_SET, &alrm) == -1) {
-        printf("Failed to clear rtc alarms %s: %s: %m\n", rtc_path, "RTC_WKALM_SET");
-        close(rtc_fd);
-        return EXIT_FAILURE;
+        log_error("Failed to clear rtc alarms %s: %s: %m", rtc_path,
+                  "RTC_WKALM_SET");
+        goto EXIT;
     }
-    close(rtc_fd);
+
     printf("RTC alarm cleared ok\n");
-    return EXIT_SUCCESS;
+    cleared = true;
+
+EXIT:
+    if( rtc_fd != -1 )
+        close(rtc_fd);
+
+    return cleared;
 }
+
+/* ========================================================================= *
+ * OPTION_PARSING
+ * ========================================================================= */
 
 static unsigned parse_unsigned(char *str)
 {
@@ -406,8 +525,8 @@ static unsigned parse_unsigned(char *str)
     unsigned  val = strtoul(str, &pos, 0);
 
     if( pos == str || *pos != 0 ) {
-	fprintf(stderr, "%s: not a valid unsigned integer\n", str);
-	exit(EXIT_FAILURE);
+        log_error("%s: not a valid unsigned integer", str);
+        exit(EXIT_FAILURE);
     }
 
     return val;
@@ -418,18 +537,69 @@ static unsigned parse_loglevel(char *str)
     unsigned val = parse_unsigned(str);
 
     if( val > 7 ) {
-	fprintf(stderr, "%s: not a valid log level\n", str);
-	exit(EXIT_FAILURE);
+        log_error("%s: not a valid log level", str);
+        exit(EXIT_FAILURE);
     }
 
     return val;
 }
 
-int main(int argc, char* argv[])
+static const char *parse_runlevel(char *str)
 {
-    const char* program_name  = argv[0];
-    int         retval        = EXIT_SUCCESS;
-    const char* short_options = "hdsbvact:l:guo";
+    static const char * const lut[] =
+    {
+        "SHUTDOWN", "USER", "ACTDEAD", "REBOOT", 0
+    };
+
+    for( size_t i = 0;  ; ++i ) {
+
+        if( lut[i] == 0 ) {
+            log_error("%s: not a valid run level", str);
+            exit(EXIT_FAILURE);
+        }
+
+        if( !strcasecmp(lut[i], str) )
+            return lut[i];
+    }
+}
+
+static void output_usage(const char *name)
+{
+    printf("USAGE: %s <options>\n", name);
+    printf(
+"\n"
+"  -h --help                       Print usage information\n"
+"  -v --version                    Print the versions of DSME and dsmetool\n"
+"  -V --verbose                    Make dsmetool more verbose\n"
+"  -l --loglevel <0..7>            Change DSME's logging verbosity\n"
+"\n"
+"  -g --get-state                  Print device state, i.e. one of\n"
+"                                   SHUTDOWN USER ACTDEAD REBOOT BOOT\n"
+"                                   TEST MALF LOCAL NOT_SET or UNKNOWN\n"
+"  -b --reboot                     Reboot the device\n"
+"  -o --shutdown                   Shutdown (or switch to ACTDEAD)\n"
+"  -u --powerup                    Switch from ACTDEAD to USER state\n"
+"  -t --telinit <runlevel name>    Change runlevel, valid names are:\n"
+"                                   SHUTDOWN USER ACTDEAD REBOOT\n"
+"\n"
+"  -c --clear-rtc                  Clear RTC alarms\n"
+"\n"
+"  -d --start-dbus                 Start DSME's D-Bus services\n"
+"  -s --stop-dbus                  Stop DSME's D-Bus services\n"
+"  -a --ta-test                    Enable test automation mode\n"
+"\n"
+          );
+}
+
+/* ========================================================================= *
+ * MAIN_ENTRY_POINT
+ * ========================================================================= */
+
+int main(int argc, char *argv[])
+{
+    const char *program_name  = argv[0];
+    int         retval        = EXIT_FAILURE;
+    const char *short_options = "hdsbvact:l:guoV";
     const struct option long_options[] = {
         {"help",       no_argument,       NULL, 'h'},
         {"start-dbus", no_argument,       NULL, 'd'},
@@ -443,64 +613,96 @@ int main(int argc, char* argv[])
         {"shutdown",   no_argument,       NULL, 'o'},
         {"telinit",    required_argument, NULL, 't'},
         {"loglevel",   required_argument, NULL, 'l'},
+        {"verbose",    no_argument,       NULL, 'V'},
         {0, 0, 0, 0}
     };
 
-    for( ;; ) {
-	int opt = getopt_long(argc, argv, short_options, long_options, 0);
+    /* Treat no args as if --help option were given */
+    if( argc == 1 ) {
+        output_usage(program_name);
+        goto DONE;
+    }
 
-	if( opt == -1 )
-	    break;
+    /* Handle options */
+    for( ;; ) {
+        int opt = getopt_long(argc, argv, short_options, long_options, 0);
+
+        if( opt == -1 )
+            break;
 
         switch( opt ) {
-	case 'd':
-	    return send_dbus_service_start_request();
+        case 'd':
+            xdsme_request_dbus_connect();
+            break;
 
-	case 's':
-	    return send_dbus_service_stop_request();
+        case 's':
+            xdsme_request_dbus_disconnect();
+            break;
 
-	case 'b':
-	    return send_reboot_request();
+        case 'b':
+            xdsme_request_reboot();
+            break;
 
-	case 'u':
-	    return send_powerup_request();
+        case 'u':
+            xdsme_request_powerup();
+            break;
 
-	case 'o':
-	    return send_shutdown_request();
+        case 'o':
+            xdsme_request_shutdown();
+            break;
 
-	case 'v':
-	    return get_version(false);
+        case 'v':
+            xdsme_query_version(false);
+            break;
 
-	case 'a':
-	    return send_ta_test_request();
+        case 'a':
+            xdsme_request_ta_test_mode();
+            break;
 
-	case 't':
-	    return telinit(optarg);
+        case 't':
+            xdsme_request_runlevel(parse_runlevel(optarg));
+            break;
 
-	case 'g':
-	    return dsme_state_query();
+        case 'g':
+            xdsme_query_runlevel();
+            break;
 
-	case 'l':
-	    return loglevel(parse_loglevel(optarg));
+        case 'l':
+            xdsme_request_loglevel(parse_loglevel(optarg));
+            break;
 
-	case 'c':
-	    return clear_rtc();
+        case 'c':
+            if( !rtc_clear_alarm() )
+                goto EXIT;
+            break;
 
-	case 'h':
-	    usage(program_name);
-	    return EXIT_SUCCESS;
+        case 'V':
+            log_verbose = true;
+            break;
 
-	case '?':
-	    fprintf(stderr, "(use --help for instructions)\n");
-	    return EXIT_FAILURE;
+        case 'h':
+            output_usage(program_name);
+            goto DONE;
+
+        case '?':
+            fprintf(stderr, "(use --help for instructions)\n");
+            goto EXIT;
         }
     }
 
-    /* check if unknown parameters or no parameters at all were given */
-    if (argc == 1 || optind < argc) {
-        usage(program_name);
-        return EXIT_FAILURE;
+    /* Complain about excess args */
+    if( optind < argc ) {
+        fprintf(stderr, "%s: unknown argument\n", argv[optind]);
+        fprintf(stderr, "(use --help for instructions)\n");
+        goto EXIT;
     }
+
+DONE:
+    retval = EXIT_SUCCESS;
+
+EXIT:
+
+    dsmeipc_disconnect();
 
     return retval;
 }
