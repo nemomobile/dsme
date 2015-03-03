@@ -61,6 +61,17 @@ static dsme_timer_t pwrkey_timer = 0;
 /** Prefix string for logging messages from this module */
 #define PFIX "pwrkeymonitor: "
 
+/** Predicate for: Operating system update in progress
+ *
+ * Determined from presence of update mode flag file.
+ */
+static bool pwrkey_update_mode_is_active(void)
+{
+    static const char flagfile[] = "/tmp/os-update-running";
+
+    return access(flagfile, F_OK) == 0;
+}
+
 /** Timer callback function for initiating shutdown
  *
  * @param data (not used)
@@ -73,6 +84,19 @@ pwrkey_trigger(void *data)
     if( !pwrkey_timer )
     {
         /* Cancelled but got triggered anyway */
+        return FALSE;
+    }
+
+    /* Invalidate cached timer id */
+    pwrkey_timer = 0;
+
+    /* No shutdown via powerkey while in update mode */
+    if( pwrkey_update_mode_is_active() )
+    {
+        dsme_log(LOG_WARNING, PFIX"ongoing os update; ignoring power key");
+        // TODO: send a dbus signal (TBD) so that ui side can warn the
+        //       user before some hw specific immediate power off gets
+        //       triggered if power key is kept pressed any longer
         return FALSE;
     }
 
@@ -94,9 +118,6 @@ pwrkey_trigger(void *data)
     DSM_MSGTYPE_SHUTDOWN_REQ msg = DSME_MSG_INIT(DSM_MSGTYPE_SHUTDOWN_REQ);
     broadcast_internally(&msg);
 #endif
-
-    /* Invalidate cached timer id */
-    pwrkey_timer = 0;
 
     /* No repeats */
     return FALSE;
