@@ -1,3 +1,10 @@
+dsme (0.68.2) precise; urgency=low
+
+  * [dsme] Disable shutdown by long power key press during os update.
+    Fixes JB#26767
+
+ -- Simo Piiroinen <simo.piiroinen@jollamobile.com>  Tue, 03 Mar 2015 14:56:35 +0200
+
 dsme (0.68.1) precise; urgency=low
 
   * [dsmetool] Refactor dsmetool sources. Fixes JB#26520
