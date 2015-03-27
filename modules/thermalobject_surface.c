@@ -26,10 +26,10 @@
 
 #include "thermalsensor_battery.h"
 #include "thermalmanager.h"
-#include "dsme/dsme-wdd-wd.h"
+#include "../include/dsme/dsme-wdd-wd.h"
 
-#include "dsme/modules.h"
-#include "dsme/logging.h"
+#include "../include/dsme/modules.h"
+#include "../include/dsme/logging.h"
 
 #include "dsme_dbus.h"
 #include "dbusproxy.h"

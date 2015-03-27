@@ -27,9 +27,9 @@
 #endif
 
 #include "runlevel.h"
-#include "dsme/modules.h"
-#include "dsme/logging.h"
-#include "dsme/modulebase.h"
+#include "../include/dsme/modules.h"
+#include "../include/dsme/logging.h"
+#include "../include/dsme/modulebase.h"
 
 #include <stdio.h>
 #include <stdlib.h>

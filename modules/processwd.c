@@ -40,9 +40,9 @@
 
 #include <iphbd/iphb_internal.h>
 
-#include "dsme/modules.h"
-#include "dsme/logging.h"
-#include "dsme/timers.h"
+#include "../include/dsme/modules.h"
+#include "../include/dsme/logging.h"
+#include "../include/dsme/timers.h"
 
 #include <dsme/messages.h>
 #include <dsme/processwd.h>

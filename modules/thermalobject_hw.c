@@ -27,8 +27,8 @@
 #include "thermalmanager.h"
 #include "thermalsensor_hw.h"
 
-#include "dsme/modules.h"
-#include "dsme/logging.h"
+#include "../include/dsme/modules.h"
+#include "../include/dsme/logging.h"
 
 #include "dsme_dbus.h"
 #include "dbusproxy.h"

@@ -25,7 +25,7 @@
 #define _GNU_SOURCE
 #include "thermalmanager.h"
 #include "thermalsensor_hw.h"
-#include "dsme/logging.h"
+#include "../include/dsme/logging.h"
 
 #include <string.h>
 #include <stdio.h>

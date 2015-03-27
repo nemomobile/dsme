@@ -25,7 +25,7 @@
 #ifndef DSME_LOGGING_H
 #define DSME_LOGGING_H
 
-#include "dsme/messages.h"
+#include <dsme/messages.h>
 /* Even if syslog is not used, use the message levels therein */
 #include <syslog.h>
 #include <stdbool.h>

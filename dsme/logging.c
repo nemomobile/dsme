@@ -25,7 +25,7 @@
 
 #define _GNU_SOURCE // TODO: should these be put to makefile?
 
-#include "dsme/logging.h"
+#include "../include/dsme/logging.h"
 
 #include <unistd.h>
 #include <stdio.h>

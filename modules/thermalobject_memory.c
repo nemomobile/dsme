@@ -26,8 +26,8 @@
 #include "thermalsensor_omap.h"
 #include "thermalmanager.h"
 
-#include "dsme/modules.h"
-#include "dsme/logging.h"
+#include "../include/dsme/modules.h"
+#include "../include/dsme/logging.h"
 
 
 static bool get_memory_temperature(int* temperature);

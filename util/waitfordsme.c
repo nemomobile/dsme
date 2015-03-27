@@ -24,8 +24,8 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dsme/protocol.h"
-#include "dsme/state.h"
+#include <dsme/protocol.h>
+#include <dsme/state.h>
 
 #include <stdbool.h>
 #include <stdio.h>

@@ -24,7 +24,7 @@
 
 #define _GNU_SOURCE
 #include "thermalsensor_omap.h"
-#include "dsme/logging.h"
+#include "../include/dsme/logging.h"
 
 #include <string.h>
 #include <stdarg.h>

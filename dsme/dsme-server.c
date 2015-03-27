@@ -34,13 +34,13 @@
 #define _GNU_SOURCE
 #endif
 
-#include "dsme/mainloop.h"
-#include "dsme/modulebase.h"
-#include "dsme/dsmesock.h"
-#include "dsme/protocol.h"
-#include "dsme/logging.h"
-#include "dsme/messages.h"
-#include "dsme/oom.h"
+#include "../include/dsme/mainloop.h"
+#include "../include/dsme/modulebase.h"
+#include "../include/dsme/dsmesock.h"
+#include <dsme/protocol.h>
+#include "../include/dsme/logging.h"
+#include <dsme/messages.h>
+#include "../include/dsme/oom.h"
 
 #include <glib.h>
 #include <unistd.h>

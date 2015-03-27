@@ -27,8 +27,8 @@
 #endif
 
 #include "diskmonitor.h"
-#include "dsme/modules.h"
-#include "dsme/logging.h"
+#include "../include/dsme/modules.h"
+#include "../include/dsme/logging.h"
 
 #include <errno.h>
 #include <glib.h>

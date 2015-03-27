@@ -24,7 +24,7 @@
 #ifndef DSME_HEARTBEAT_H
 #define DSME_HEARTBEAT_H
 
-#include "dsme/messages.h"
+#include <dsme/messages.h>
 
 enum {
     DSME_MSG_ENUM(DSM_MSGTYPE_HEARTBEAT, 0x00000702),

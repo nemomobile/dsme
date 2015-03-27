@@ -41,9 +41,9 @@
 #define _GNU_SOURCE
 #endif
 
-#include "dsme/messages.h"
-#include "dsme/modulebase.h"
-#include "dsme/logging.h"
+#include <dsme/messages.h>
+#include "../include/dsme/modulebase.h"
+#include "../include/dsme/logging.h"
 
 #include <stdio.h>
 #include <string.h>

@@ -28,10 +28,10 @@
 
 #include "dsme_dbus.h"
 
-#include "dsme/logging.h"
-#include "dsme/modules.h"
-#include "dsme/modulebase.h"
-#include "dsme/state.h"
+#include "../include/dsme/logging.h"
+#include "../include/dsme/modules.h"
+#include "../include/dsme/modulebase.h"
+#include <dsme/state.h>
 
 #include <glib.h>
 #include <dbus/dbus.h>

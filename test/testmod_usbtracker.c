@@ -29,14 +29,14 @@
 
 /* INCLUDES */
 
-#include "modules/dbusproxy.h"
-#include "modules/state-internal.h"
-#include "dsme/modulebase.h"
-#include "dsme/modules.h"
-#include "dsme/mainloop.h"
+#include "../modules/dbusproxy.h"
+#include "../modules/state-internal.h"
+#include "../include/dsme/modulebase.h"
+#include "../include/dsme/modules.h"
+#include "../include/dsme/mainloop.h"
 
 #include <dsme/protocol.h>
-#include <dsme/dsmesock.h>
+#include "../include/dsme/dsmesock.h"
 #include <dsme/messages.h>
 #include <dsme/state.h>
 #include <dsme/alarm_limit.h>

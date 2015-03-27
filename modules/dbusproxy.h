@@ -25,7 +25,7 @@
 #ifndef DBUSPROXY_H
 #define DBUSPROXY_H
 
-#include "dsme/messages.h"
+#include <dsme/messages.h>
 
 enum {
     DSME_MSG_ENUM(DSM_MSGTYPE_DBUS_CONNECT,    0x00000100),

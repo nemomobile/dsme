@@ -23,9 +23,9 @@
 */
 
 #include "heartbeat.h"
-#include "dsme/modules.h"
-#include "dsme/logging.h"
-#include "dsme/mainloop.h"
+#include "../include/dsme/modules.h"
+#include "../include/dsme/logging.h"
+#include "../include/dsme/mainloop.h"
 
 #include <stdlib.h>
 #include <stdio.h>

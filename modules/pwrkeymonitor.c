@@ -31,10 +31,10 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dsme/modules.h"
-#include "dsme/logging.h"
-#include "dsme/mainloop.h"
-#include "dsme/timers.h"
+#include "../include/dsme/modules.h"
+#include "../include/dsme/logging.h"
+#include "../include/dsme/mainloop.h"
+#include "../include/dsme/timers.h"
 #include "runlevel.h"
 #include "state-internal.h"
 

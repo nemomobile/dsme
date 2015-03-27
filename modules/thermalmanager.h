@@ -24,7 +24,7 @@
 #ifndef THERMALMANAGER_H
 #define THERMALMANAGER_H
 
-#include "dsme/timers.h"
+#include "../include/dsme/timers.h"
 #include <stdbool.h>
 
 #define INVALID_TEMPERATURE -9999

@@ -23,7 +23,7 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dsme/timers.h"
+#include "../include/dsme/timers.h"
 #include <glib.h>
 
 

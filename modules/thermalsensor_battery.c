@@ -23,7 +23,7 @@
 */
 
 #include "thermalsensor_battery.h"
-#include "dsme/logging.h"
+#include "../include/dsme/logging.h"
 #include <glib.h>
 #include <string.h>
 

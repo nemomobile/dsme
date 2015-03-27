@@ -42,8 +42,8 @@
 
 #include "diskmonitor.h"
 #include "diskmonitor_backend.h"
-#include "dsme/modules.h"
-#include "dsme/logging.h"
+#include "../include/dsme/modules.h"
+#include "../include/dsme/logging.h"
 #include "heartbeat.h"
 
 #include <sys/time.h>
