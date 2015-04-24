@@ -439,6 +439,8 @@ static void method_dispatcher_dispatch(const Dispatcher* dispatcher,
   };
   DsmeDbusMessage* reply   = 0;
 
+  dbus_message_iter_init(msg, &request.iter);
+
   enter_module(dispatcher->module);
   dispatcher->target.method(&request, &reply);
   leave_module();
