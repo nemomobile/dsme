@@ -1,6 +1,6 @@
 Name:       dsme
 Summary:    Device State Management Entity
-Version:    0.68.2
+Version:    0.68.3
 Release:    0
 Group:      System/System Control
 License:    LGPLv2+

@@ -1,3 +1,10 @@
+dsme (0.68.3) precise; urgency=low
+
+  * [wlanloader] Only reset wlan module after wifi tethering has been turned
+    off. Contributes to JB#15005
+
+ -- Simo Piiroinen <simo.piiroinen@jollamobile.com>  Tue, 28 Apr 2015 11:27:48 +0300
+
 dsme (0.68.2) precise; urgency=low
 
   * [dsme] Disable shutdown by long power key press during os update.
