@@ -265,6 +265,16 @@ bool dsme_dbus_message_get_variant_bool(const DsmeDbusMessage* msg)
   return b;
 }
 
+const char* dsme_dbus_message_path(const DsmeDbusMessage* msg)
+{
+  if (msg && msg->msg) {
+      const char* path = dbus_message_get_path(msg->msg);
+      if (path)
+          return path;
+  }
+  return "";
+}
+
 static void message_send_and_delete(DsmeDbusMessage* msg)
 {
   // TODO: check for errors and log them

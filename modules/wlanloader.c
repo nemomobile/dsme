@@ -89,7 +89,9 @@ static void connman_tethering_changed(const DsmeDbusMessage* sig)
 {
     bool tethering;
 
-    if (strcmp(dsme_dbus_message_get_string(sig), "Tethering") == 0)
+    if (strcmp(dsme_dbus_message_get_string(sig), "Tethering") == 0 &&
+        strcmp(dsme_dbus_message_path(sig),
+                            "/net/connman/technology/wifi") == 0)
     {
         tethering = dsme_dbus_message_get_variant_bool(sig);
         dsme_log(LOG_DEBUG, "wlanloader: Tethering status changed to %d",
