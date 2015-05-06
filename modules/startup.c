@@ -90,14 +90,8 @@ const char *modules[] = {
 #endif
     "thermalflagger.so",
     "thermalmanager.so",
-#ifdef DSME_HW_THERMAL_MGMT
-    "thermalobject_hw.so",
-#endif
-#ifdef DSME_MEMORY_THERMAL_MGMT
-    "thermalobject_memory.so",
-#endif
-#ifdef DSME_BMEIPC
-    "thermalobject_surface.so",
+#ifdef DSME_GENERIC_THERMAL_MGMT
+    "thermalsensor_generic.so",
 #endif
     "emergencycalltracker.so",
     "usbtracker.so",

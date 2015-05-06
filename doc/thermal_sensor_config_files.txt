@@ -1,0 +1,228 @@
+General
+=======
+
+Temperature sensors provide input for dsme thermal policy. When
+one or more sensors indicate that the device is running too hot
+or cold, the dsme thernal manager will broadcast D-Bus signals.
+Other components on the system can subscribe to these signals
+and for example notify the user about the situation. If at
+least one sensor gets to fatal thermal status, the device will
+shutdown.
+
+This document describes the configuration file format used for
+describing location and thermal limits for temperature sensors
+accessible via file io.
+
+Encoding
+========
+
+The general format for the configuration file is:
+  <keyword>':'[whitespace]<argument>[<whitespace><argument>]...
+
+Any line starting with '#' is assumed to be a comment.
+
+Apart from comment lines the file should be ascii text.
+
+The "Name" keyword selects sensor configuration to modify. All
+the other keywords modify the latest sensor to be named.
+
+It is assumed that there is no need for white space characters
+when specifying sensor names, file paths and enable/disable
+strings.
+
+Location
+========
+
+The sensor plugin looks for files matching glob pattern:
+  /etc/dsme/thermal_sensor_*.conf
+
+The configuration files should be installed from hw adaptation
+specific packages to /etc/dsme directory and the name should
+include a hw identifier part, something like:
+  /etc/dsme/thermal_sensor_sbj.conf
+  /etc/dsme/thermal_sensor_rm696.conf
+
+Parsing
+=======
+
+First all installed configuration files are read and a set
+of thermal objects is constructed.
+
+Then each thermal object is
+  a) validated for internal consistency
+  b) registered to thermal manager
+
+The validation includes checking that the sensor value can be
+read. This implicitly means that meta-sensors must be defined
+later than the sensors they depend on or the validation step
+will fail. Which in turn means that all meta sensors that are
+part of circular dependency chain get rejected.
+
+The parser is implemented in modules/thermalsensor_generic.c
+starting from function tsg_objects_read_config().
+
+Keywords
+========
+
+Name: <sensor_name>
+
+        Required
+
+        If the configuration for given sensor_name does not
+        exist yet, it is created and selected. Otherwise
+        already existing configuration item is selected.
+
+        There are no hard requirements for sensor naming, but
+        thermal manager D-Bus service assigns special meaning
+        to sensor names "core", "battery" and"surface", so
+        those should be used when applicable.
+
+        To allow flexibility in dealing with single/multicore
+        devices etc, the sensor_name can be constructed from
+        two parts: <group_prefix><unique_part>
+
+        So on a single core device there should be
+                Name: core
+
+        But multicore device could do also
+                Name: core:cpu1
+                Name: core:cpu2
+
+        Or alternatively:
+                Name: core0
+                Name: core1
+
+        After which D-Bus query for "core" sensor will return
+        the status of the sensor in the "core" group that has
+        the biggest deviation from normal status.
+
+Temp: <path_to_temperature_file> <temperature_unit>
+
+        Required unless "Meta" keyword is used.
+
+        The path_to_temperature_file defines a file path from
+        which integer temperature value can be read.
+
+        Configuration validation will fail unless the file
+        exists and is readable by dsme.
+
+        The temperature_unit defines how the integer value
+        should be interpreted. Supported units are:
+
+        - "C" degrees Centigrade, used as is
+        - "dC" 10ths of degrees, rounded up to full degrees
+        - "mc" 1000ths of degrees, rounded up to full degrees
+
+Meta: <sensor_name> [offset]
+
+        Required unless "Temp" keyword is used.
+
+        The dependency sensor_name must already be defined or
+        the meta sensor validation will fail.
+
+        The offset is degrees to added to the temperature
+        of the named sensor, e.g.
+
+        meta_sensor_temp = dependency_sensor_temp + offset
+
+        Can be used for example in cases where there is no
+        separate surface temperature sensor, but the
+        temperature on the surface can be estimated based on
+        some other sensor like battery / cpu core.
+
+        Using meta sensor allows warning user about possible
+        surface temperature issues while the "real" battery or
+        core temperature config deals with hardware operational
+        limits only.
+
+Mode: <path_to_control_file> <enable_string> [disable_string]
+
+        Optional, makes sense only if "Temp" keyword is used.
+
+        Should be used if sensor needs to be explicitly
+        enabled. If disable_string is not defined, the sensor
+        is left enabled on dsme exit.
+
+        Configuration validation will fail if:
+        - path_to_control_file is not writable by dsme
+        - enable_string is not set
+        - writing enable_string to path_to_control_file fails
+
+Low:     <mintemp> <minwait> <maxwait>
+Normal:  <mintemp> <minwait> <maxwait>
+Warning: <mintemp> <minwait> <maxwait>
+Alert:   <mintemp> <minwait> <maxwait>
+Fatal:   <mintemp> <minwait> <maxwait>
+Invalid: <mintemp> <minwait> <maxwait>
+
+        Required, all thermal status levels must be defined.
+
+        The mintemp specifies the low temperature bound
+        for the thermal status.
+
+        The minwait/maxwait defines the polling delay while
+        the sensor is in this thermal status.
+
+        Also temperatures that are below Low.mintemp are
+        considered Invalid. The expected range provided
+        by the sensor should be [Low.mintemp ... Invalid.mintemp)
+
+        Configuration validation will fail if:
+        - one or more levels are not defined
+        - temperatures are not in ascending order
+        - polling delays do not make sense
+
+        If needed for some reason, it is possible to leave
+        out some levels by defining the following levels
+        to start from the same mintemp, for example:
+
+          Low:          -50 30 30
+          Normal:       -50 30 30
+          Warning:      100 30 30
+          Alert:        100 30 30
+          Fatal:        100 30 30
+          Invalid:      100 30 30
+
+        Would make temperatures from -50 to +99 register as
+        "normal" and everything else as "invalid".
+
+Example
+=======
+
+# CPU temperature that can be read from sysfs file, is reported
+# as degrees Centigrade and must be explicitly enabled
+
+Name:    core
+Temp:    /sys/devices/virtual/thermal/thermal_zone9/temp C
+Mode:    /sys/devices/virtual/thermal/thermal_zone9/mode enabled disabled
+Low:     -99  60    120
+Normal:  -15  60    120
+Warning:  99  30     60
+Alert:   109   5     10
+Fatal:   119   5     10
+Invalid: 200  60    120
+
+# Battery temperature that can be read from sysfs file, is
+# reported as tenths of degrees Centigrade and does not need to
+# be explicitly enabled
+
+Name:    battery
+Temp:    /sys/class/power_supply/battery/temp dC
+Low:     -99   60    120
+Normal:   -4   60    120
+Warning:  59   30     60
+Alert:    64    5     10
+Fatal:    68    5     10
+Invalid: 200   60    120
+
+# Surface temperature that is assumed to be roughly equal
+# to battery temperature minus one degree
+
+Name:    surface
+Meta:    battery -1
+Low:     -99  60    120
+Normal:   -1  55     60
+Warning:  56  55     60
+Alert:    59  20     30
+Fatal:    63  20     30
+Invalid: 200  60    120
