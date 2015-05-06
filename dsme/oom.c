@@ -23,12 +23,12 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dsme/oom.h"
+#include "../include/dsme/oom.h"
 
 #include <stdio.h>
 #include <errno.h>
 #include <sys/stat.h>
-#include "dsme/logging.h"
+#include "../include/dsme/logging.h"
 
 /* Kernel 2.6.36 and newer are using /proc/<pid>/oom_score_adj
  * and older kernels /proc/<pid>/oom_adj

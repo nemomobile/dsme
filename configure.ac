@@ -11,21 +11,6 @@ AC_CONFIG_SRCDIR([dsme/dsme-wdd-wd.c])
 # CONFIG OPTIONS
 #
 
-# bmeipc
-AC_ARG_WITH([bmeipc],
-  [AS_HELP_STRING([--without-bmeipc],
-    [disable BME ipc communication])])
-
-AS_IF([test "x$with_bmeipc" != xno],
-  [AC_CHECK_LIB([bmeipc], [bmeipc_open],
-    [AC_SUBST([LIBBMEIPC], ["-lbmeipc"])
-     AC_DEFINE([DSME_BMEIPC], [1])
-    ],
-    [AC_MSG_FAILURE([libbmeipc not found (--without-bmeipc to disable)])])
-  ])
-
-AM_CONDITIONAL([WANT_BMEIPC], [test x$with_bmeipc != xno])
-
 #
 # powerontimer
 #
@@ -92,30 +77,17 @@ AS_IF([test "x$enable_validatorlistener" != xno],
 AM_CONDITIONAL([WANT_VALIDATOR_LISTENER], [test x$enable_validatorlistener != xno])
 
 #
-# memory thermal mgmt
+# Generic thermal mgmt
 #
-AC_ARG_ENABLE([memory-thermal-mgmt],
-  [AS_HELP_STRING([--enable-memory-thermal-mgmt],
-    [enable memory thermal management (libthermalobject_memory)])],
+AC_ARG_ENABLE([generic-thermal-mgmt],
+  [AS_HELP_STRING([--disable-generic-thermal-mgmt],
+    [disable generic thermal management (libthermalobject_generic)])],
   [],
-  [enable_memory_thermal_mgmt=no])
+  [enable_generic_thermal_mgmt=yes])
 
-AS_IF([test "x$enable_memory_thermal_mgmt" != xno],
-  [AC_DEFINE([DSME_MEMORY_THERMAL_MGMT], [1])])
-AM_CONDITIONAL([WANT_MEMORY_THERMAL_MGMT], [test x$enable_memory_thermal_mgmt != xno])
-
-#
-# HW thermal mgmt
-#
-AC_ARG_ENABLE([hw-thermal-mgmt],
-  [AS_HELP_STRING([--disable-hw-thermal-mgmt],
-    [disable hw thermal management (libthermalobject_hw)])],
-  [],
-  [enable_hw_thermal_mgmt=yes])
-
-AS_IF([test "x$enable_hw_thermal_mgmt" != xno],
-  [AC_DEFINE([DSME_HW_THERMAL_MGMT], [1])])
-AM_CONDITIONAL([WANT_HW_THERMAL_MGMT], [test x$enable_hw_thermal_mgmt != xno])
+AS_IF([test "x$enable_generic_thermal_mgmt" != xno],
+  [AC_DEFINE([DSME_GENERIC_THERMAL_MGMT], [1])])
+AM_CONDITIONAL([WANT_GENERIC_THERMAL_MGMT], [test x$enable_generic_thermal_mgmt != xno])
 
 #
 # pwrkeymonitor
@@ -203,8 +175,6 @@ fi
 AC_SUBST(C_GENFLAGS, ["-pthread -g -std=c99 -Wall -Wwrite-strings -Wmissing-prototypes -Werror -Wshadow"])
 AC_SUBST(C_OPTFLAGS, ["-O2"])
 AC_SUBST(C_DBGFLAGS, ["-g -DDEBUG -DDSME_LOG_ENABLE"])
-AC_SUBST(CPP_GENFLAGS, '-I$(top_srcdir) -I$(top_srcdir)/include')
-
 
 # Checks for programs.
 AC_PROG_CC

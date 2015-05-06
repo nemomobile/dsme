@@ -28,8 +28,8 @@
 #include <dsme/protocol.h>
 
 #include "malf.h"
-#include "dsme/modules.h"
-#include "dsme/logging.h"
+#include "../include/dsme/modules.h"
+#include "../include/dsme/logging.h"
 
 #include <string.h>
 #include <stdio.h>

@@ -34,17 +34,8 @@ noinst_HEADERS = dsme_dbus.h \
 #
 pkgsysconfdir = @sysconfdir@
 
-
-if WANT_BMEIPC
-pkglib_LTLIBRARIES += thermalobject_surface.la
-endif
-
-if WANT_MEMORY_THERMAL_MGMT
-pkglib_LTLIBRARIES += thermalobject_memory.la
-endif
-
-if WANT_HW_THERMAL_MGMT
-pkglib_LTLIBRARIES += thermalobject_hw.la
+if WANT_GENERIC_THERMAL_MGMT
+pkglib_LTLIBRARIES += thermalsensor_generic.la
 endif
 
 if WANT_POWERON_TIMER
@@ -130,8 +121,8 @@ alarmtracker_la_SOURCES = alarmtracker.c
 alarmtracker_la_CFLAGS = $(AM_CFLAGS) $(DBUS_CFLAGS)
 alarmtracker_la_CPPFLAGS = $(AM_CPPFLAGS) -D_GNU_SOURCE
 
-thermalmanager_la_SOURCES = thermalmanager.c
-thermalmanager_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS) -DDSME_THERMAL_TUNING
+thermalmanager_la_SOURCES = thermalmanager.c thermalobject.c
+thermalmanager_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS)
 thermalmanager_la_LIBADD = -lthermalmanager_dbus_if
 
 emergencycalltracker_la_SOURCES = emergencycalltracker.c
@@ -150,26 +141,10 @@ thermalflagger_la_SOURCES = thermalflagger.c
 
 malf_la_SOURCES = malf.c
 
-if WANT_BMEIPC
-thermalobject_surface_la_SOURCES = thermalobject_surface.c \
-                                      thermalsensor_battery.c \
-                                      thermalsensor_battery.h
-thermalobject_surface_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS)
-thermalobject_surface_la_LIBADD = $(GLIB_LIBS)
-endif
-
-if WANT_MEMORY_THERMAL_MGMT
-thermalobject_memory_la_SOURCES = thermalobject_memory.c \
-                                     thermalsensor_omap.c   \
-                                     thermalsensor_omap.h
-endif
-
-if WANT_HW_THERMAL_MGMT
-thermalobject_hw_la_SOURCES = thermalobject_hw.c \
-                              thermalsensor_hw.c   \
-                              thermalsensor_hw.h
-thermalobject_hw_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS)
-thermalobject_hw_la_LIBADD = $(GLIB_LIBS)
+if WANT_GENERIC_THERMAL_MGMT
+thermalsensor_generic_la_SOURCES = thermalsensor_generic.c
+thermalsensor_generic_la_CFLAGS = $(AM_CFLAGS) $(GLIB_CFLAGS) $(DBUS_CFLAGS)
+thermalsensor_generic_la_LIBADD = -lthermalmanager_dbus_if
 endif
 
 

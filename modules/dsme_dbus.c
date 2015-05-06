@@ -28,10 +28,10 @@
 
 #include "dsme_dbus.h"
 
-#include "dsme/logging.h"
-#include "dsme/modules.h"
-#include "dsme/modulebase.h"
-#include "dsme/state.h"
+#include "../include/dsme/logging.h"
+#include "../include/dsme/modules.h"
+#include "../include/dsme/modulebase.h"
+#include <dsme/state.h>
 
 #include <glib.h>
 #include <dbus/dbus.h>
@@ -438,6 +438,8 @@ static void method_dispatcher_dispatch(const Dispatcher* dispatcher,
     dbus_connection_ref(connection), dbus_message_ref(msg)
   };
   DsmeDbusMessage* reply   = 0;
+
+  dbus_message_iter_init(msg, &request.iter);
 
   enter_module(dispatcher->module);
   dispatcher->target.method(&request, &reply);

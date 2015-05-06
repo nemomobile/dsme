@@ -38,13 +38,13 @@
 #include "state-internal.h"
 #include "runlevel.h"
 #include "malf.h"
-#include "dsme/timers.h"
-#include "dsme/modules.h"
-#include "dsme/logging.h"
-#include "dsme/modulebase.h"
+#include "../include/dsme/timers.h"
+#include "../include/dsme/modules.h"
+#include "../include/dsme/logging.h"
+#include "../include/dsme/modulebase.h"
 #include <dsme/state.h>
 
-#include "dsme/dsme-rd-mode.h"
+#include "../dsme/dsme-rd-mode.h"
 
 #include <stdio.h>
 #include <stdlib.h>

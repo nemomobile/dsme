@@ -25,7 +25,7 @@
 #ifndef POWERONTIMER_H_
 #define POWERONTIMER_H_
 
-#include "dsme/timers.h"
+#include "../include/dsme/timers.h"
 #include <stdbool.h>
 
 #ifdef __cplusplus

@@ -27,11 +27,11 @@
 #define _GNU_SOURCE
 #endif
 
-#include "dsme/modulebase.h"
-#include "dsme/messages.h"
-#include "dsme/protocol.h"
-#include "dsme/logging.h"
-#include "dsme/mainloop.h"
+#include "../include/dsme/modulebase.h"
+#include <dsme/messages.h>
+#include <dsme/protocol.h>
+#include "../include/dsme/logging.h"
+#include "../include/dsme/mainloop.h"
 
 #include <glib.h>
 #include <stdio.h>
@@ -591,6 +591,7 @@ bool unload_module(module_t* module)
     GSList* node;
 
     if (module && (node = g_slist_find(modules, module))) {
+        dsme_log(LOG_INFO, "unloading module: %s", module->name);
 
         remove_msghandlers(module);
 
@@ -630,6 +631,8 @@ module_t* load_module(const char* filename, int priority)
     void*             dlhandle = 0;
     module_t*         module   = 0;
     module_init_fn_t* initfunc;
+
+    dsme_log(LOG_INFO, "loading module: %s", filename);
 
     /* Prepend ./ to non-absolute path */
     if (*filename != '/') {
@@ -723,6 +726,9 @@ const char* module_name(const module_t* module)
 
 int modulebase_shutdown(void)
 {
+        /* Unload in reverse load order */
+        modules = g_slist_reverse(modules);
+
         while (modules) {
 		process_message_queue();
 		unload_module((module_t*)modules->data);

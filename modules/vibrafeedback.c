@@ -26,8 +26,8 @@
 #include "dbusproxy.h"
 #include "dsme_dbus.h"
 
-#include "dsme/modules.h"
-#include "dsme/logging.h"
+#include "../include/dsme/modules.h"
+#include "../include/dsme/logging.h"
 
 #include <dsme/state.h>
 #include <dsme/protocol.h>

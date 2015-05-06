@@ -29,7 +29,7 @@
 
 #include "powerontimer_backend.h"
 
-#include <dsme/logging.h>
+#include "../include/dsme/logging.h"
 
 #include <sys/time.h>
 

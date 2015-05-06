@@ -26,7 +26,7 @@
 #ifndef DSME_TEST_STUB_TIMERS_H
 #define DSME_TEST_STUB_TIMERS_H
 
-#include "dsme/timers.h"
+#include "../include/dsme/timers.h"
 
 typedef struct test_timer_t {
     unsigned               seconds;

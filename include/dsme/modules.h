@@ -26,7 +26,7 @@
 #ifndef DSME_MODULES_H
 #define DSME_MODULES_H
 
-#include "dsme/messages.h"
+#include <dsme/messages.h>
 #include <sys/types.h>
 #include <stdbool.h>
 

@@ -25,7 +25,7 @@
 #ifndef DSME_STATE_INTERNAL_H
 #define DSME_STATE_INTERNAL_H
 
-#include "dsme/messages.h"
+#include <dsme/messages.h>
 #include <stdbool.h>
 
 

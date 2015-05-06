@@ -21,8 +21,8 @@
    You should have received a copy of the GNU Lesser General Public
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "dsme/mainloop.h"
-#include "dsme/logging.h"
+#include "../include/dsme/mainloop.h"
+#include "../include/dsme/logging.h"
 
 #include <stdbool.h>
 #include <glib.h>

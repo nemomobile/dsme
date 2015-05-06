@@ -1,0 +1,161 @@
+/* -*- mode: c -*-
+ *
+ * Graph of thermal measurement control flow
+ *
+ * To create PNG image from this, use:
+ *
+ * % dot -T png thermalmanager.dot -o thermalmanager.png
+ */
+
+digraph thermal_manager_control_flow
+{
+  nodesep = 0.20;
+  ranksep = 0.33;
+  edge[arrowsize=0.3];
+  edge[fontsize=7];
+  edge[color=grey25];
+  node[fontsize=7];
+  node[shape=box];
+  node[style=filled];
+  node[width=0.0001];
+  node[height=0.0001];
+
+  /* - - - - - - - - - - - - - - - - - - - *
+   * thermal sensor nodes
+   * - - - - - - - - - - - - - - - - - - - */
+
+  node[fillcolor="pink"];
+
+  tsg_objects_init;
+  tsg_objects_register_all;
+  tsg_objects_read_config;
+  thermal_sensor_generic_enable_sensor           [label="thermal_sensor_generic\nenable_sensor\n"];
+  thermal_sensor_generic_read_sensor_cb          [label="thermal_sensor_generic\nread_sensor_cb\n"]
+  thermal_sensor_generic_read_sensor             [label="thermal_sensor_generic\nread_sensor\n"]
+  thermal_sensor_generic_get_status_cb           [label="thermal_sensor_generic\nget_status_cb\n"]
+  thermal_sensor_generic_get_status              [label="thermal_sensor_generic\nget_status\n"]
+  thermal_sensor_generic_sensor_notify_cb        [label="thermal_sensor_generic\nsensor_notify_cb\n"]
+  thermal_sensor_generic_get_poll_delay_cb       [label="thermal_sensor_generic\nget_poll_delay_cb\n"]
+  thermal_sensor_generic_get_poll_delay          [label="thermal_sensor_generic\nget_poll_delay\n"]
+  read_from_file;
+
+  /* - - - - - - - - - - - - - - - - - - - *
+   * thermal object nodes
+   * - - - - - - - - - - - - - - - - - - - */
+
+  node[fillcolor="wheat"];
+
+  tsv_read_sensor_cb;
+  tsv_get_status_cb;
+  tsv_get_poll_delay_cb;
+
+  thermal_object_get_sensor_status      [label="thermal_object\nget_sensor_status\n"];
+  thermal_object_handle_update          [label="thermal_object\nhandle_update\n"];
+  thermal_object_read_sensor            [label="thermal_object\nread_sensor\n"];
+  thermal_object_request_update         [label="thermal_object\nrequest_update\n"];
+  thermal_object_get_poll_delay         [label="thermal_object\nget_poll_delay\n"];
+
+  /* - - - - - - - - - - - - - - - - - - - *
+   * misc nodes
+   * - - - - - - - - - - - - - - - - - - - */
+
+  node[fillcolor="cyan"];
+
+  UI_INDICATION                         [label="UI INDICATION"];
+  SHUTDOWN_POLICY                       [label="SHUTDOWN POLICY"];
+  CONFIG_FILES                          [label="/etc/dsme/thermal_sensor_*.conf"];
+
+  /* - - - - - - - - - - - - - - - - - - - *
+   * thermal manager nodes
+   * - - - - - - - - - - - - - - - - - - - */
+
+  node[fillcolor="yellow"];
+  thermal_manager_broadcast_status      [label="thermal_manager\nbroadcast_status\n"];
+  thermal_state_change_ind              [label="thermal_state_change_ind\n"];
+  DSM_MSGTYPE_SET_THERMAL_STATUS        [label="DSM_MSGTYPE\nSET_THERMAL_STATUS\n"];
+  thermal_manager_handle_sensor_update  [label="thermal_manager\nhandle_sensor_update\n"];
+  thermal_manager_request_sensor_update [label="thermal_manager\nrequest_sensor_update\n"];
+  thermal_manager_register_object       [label="thermal_manager\nregister_object\n"];
+  thermal_manager_request_object_update [label="thermal_manager\nrequest_object_update\n"];
+  thermal_manager_schedule_object_poll  [label="thermal_manager\nschedule_object_poll\n"];
+  thermal_manager_handle_object_update  [label="thermal_manager\nhandle_object_update\n"];
+  DSM_MSGTYPE_WAKEUP                    [label="DSM_MSGTYPE\nWAKEUP\n"];
+  thermal_manager_get_sensor_status     [label="thermal_manager\nget_sensor_status\n"];
+
+  /* - - - - - - - - - - - - - - - - - - - *
+   * catch unlisted nodes
+   * - - - - - - - - - - - - - - - - - - - */
+
+  node[fillcolor="red"];
+
+  /* - - - - - - - - - - - - - - - - - - - *
+   * edges
+   * - - - - - - - - - - - - - - - - - - - */
+
+  tsg_objects_init -> tsg_objects_register_all;
+  tsg_objects_init -> tsg_objects_read_config;
+
+  tsg_objects_read_config -> CONFIG_FILES;
+
+  tsg_objects_register_all -> thermal_sensor_generic_read_sensor;
+  tsg_objects_register_all -> thermal_sensor_generic_enable_sensor;
+  tsg_objects_register_all -> thermal_manager_register_object;
+
+  thermal_manager_register_object -> thermal_manager_request_object_update [weight=3] [style=bold,color=black,arrowsize=0.5];
+
+  thermal_manager_request_object_update -> thermal_object_request_update [weight=2] [style=bold,color=black,arrowsize=0.5];
+
+  thermal_object_request_update -> thermal_manager_request_sensor_update [label=" redirect", color=blue];
+
+  thermal_manager_request_sensor_update -> thermal_object_request_update [color=blue];
+
+  thermal_object_request_update -> thermal_object_read_sensor [weight=3] [style=bold,color=black,arrowsize=0.5];
+  thermal_object_request_update -> thermal_object_handle_update [label=" nak", color=red];
+
+  thermal_object_read_sensor ->  tsv_read_sensor_cb [style=bold,color=black,arrowsize=0.5];
+
+  tsv_read_sensor_cb -> thermal_sensor_generic_read_sensor_cb [style=bold,color=black,arrowsize=0.5];
+
+  thermal_sensor_generic_read_sensor_cb -> thermal_sensor_generic_read_sensor;
+
+  thermal_sensor_generic_read_sensor -> thermal_manager_get_sensor_status [label=" redirect", color=blue];
+  thermal_sensor_generic_read_sensor -> read_from_file [label=" sensor"];
+
+  thermal_sensor_generic_read_sensor_cb -> thermal_sensor_generic_sensor_notify_cb [style=dotted, label=" async"] [style=bold,color=black,arrowsize=0.5] [style=dashed];
+
+  thermal_sensor_generic_sensor_notify_cb -> thermal_object_handle_update [style=bold,color=black,arrowsize=0.5];
+
+  thermal_object_handle_update -> thermal_object_get_sensor_status;
+  thermal_object_handle_update -> thermal_manager_handle_object_update [style=bold,color=black,arrowsize=0.5];
+
+  thermal_object_handle_update -> thermal_manager_handle_sensor_update [label=" redirect", color=blue];
+  thermal_manager_handle_sensor_update -> thermal_object_read_sensor [color=blue];
+
+  thermal_object_get_sensor_status -> tsv_get_status_cb;
+
+  tsv_get_status_cb -> thermal_sensor_generic_get_status_cb;
+
+  thermal_sensor_generic_get_status_cb -> thermal_sensor_generic_get_status;
+
+  thermal_manager_handle_object_update -> thermal_manager_broadcast_status [weight=2];
+
+  thermal_manager_broadcast_status -> thermal_state_change_ind [style=dotted, label=" dbus"];
+  thermal_manager_broadcast_status -> DSM_MSGTYPE_SET_THERMAL_STATUS [style=dotted, label=" event"];
+
+  thermal_state_change_ind -> UI_INDICATION;
+
+  DSM_MSGTYPE_SET_THERMAL_STATUS -> SHUTDOWN_POLICY;
+
+  DSM_MSGTYPE_WAKEUP -> thermal_manager_request_object_update [weight=3][style=bold,color=black,arrowsize=0.5];
+
+  thermal_manager_handle_object_update -> thermal_manager_schedule_object_poll [style=bold,color=black,arrowsize=0.5];
+
+  thermal_manager_schedule_object_poll -> DSM_MSGTYPE_WAKEUP [style=dotted, label=" timer"] [style=bold,color=black,arrowsize=0.5] [style=dashed];
+  thermal_manager_schedule_object_poll -> thermal_object_get_poll_delay;
+
+  thermal_object_get_poll_delay -> tsv_get_poll_delay_cb;
+
+  tsv_get_poll_delay_cb -> thermal_sensor_generic_get_poll_delay_cb;
+
+  thermal_sensor_generic_get_poll_delay_cb -> thermal_sensor_generic_get_poll_delay;
+};

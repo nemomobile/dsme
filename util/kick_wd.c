@@ -22,7 +22,7 @@
    License along with Dsme.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "dsme/protocol.h"
+#include <dsme/protocol.h>
 #include "../modules/hwwd.h"
 
 #include <stdlib.h>

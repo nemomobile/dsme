@@ -31,7 +31,7 @@
 
 #include "dsme-wdd.h"
 #include "dsme-wdd-wd.h"
-#include "dsme/oom.h"
+#include "../include/dsme/oom.h"
 
 #include <unistd.h>
 #include <stdio.h>

@@ -5,8 +5,11 @@
    by providing the current thermal state for interested sw components.
    <p>
    Copyright (C) 2009-2010 Nokia Corporation
+   Copyright (C) 2013-2015 Jolla Oy.
 
    @author Semi Malinen <semi.malinen@nokia.com>
+   @author Pekka Lundstrom <pekka.lundstrom@jollamobile.com>
+   @author Simo Piiroinen <simo.piiroinen@jollamobile.com>
 
    This file is part of Dsme.
 
@@ -27,10 +30,111 @@
  * An example command line to obtain thermal state over D-Bus:
  * $ dbus-send --system --print-reply --dest=com.nokia.thermalmanager /com/nokia/thermalmanager com.nokia.thermalmanager.get_thermal_state
  *
- * TODO:
- * - use a single timer for all thermal objects
- *   i.e. use the shortest interval of all thermal objects
+ * An example command line to obtain surface temperature estimate over D-Bus:
+ * $ dbus-send --system --print-reply --dest=com.nokia.thermalmanager /com/nokia/thermalmanager com.nokia.thermalmanager.estimate_surface_temperature
+ *
+ * An example command line to obtain core temperature over D-Bus:
+ * $ dbus-send --system --print-reply --dest=com.nokia.thermalmanager /com/nokia/thermalmanager com.nokia.thermalmanager.core_temperature
+ *
+ * An example command line to obtain battery temperature over D-Bus:
+ * $ dbus-send --system --print-reply --dest=com.nokia.thermalmanager /com/nokia/thermalmanager com.nokia.thermalmanager.battery_temperature
+ *
+ * An example command line to obtain named sensor temperature over D-Bus:
+ * $ dbus-send --system --print-reply --dest=com.nokia.thermalmanager /com/nokia/thermalmanager com.nokia.thermalmanager.sensor_temperature string:core
  */
+
+/* ========================================================================= *
+ *
+ * Thermal manager:
+ * - maintains a set of registered thermal objects
+ * - polls status of each thermal object periodically
+ * - evaluates overall device thermal status
+ * - broadcasts thermal status changes within dsme and over D-Bus
+ * - handles thermal sensor related D-Bus queries
+ *
+ * Thermal sensor:
+ * - handles the actual sensor reading
+ * - defines the thermal limits and associated polling delays
+ * - hw specific sensors can be made available as plugins
+ *
+ * Thermal object:
+ * - acts as glue layer allowing communication between thermal
+ *   manager and possibly hw specific sensor logic
+ *
+ * +-------------------------+
+ * |                         |
+ * |  THERMAL_MANAGER        |
+ * |                         |
+ * +-------------------------+
+ *           ^ 1
+ *           |
+ *           |
+ *           v N
+ * +-------------------------+
+ * |                         |
+ * |  THERMAL_OBJECT         |
+ * |                 +-------|
+ * |-----------------| VTAB  |
+ * |                 +-------|
+ * |  THERMAL_SENSOR         |
+ * |                         |
+ * +-------------------------+
+ *
+ * The included-by-default generic thermal sensor plugin:
+ * - can read file based sensors (in /sys and /proc file systems)
+ * - allows enabling/disabling sensors on dsme startup/exit
+ * - allows configuring meta-sensors which take temperature
+ *   value from some other sensor, apply optional offset and
+ *   can define separate thermal limits for the resulting
+ *   values (e.g. surface_temp = battery_temp - 3 etc).
+ *
+ * HW specific plugins can/must be added to deal with thermal
+ * sensors that can't be accessed via filesystem (e.g. old nokia
+ * devices where battery temperature is accessible via bme ipc only).
+ * The sensor update logic in thermal manager has been implemented
+ * to expect asynchronous sensor access to facilitate such indirect
+ * sensor polling.
+ *
+ * Simplified graph of sensor poll duty loop:
+ *
+ *     DSME_STARTUP
+ *           |
+ *           v
+ *     thermal_sensor
+ *           |
+ *           v
+ *     thermal_manager_register_object
+ *           |
+ *           v
+ *     thermal_manager_request_object_update <---------.
+ *           |                                         |
+ *           v                                         |
+ *     thermal_object_request_update                   |
+ *           |                                         |
+ *           v                                         |
+ *     thermal_sensor                                  |
+ *           |                                         |
+ *           Z (assumed: sensor access is async)       Z iphb_timer
+ *           |                                         |
+ *           v                                         |
+ *     thermal_object_handle_update                    |
+ *           |                                         |
+ *           v                                         |
+ *     thermal_manager_handle_object_update            |
+ *           |                 |                       |
+ *           |                 v                       |
+ *           |              thermal_manager_schedule_object_poll
+ *           v
+ *     thermal_manager_broadcast_status
+ *         |                   |
+ *         Z DBUS              Z DSME
+ *         |                   |
+ *         v                   v
+ *     UI_NOTIFICATION     SHUTDOWN_POLICY
+ *
+ * More descriptive diagram can be generated from thermalmanager.dot.
+ *
+ * ========================================================================= */
 
 #define _GNU_SOURCE
 
@@ -41,9 +145,9 @@
 #include "dbusproxy.h"
 #include "dsme_dbus.h"
 
-#include "dsme/modules.h"
-#include "dsme/modulebase.h"
-#include "dsme/logging.h"
+#include "../include/dsme/modules.h"
+#include "../include/dsme/modulebase.h"
+#include "../include/dsme/logging.h"
 #include "heartbeat.h"
 
 #include <dsme/state.h>
@@ -52,545 +156,1004 @@
 #include <glib.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
-static void receive_temperature_response(thermal_object_t* thermal_object,
-                                         int               temperature);
-static void thermal_object_polling_interval_expired(void* object);
+/* ========================================================================= *
+ * FORWARD_DECLARATIONS
+ * ========================================================================= */
 
-#ifdef DSME_THERMAL_TUNING
-static void thermal_object_try_to_read_config(thermal_object_t* thermal_object);
-static thermal_object_t* thermal_object_copy(
-  const thermal_object_t* thermal_object);
-#endif
+/* ------------------------------------------------------------------------- *
+ * DIAGNOSTIC_LOGGING
+ * ------------------------------------------------------------------------- */
 
-#ifdef DSME_THERMAL_LOGGING
-static void log_temperature(int temperature, const thermal_object_t* thermal_object);
-#endif
+/** Prefix to use for all logging from this module */
+#define PFIX "thermalmanager: "
 
+/* ------------------------------------------------------------------------- *
+ * THERMAL_STATUS
+ * ------------------------------------------------------------------------- */
 
-static module_t* this_module = 0;
+const char *thermal_status_name (THERMAL_STATUS status);
+const char *thermal_status_repr (THERMAL_STATUS status);
 
-static GSList* thermal_objects = 0;
+/* ------------------------------------------------------------------------- *
+ * THERMAL_MANAGER
+ * ------------------------------------------------------------------------- */
 
-static const char* const service   = thermalmanager_service;
-static const char* const interface = thermalmanager_interface;
-static const char* const path      = thermalmanager_path;
+void        thermal_manager_register_object            (thermal_object_t *thermal_object);
+void        thermal_manager_unregister_object          (thermal_object_t *thermal_object);
+bool        thermal_manager_object_is_registered       (thermal_object_t *thermal_object);
+static void thermal_manager_request_object_update      (thermal_object_t *thermal_object);
+void        thermal_manager_handle_object_update       (thermal_object_t *changed_object);
+static void thermal_manager_schedule_object_poll       (thermal_object_t *thermal_object);
 
+bool        thermal_manager_get_sensor_status          (const char *sensor_name, THERMAL_STATUS *status, int *temperature);
+bool        thermal_manager_request_sensor_update      (const char *sensor_name);
+void        thermal_manager_handle_sensor_update       (const thermal_object_t *thermal_object);
+static bool thermal_manager_have_pending_sensor_update (const char *sensor_name);
+
+static void thermal_manager_broadcast_status           (THERMAL_STATUS status, thermal_object_t *changed_object);
+static void thermal_manager_broadcast_status_dsme      (THERMAL_STATUS status, int temperature, const char *sensor_name);
+static void thermal_manager_broadcast_status_dbus      (THERMAL_STATUS status);
+
+/* ------------------------------------------------------------------------- *
+ * DBUS_HANDLERS
+ * ------------------------------------------------------------------------- */
+
+static void thermal_manager_get_thermal_state_cb       (const DsmeDbusMessage *request, DsmeDbusMessage **reply);
+
+static void thermal_manager_handle_temperature_query   (const DsmeDbusMessage *req, const char *sensor_name, DsmeDbusMessage **rsp);
+static void thermal_manager_get_surface_temperature_cb (const DsmeDbusMessage *req, DsmeDbusMessage **rsp);
+static void thermal_manager_get_core_temperature_cb    (const DsmeDbusMessage *req, DsmeDbusMessage **rsp);
+static void thermal_manager_get_battery_temperature_cb (const DsmeDbusMessage *req, DsmeDbusMessage **rsp);
+static void thermal_manager_get_sensor_temperature_cb  (const DsmeDbusMessage *req, DsmeDbusMessage **rsp);
+
+/* ------------------------------------------------------------------------- *
+ * MODULE_GLUE
+ * ------------------------------------------------------------------------- */
+
+void module_init (module_t *handle);
+void module_fini (void);
+
+/* ========================================================================= *
+ * MODULE_DATA
+ * ========================================================================= */
+
+/** DSME module handle for this module */
+static module_t *this_module = 0;
+
+/** List of registered thermal objects */
+static GSList *thermal_objects = 0;
+
+/** Currently accepted device thermal state */
 static THERMAL_STATUS current_status = THERMAL_STATUS_NORMAL;
 
-#ifdef DSME_THERMAL_TUNING
-static bool is_in_ta_test = false;
-#endif
+/** Flag for: D-Bus method handlers have been registered */
+static bool dbus_methods_bound = false;
 
-static const char* const thermal_status_name[] = {
-  "low-temp-warning", "normal", "warning", "alert", "fatal"
+/* ========================================================================= *
+ * THERMAL_STATUS
+ * ========================================================================= */
+
+/** Convert thermal status to name used in D-Bus signaling
+ *
+ * @param  status thermal status
+ *
+ * @return string expected by dbus peers
+ */
+const char *
+thermal_status_name(THERMAL_STATUS status)
+{
+    /* Note: Any deviation from strings defined in thermalmanager_dbus_if
+     *       from libdsme constitutes a possible D-Bus API break and should
+     *       be avoided.
+     */
+
+    const char *res = "unknown";
+
+    switch( status ) {
+    case THERMAL_STATUS_LOW:
+      res = thermalmanager_thermal_status_low;
+      break;
+
+    case THERMAL_STATUS_NORMAL:
+      res = thermalmanager_thermal_status_normal;
+      break;
+
+    case THERMAL_STATUS_WARNING:
+      res = thermalmanager_thermal_status_warning;
+      break;
+
+    case THERMAL_STATUS_ALERT:
+      res = thermalmanager_thermal_status_alert;
+      break;
+
+    case THERMAL_STATUS_FATAL:
+      res = thermalmanager_thermal_status_fatal;
+      break;
+
+    default: break;
+    }
+
+    return res;
+}
+
+/** Convert thermal status to human readable string
+ *
+ * @param  status thermal status
+ *
+ * @return name of the status
+ */
+const char *
+thermal_status_repr(THERMAL_STATUS status)
+{
+    const char *repr = "UNKNOWN";
+
+    switch (status) {
+    case THERMAL_STATUS_LOW:     repr = "LOW";     break;
+    case THERMAL_STATUS_NORMAL:  repr = "NORMAL";  break;
+    case THERMAL_STATUS_WARNING: repr = "WARNING"; break;
+    case THERMAL_STATUS_ALERT:   repr = "ALERT";   break;
+    case THERMAL_STATUS_FATAL:   repr = "FATAL";   break;
+    case THERMAL_STATUS_INVALID: repr = "INVALID"; break;
+    default: break;
+    }
+
+    return repr;
+}
+
+/* ========================================================================= *
+ * THERMAL_MANAGER
+ * ========================================================================= */
+
+/** Initiate thermal object state update
+ *
+ * Pass request to thermal sensor via thermal object abstraction layer.
+ *
+ * The temperature query is assumed to be asynchronous.
+ *
+ * Control returns to thermal manager when thermal object layer calls
+ * thermal_manager_handle_object_update() function.
+ *
+ * @param thermal_object  registered thermal object
+ */
+void
+thermal_manager_request_object_update(thermal_object_t *thermal_object)
+{
+    /* Ignore invalid / unregistered objects */
+    if( !thermal_manager_object_is_registered(thermal_object) )
+        goto EXIT;
+
+    /* Initiate fetching and evaluating of the current value */
+    thermal_object_request_update(thermal_object);
+
+    /* ... lower level activity ...
+     * -> thermal_object_handle_update()
+     *    -> thermal_manager_handle_object_update()
+     *       -> thermal_manager_schedule_object_poll()
+     */
+
+EXIT:
+    return;
+}
+
+/** Scedule iphb wakeup for updating thermal object
+ *
+ * Normally the required poll delay is decided at thermal sensor
+ * and depends on the current thermal state for the sensor.
+ *
+ * However, when status change is detected, several measurements
+ * are needed before the new status is accepted. For this purpose
+ * shorter polling delays are used while the status is in
+ * transitional state.
+ *
+ * Control returns to thermal manager when iphb wakeup message
+ * handler calls thermal_manager_request_object_update() function.
+ *
+ * @param thermal_object  registered thermal object
+ */
+void
+thermal_manager_schedule_object_poll(thermal_object_t *thermal_object)
+{
+    /* Ignore invalid / unregistered objects
+     */
+    if( !thermal_manager_object_is_registered(thermal_object) )
+        goto EXIT;
+
+    /* Schedule the next measurement point
+     */
+    DSM_MSGTYPE_WAIT msg = DSME_MSG_INIT(DSM_MSGTYPE_WAIT);
+
+    msg.req.pid = 0;
+    msg.data    = thermal_object;
+
+    /* Start with fall back defaults */
+    int mintime = THERMAL_STATUS_POLL_DELAY_DEFAULT_MINIMUM;
+    int maxtime = THERMAL_STATUS_POLL_DELAY_DEFAULT_MAXIMUM;
+
+    if( thermal_object_status_in_transition(thermal_object) ) {
+        /* In transition: multiple measurements are neede to
+         * verify the status change - wake up more frequently */
+        mintime = THERMAL_STATUS_POLL_DELAY_TRANSITION_MINIMUM;
+        maxtime = THERMAL_STATUS_POLL_DELAY_TRANSITION_MAXIMUM;
+
+        /* and wake up from suspend to do the measurement */
+        msg.req.wakeup  = true;
+    }
+    else if( !thermal_object_get_poll_delay(thermal_object,
+                                            &mintime, &maxtime) ) {
+        /* No wait period defined in the configuration - use
+         * shorter waits for abnormal states */
+
+        THERMAL_STATUS    status = THERMAL_STATUS_INVALID;
+        int               temperature = INVALID_TEMPERATURE;
+
+        thermal_object_get_sensor_status(thermal_object, &status,
+                                         &temperature);
+
+        switch( status ) {
+        case THERMAL_STATUS_ALERT:
+        case THERMAL_STATUS_FATAL:
+            mintime =  THERMAL_STATUS_POLL_ALERT_TRANSITION_MINIMUM;
+            maxtime =  THERMAL_STATUS_POLL_ALERT_TRANSITION_MAXIMUM;
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    if( mintime == maxtime ) {
+        dsme_log(LOG_DEBUG, PFIX"%s: check again in %d sec global slot",
+                 thermal_object_get_name(thermal_object), mintime);
+    }
+    else {
+        dsme_log(LOG_DEBUG, PFIX"%s: check again in %d to %d seconds",
+                 thermal_object_get_name(thermal_object), mintime, maxtime);
+    }
+
+    msg.req.mintime = mintime;
+    msg.req.maxtime = maxtime;
+
+    /* Wakeup will be sent to "originating module". Since
+     * this function can end up being called from events
+     * dispatched at other modules, we need to maintain
+     * the context manually ... */
+    const module_t *from_module = current_module();
+    enter_module(this_module);
+    broadcast_internally(&msg);
+    enter_module(from_module);
+
+    /* ... wait for DSM_MSGTYPE_WAKEUP ...
+     * -> thermal_manager_request_object_update()
+     */
+
+EXIT:
+    return;
+}
+
+/** Register thermal object to thermal manager
+ *
+ * Add sensor object to the list of registered objects.
+ *
+ * Start update cycle:
+ *   1. query sensor temperature and status
+ *      ... wait for sensor status
+ *
+ *   2. update device thermal state
+ *   3. broadcast device thermal state
+ *
+ *   4. schedule sensor specific iphb wakeup
+ *      ... wait for iphb wakeup
+ *
+ *   5. go back to 1
+ *
+ * @param thermal_object  unregistered thermal object
+ */
+void
+thermal_manager_register_object(thermal_object_t *thermal_object)
+{
+    if( !thermal_object )
+        goto EXIT;
+
+    if( thermal_manager_object_is_registered(thermal_object) )
+        goto EXIT;
+
+    dsme_log(LOG_DEBUG, PFIX"%s: registered",
+             thermal_object_get_name(thermal_object));
+
+    // add the thermal object to the list of know thermal objects
+    thermal_objects = g_slist_append(thermal_objects, thermal_object);
+
+    thermal_manager_request_object_update(thermal_object);
+
+EXIT:
+    return;
+}
+
+/** Unregister thermal object from thermal manager
+ *
+ * Remove sensor object from the list of registered objects.
+ *
+ * It is expected that this function will be called only
+ * when dsme is on exit path and sensor backend plugins are
+ * being unloaded.
+ *
+ * Pending temperature requests are not canceled as it
+ * is assumed to be done by the thermal sensor plugin.
+ * If lower levels however do use thermal manager API
+ * to report changes later on, the calls are ignored
+ * because the objects are no longer registered.
+ *
+ * Similarly iphb wakeups relating to unregistered objects
+ * are ignored. And once thermal manager plugin is unloaded
+ * they will not be even dispatched anymore.
+ *
+ * @param thermal_object  registered thermal object
+ */
+void
+thermal_manager_unregister_object(thermal_object_t *thermal_object)
+{
+    if( !thermal_object )
+        goto EXIT;
+
+    if( !thermal_manager_object_is_registered(thermal_object) )
+        goto EXIT;
+
+    // remove the thermal object from the list of know thermal objects
+    thermal_objects = g_slist_remove(thermal_objects, thermal_object);
+
+    dsme_log(LOG_DEBUG, PFIX"%s: unregistered",
+             thermal_object_get_name(thermal_object));
+
+EXIT:
+    return;
+}
+
+/** Check if thermal object is registered to thermal manager
+ *
+ * @param thermal_object  thermal object
+ *
+ * @return true if object is registerd, false otherwise
+ */
+bool
+thermal_manager_object_is_registered(thermal_object_t *thermal_object)
+{
+    bool is_registered = false;
+
+    if( !thermal_object )
+        goto EXIT;
+
+    if( g_slist_find(thermal_objects, thermal_object) )
+        is_registered = true;
+
+EXIT:
+    return is_registered;
+}
+
+/** Get sensor status and temperature
+ *
+ * The status reported is the worst deviation from normal status found in
+ * the thermal objects that match the sensor_name given.
+ *
+ * For example, if there are sensors "core0", "core1", "core2" and "core3"
+ *
+ * Requesting "core0" status returns info from the "core0" as is.
+ *
+ * But requesting "core" status depends on overall status of all four
+ * matching sensors, which is highest state and temperature found, unless
+ * no sensors are in grave overheat state and at least one sensor is in
+ * low temperature states - in which case lowest state/temperature is
+ * returned.
+ *
+ * Notes:
+ *  - The status and temperature values are not modified if no matching
+ *    sensors are found
+ *  - Values cached at thermal object level are used - the temperature
+ *    is always the latest seen, but during lower level status transition
+ *    the previous (stable) status is used
+ *
+ * @param sensor_name  sensor name / sensor group name prefix
+ * @param status       where to store sensor thermal status
+ * @param temperature  where to store sensor temperature value
+ *
+ * @param return true if matching sensors were found and output values set;
+ *               false otherwise
+ */
+bool
+thermal_manager_get_sensor_status(const char *sensor_name,
+                                  THERMAL_STATUS *status, int *temperature)
+{
+    static volatile int recursing = 0;
+
+    bool ack = false;
+
+    /* In theory backend config parser should eliminate
+     * cyclic sensor dependencies - but if it still happens,
+     * it must not end up in infinite recursion  ... */
+    if( ++recursing != 1 )
+        goto EXIT;
+
+    /* Initialize to invalid [lo,hi] range */
+    THERMAL_STATUS status_hi = THERMAL_STATUS_LOW;
+    THERMAL_STATUS status_lo = THERMAL_STATUS_FATAL;
+    int            temp_lo   = IGNORE_TEMP_ABOVE;
+    int            temp_hi   = IGNORE_TEMP_BELOW;
+
+    for( GSList *item = thermal_objects; item; item = item->next ) {
+        thermal_object_t *object = item->data;
+
+        if( !thermal_object_has_name_like(object, sensor_name) )
+            continue;
+
+        THERMAL_STATUS s = THERMAL_STATUS_INVALID;
+        int            t = INVALID_TEMPERATURE;
+
+        if( !thermal_object_get_sensor_status(object, &s, &t) )
+            continue;
+
+        if( status_hi < s )   status_hi = s;
+        if( status_lo > s )   status_lo = s;
+
+        if( temp_hi < t ) temp_hi = t;
+        if( temp_lo > t ) temp_lo = t;
+    }
+
+    /* Skip if there were no matching sensors */
+    if( status_lo > status_hi || temp_lo > temp_hi )
+        goto EXIT;
+
+    /* Precedence: FATAL > ALERT > LOW > WARNING > NORMAL
+     *
+     * There is implicit exceptation that group of matching
+     * sensors share similar enough temperature config that
+     * this simplistic temperature selection makes sense.
+     */
+
+    if( status_lo < THERMAL_STATUS_NORMAL &&
+        status_hi < THERMAL_STATUS_ALERT ) {
+        *status = status_lo;
+        *temperature = temp_lo;
+    }
+    else {
+        *status = status_hi;
+        *temperature = temp_hi;
+    }
+
+    ack = true;
+
+EXIT:
+
+    --recursing;
+
+    return ack;
+}
+
+/** Handle updated thermal object status
+ *
+ * Called by thermal object layer when
+ * a) fresh temperature & status data is available
+ * b) temperature query via thermal sensor failed
+ *
+ * The overall device thermal state is re-evaluated and
+ * changes broadcast both internally and externally.
+ *
+ * The next temperature poll time is scheduled.
+ *
+ * @param thermal_object  registered thermal object
+ */
+void
+thermal_manager_handle_object_update(thermal_object_t *changed_object)
+{
+    if( !thermal_manager_object_is_registered(changed_object) )
+        goto EXIT;
+
+    /* Scan all thermal objects for lowest/highest status */
+    THERMAL_STATUS highest_status = THERMAL_STATUS_NORMAL;
+    THERMAL_STATUS lowest_status  = THERMAL_STATUS_NORMAL;
+    THERMAL_STATUS overall_status = THERMAL_STATUS_NORMAL;
+
+    for( GSList *item = thermal_objects; item; item = item->next ) {
+        thermal_object_t *object = item->data;
+        THERMAL_STATUS    status = thermal_object_get_status(object);
+
+        /* Ignore sensors in invalid state */
+        if( status == THERMAL_STATUS_INVALID )
+            continue;
+
+        if( highest_status < status )
+            highest_status = status;
+
+        if( lowest_status > status )
+            lowest_status = status;
+    }
+
+    /* Decide overall status:
+     *  If we have any ALERT of FATAL then that decides overall status
+     *  During LOW, NORMAL or WARNING, any LOW wins
+     *  Else status is the highest
+     */
+    if( lowest_status  < THERMAL_STATUS_NORMAL &&
+        highest_status < THERMAL_STATUS_ALERT )
+        overall_status = lowest_status;
+    else
+        overall_status = highest_status;
+
+    /* Send notifications */
+    thermal_manager_broadcast_status(overall_status, changed_object);
+
+    /* Schedule the next inspection point */
+    thermal_manager_schedule_object_poll(changed_object);
+
+EXIT:
+    return;
+}
+
+/** Update current overall device thermal status
+ *
+ * Update bookkeeping and broadcast status both within dsme
+ * and via dbus.
+ *
+ * @param status          device overall thermal status
+ * @param changed_object  thermal object that caused status change
+ */
+static void
+thermal_manager_broadcast_status(THERMAL_STATUS status,
+                                 thermal_object_t *changed_object)
+{
+    /* Skip broadcast if no change */
+    if( current_status == status )
+        goto EXIT;
+
+    current_status = status;
+
+    /* First send an indication to D-Bus */
+    thermal_manager_broadcast_status_dbus(status);
+
+    /* Then broadcast an indication internally */
+
+    /* Note: The level gets attributed to the sensor that caused the
+     *       change. Which is not wrong when elevating level, but can
+     *       be completely bogus when returning to more normal state
+     *       after having several sensors in elevated status.
+     *
+     *       Since consumers of this if should not care what is the
+     *       sensor that is reported, leaving this the way it has
+     *       always been...
+     */
+
+    int         temperature = thermal_object_get_temperature(changed_object);
+    const char *sensor_name = thermal_object_get_name(changed_object);
+
+    thermal_manager_broadcast_status_dsme(status, temperature, sensor_name);
+
+EXIT:
+    return;
+}
+
+/** Broadcast overall device thermal status within dsme
+ *
+ * Map sensor thermal status to device status levels used by
+ * for example shutdown policy engine.
+ *
+ * Broadcast the changes via DSM_MSGTYPE_SET_THERMAL_STATUS event.
+ *
+ * @param status          device overall thermal status
+ * @param temperature     temperature to report
+ * @param sensor_name     sensor to report as cause of the change
+ */
+static void
+thermal_manager_broadcast_status_dsme(THERMAL_STATUS status,
+                                      int temperature,
+                                      const char *sensor_name)
+{
+    static dsme_thermal_status_t prev = DSM_THERMAL_STATUS_NORMAL;
+
+    /* Map sensor status to device status */
+    dsme_thermal_status_t curr = DSM_THERMAL_STATUS_NORMAL;
+
+    switch( status ) {
+    case THERMAL_STATUS_LOW:
+        curr = DSM_THERMAL_STATUS_LOWTEMP;
+        break;
+
+    default:
+    case THERMAL_STATUS_INVALID:
+    case THERMAL_STATUS_NORMAL:
+    case THERMAL_STATUS_WARNING:
+    case THERMAL_STATUS_ALERT:
+        break;
+
+    case THERMAL_STATUS_FATAL:
+        curr = DSM_THERMAL_STATUS_OVERHEATED;
+        break;
+    }
+
+    /* Skip broadcast if no change */
+    if( prev == curr )
+        goto EXIT;
+
+    prev = curr;
+
+    /* Log state change */
+    switch( curr ) {
+    case DSM_THERMAL_STATUS_LOWTEMP:
+        dsme_log(LOG_WARNING, PFIX"policy: low temperature (%s %dC)",
+                 sensor_name, temperature);
+        break;
+
+    default:
+    case DSM_THERMAL_STATUS_NORMAL:
+        dsme_log(LOG_NOTICE, PFIX"policy: acceptable temperature (%s %dC)",
+                 sensor_name, temperature);
+        break;
+
+    case DSM_THERMAL_STATUS_OVERHEATED:
+        dsme_log(LOG_CRIT, PFIX"policy: overheated (%s %dC)", sensor_name,
+                 temperature);
+        break;
+    }
+
+    /* Broadcast state change */
+    DSM_MSGTYPE_SET_THERMAL_STATUS msg =
+        DSME_MSG_INIT(DSM_MSGTYPE_SET_THERMAL_STATUS);
+
+    msg.status      = curr;
+    msg.temperature = temperature;
+    strncat(msg.sensor_name, sensor_name, sizeof msg.sensor_name - 1);
+
+    broadcast_internally(&msg);
+
+EXIT:
+    return;
+}
+
+/** Broadcast overall device thermal status via D-Bus
+ *
+ * Broadcast the changes as D-Bus signal
+ *   com.nokia.thermalmanager.thermal_state_change_ind(state_name)
+ *
+ * @param status          device overall thermal status
+ */
+static void
+thermal_manager_broadcast_status_dbus(THERMAL_STATUS status)
+{
+    static THERMAL_STATUS prev = THERMAL_STATUS_NORMAL;
+
+    if( prev == status )
+        goto EXIT;
+
+    prev = status;
+
+    const char *arg = thermal_status_name(status);
+
+    dsme_log(LOG_NOTICE, PFIX"send dbus signal %s.%s(%s)",
+             thermalmanager_interface,
+             thermalmanager_state_change_ind, arg);
+
+    DsmeDbusMessage *sig =
+        dsme_dbus_signal_new(thermalmanager_path,
+                             thermalmanager_interface,
+                             thermalmanager_state_change_ind);
+
+    dsme_dbus_message_append_string(sig, arg);
+    dsme_dbus_signal_emit(sig);
+
+EXIT:
+    return;
+}
+
+/** Request sensor status update
+ *
+ * All thermal objects have name matching the one given are
+ * updated.
+ *
+ * For example, if there are sensors "core0", "core1", "core2" and "core3"
+ *
+ * Requesting "core0" update does "core0" only.
+ *
+ * But requesting "core" update does all four.
+ *
+ * @param sensor_name  sensor name / sensor group name prefix
+ */
+bool
+thermal_manager_request_sensor_update(const char *sensor_name)
+{
+    bool ack = false;
+    for( GSList *item = thermal_objects; item; item = item->next ) {
+        thermal_object_t *object = item->data;
+        if( !thermal_object_has_name_like(object, sensor_name) )
+            continue;
+        thermal_object_request_update(object);
+        ack = true;
+        break;
+    }
+    return ack;
+}
+
+/** Check for pending sensor status request
+ *
+ * Check if any thermal objects with name matching the given on
+ * are still waiting for status update.
+ *
+ * For example, if there are sensors "core0", "core1", "core2" and "core3"
+ *
+ * Requesting "core0" checks "core0" only.
+ *
+ * But requesting "core" checks all four.
+ *
+ * @param sensor_name  sensor name / sensor group name prefix
+ */
+static bool
+thermal_manager_have_pending_sensor_update(const char *sensor_name)
+{
+    bool pending = false;
+
+    for( GSList *item = thermal_objects; item; item = item->next ) {
+        thermal_object_t *object = item->data;
+
+        /* Must be waiting for status */
+        if( !thermal_object_update_is_pending(object) )
+            continue;
+
+        /* And matching the name */
+        if( !thermal_object_has_name_like(object, sensor_name) )
+            continue;
+
+        /* But self-dependencies must not be allowed */
+        if( thermal_object_has_name(object, sensor_name) )
+            continue;
+
+        pending = true;
+        break;
+    }
+
+    return pending;
+}
+
+/** Update sensors that depend on the given thermal object
+ *
+ * If there are meta sensors that depend on temperature
+ * of the sensor that was updated, this function will
+ * re-evaluate the depending sensors.
+ *
+ * @param changed_object  thermal object that just got updated
+ */
+void
+thermal_manager_handle_sensor_update(const thermal_object_t *changed_object)
+{
+    const char *sensor_name = thermal_object_get_name(changed_object);
+
+    for( GSList *item = thermal_objects; item; item = item->next ) {
+        thermal_object_t *object = item->data;
+
+        /* Must be waiting for status */
+        if( !thermal_object_update_is_pending(object) )
+            continue;
+
+        /* and depending on the changed sensor */
+        const char *depends_on = thermal_object_get_depends_on(object);
+        if( !depends_on )
+            continue;
+
+        if( !thermal_object_has_name_like(changed_object, depends_on) )
+            continue;
+
+        /* but self-dependency must not be allowed */
+        if( thermal_object_has_name(object, sensor_name) )
+            continue;
+
+        /* in case it is a group dependency, check all matching sensors */
+        if( thermal_manager_have_pending_sensor_update(depends_on) )
+            continue;
+
+        /* Initiate sensor re-evaluation at backend. When finished,
+         * a call to thermal_object_handle_update() is made.
+         */
+        if( !thermal_object_read_sensor(object) )
+            thermal_object_cancel_update(object);
+
+        // -> thermal_object_handle_update(object);
+    }
+}
+
+/* ========================================================================= *
+ * DBUS_HANDLERS
+ * ========================================================================= */
+
+/* Handle com.nokia.thermalmanager.get_thermal_state D-Bus method call
+ *
+ * @param req   D-Bus method call message
+ * @param rsp   Where to store D-Bus method return message
+ */
+static void
+thermal_manager_get_thermal_state_cb(const DsmeDbusMessage *req,
+                                     DsmeDbusMessage **rsp)
+{
+    *rsp = dsme_dbus_reply_new(req);
+    dsme_dbus_message_append_string(*rsp, thermal_status_name(current_status));
+}
+
+/** Helper for handling temperature query D-Bus method calls
+ *
+ * @param req          D-Bus method call message
+ * @param sensor_name  Sensor name / sensor group name prefix
+ * @param rsp          Where to store D-Bus method return message
+ */
+static void
+thermal_manager_handle_temperature_query(const DsmeDbusMessage *req,
+                                         const char *sensor_name,
+                                         DsmeDbusMessage **rsp)
+{
+    THERMAL_STATUS    status      = THERMAL_STATUS_INVALID;
+    int               temperature = INVALID_TEMPERATURE;
+
+    thermal_manager_get_sensor_status(sensor_name, &status, &temperature);
+    *rsp = dsme_dbus_reply_new(req);
+    dsme_dbus_message_append_int(*rsp, temperature);
+}
+
+/* Handle com.nokia.thermalmanager.estimate_surface_temperature method call
+ *
+ * Provides backwards compatibility with legacy D-Bus method
+ * that was originally implemented in Harmattan specific
+ * sensor backend plugin.
+ *
+ * @param req   D-Bus method call message
+ * @param rsp   Where to store D-Bus method return message
+ */
+static void
+thermal_manager_get_surface_temperature_cb(const DsmeDbusMessage *req,
+                                           DsmeDbusMessage **rsp)
+{
+    thermal_manager_handle_temperature_query(req, "surface", rsp);
+}
+
+/* Handle com.nokia.thermalmanager.core_temperature D-Bus method call
+ *
+ * Provides backwards compatibility with legacy D-Bus method
+ * that was originally implemented in Harmattan specific
+ * sensor backend plugin.
+ *
+ * @param req   D-Bus method call message
+ * @param rsp   Where to store D-Bus method return message
+ */
+static void
+thermal_manager_get_core_temperature_cb(const DsmeDbusMessage *req,
+                                        DsmeDbusMessage **rsp)
+{
+    thermal_manager_handle_temperature_query(req, "core", rsp);
+}
+
+/* Handle com.nokia.thermalmanager.battery_temperature D-Bus method call
+ *
+ * Provides backwards compatibility with legacy D-Bus method
+ * that was originally implemented in Harmattan specific
+ * sensor backend plugin.
+ *
+ * @param req   D-Bus method call message
+ * @param rsp   Where to store D-Bus method return message
+ */
+static void
+thermal_manager_get_battery_temperature_cb(const DsmeDbusMessage *req,
+                                           DsmeDbusMessage **rsp)
+{
+    thermal_manager_handle_temperature_query(req, "battery", rsp);
+}
+
+/* Handle com.nokia.thermalmanager.sensor_temperature D-Bus method call
+ *
+ * Provides backwards compatibility with legacy D-Bus method
+ * that was originally implemented in Harmattan specific
+ * sensor backend plugin.
+ *
+ * @param req   D-Bus method call message
+ * @param rsp   Where to store D-Bus method return message
+ */
+static void
+thermal_manager_get_sensor_temperature_cb(const DsmeDbusMessage *req,
+                                          DsmeDbusMessage **rsp)
+{
+    const char *sensor = dsme_dbus_message_get_string(req);
+    thermal_manager_handle_temperature_query(req, sensor, rsp);
+}
+
+/** Array of D-Bus method calls supported by this plugin */
+static const dsme_dbus_binding_t dbus_methods_lut[] =
+{
+    { thermal_manager_get_thermal_state_cb,       thermalmanager_get_thermal_state },
+    { thermal_manager_get_surface_temperature_cb, thermalmanager_estimate_surface_temperature },
+    { thermal_manager_get_core_temperature_cb,    thermalmanager_core_temperature  },
+    { thermal_manager_get_battery_temperature_cb, thermalmanager_battery_temperature },
+    { thermal_manager_get_sensor_temperature_cb,  thermalmanager_sensor_temperature },
+
+    { 0, 0 }
 };
 
+/* ========================================================================= *
+ * MESSAGE_HANDLERS
+ * ========================================================================= */
 
-static const char* current_status_name()
-{
-  return thermal_status_name[current_status];
-}
-
-static THERMAL_STATUS worst_current_thermal_object_status(void)
-{
-  THERMAL_STATUS overall_status = THERMAL_STATUS_NORMAL;
-  THERMAL_STATUS highest_status = THERMAL_STATUS_NORMAL;
-  THERMAL_STATUS lowest_status = THERMAL_STATUS_NORMAL;
-  GSList*        node;
-
-  for (node = thermal_objects; node != 0; node = g_slist_next(node)) {
-      /* Find highest status */
-      if (((thermal_object_t*)(node->data))->status > highest_status) {
-          highest_status = ((thermal_object_t*)(node->data))->status;
-      }
-      /* Find lowest status */
-      if (((thermal_object_t*)(node->data))->status < lowest_status) {
-          lowest_status = ((thermal_object_t*)(node->data))->status;
-      }
-  }
-  /* Decide overall status */
-  /* If we have any ALERT of FATAL then that decides overall status */
-  /* During LOW, NORMAL or WARNING, any LOW wins */
-  /* Else status is highest */
-  if (highest_status >= THERMAL_STATUS_ALERT) {
-      overall_status = highest_status;
-  } else if (lowest_status == THERMAL_STATUS_LOW) {
-      overall_status = THERMAL_STATUS_LOW;
-  } else {
-      overall_status = highest_status;
-  }
-  return overall_status;
-}
-
-static void send_thermal_status(dsme_thermal_status_t status, 
-                                const char *sensor_name, int temperature)
-{
-  DSM_MSGTYPE_SET_THERMAL_STATUS msg =
-    DSME_MSG_INIT(DSM_MSGTYPE_SET_THERMAL_STATUS);
-
-  msg.status = status;
-  msg.temperature = temperature;
-  strncpy(msg.sensor_name, sensor_name, DSM_TEMP_SENSOR_MAX_NAME_LEN); 
-  msg.sensor_name[DSM_TEMP_SENSOR_MAX_NAME_LEN - 1] = 0;
-
-  broadcast_internally(&msg);
-}
-
-static void send_thermal_indication(const char *sensor_name, int temperature)
-{
-  /* first send an indication to D-Bus */
-  {
-      DsmeDbusMessage* sig =
-          dsme_dbus_signal_new(path,
-                               interface,
-                               thermalmanager_state_change_ind);
-      dsme_dbus_message_append_string(sig, current_status_name());
-      dsme_dbus_signal_emit(sig);
-      dsme_log(LOG_NOTICE, "thermalmanager: Device (%s) thermal status: %s (%dC)", sensor_name, current_status_name(), temperature);
-  }
-
-  /* then broadcast an indication internally */
-  {
-      static bool temp_warning_sent = false;
-
-      if (current_status == THERMAL_STATUS_FATAL) {
-          send_thermal_status(DSM_THERMAL_STATUS_OVERHEATED, sensor_name, temperature);
-          temp_warning_sent = true;
-          dsme_log(LOG_CRIT, "thermalmanager: Device (%s) overheated (%dC)", sensor_name, temperature);
-      } else if (current_status == THERMAL_STATUS_LOW) {
-          send_thermal_status(DSM_THERMAL_STATUS_LOWTEMP, sensor_name, temperature);
-          temp_warning_sent = true;
-          dsme_log(LOG_WARNING, "thermalmanager: Device (%s) temperature low (%dC)", sensor_name, temperature);
-      } else if (temp_warning_sent) {
-          send_thermal_status(DSM_THERMAL_STATUS_NORMAL, sensor_name, temperature);
-          temp_warning_sent = false;
-          dsme_log(LOG_NOTICE, "thermalmanager: Device (%s) temperature back to normal (%dC)", sensor_name, temperature);
-      }
-  }
-}
-
-static void send_temperature_request(thermal_object_t* thermal_object)
-{
-  if (!thermal_object->request_pending) {
-      dsme_log(LOG_DEBUG,
-               "thermalmanager: requesting %s temperature",
-               thermal_object->conf->name);
-      thermal_object->request_pending = true;
-      if (!thermal_object->conf->request_temperature(
-               thermal_object,
-               receive_temperature_response))
-      {
-          thermal_object->request_pending = false;
-          dsme_log(LOG_DEBUG,
-                   "thermalmanager: error requesting %s temperature",
-                   thermal_object->conf->name);
-      }
-  } else {
-      dsme_log(LOG_DEBUG,
-               "thermalmanager: still waiting for %s temperature",
-               thermal_object->conf->name);
-  }
-}
-
-static void receive_temperature_response(thermal_object_t* thermal_object,
-                                         int               temperature)
-{
-  thermal_object->request_pending = false;
-
-  if (temperature == INVALID_TEMPERATURE) {
-      dsme_log(LOG_DEBUG,
-               "thermalmanager: %s temperature request failed",
-               thermal_object->conf->name);
-      return;
-  }
-
-  THERMAL_STATUS previous_status = thermal_object->status;
-  THERMAL_STATUS new_status      = thermal_object->status;
-
-#ifdef DSME_THERMAL_TUNING
-  if (is_in_ta_test) {
-      thermal_object_try_to_read_config(thermal_object);
-  }
-#endif
-
-  /* We require that temp readings are C degrees integers
-   * and we drop obviously wrong values
-   */
-  if ((temperature > 200) || (temperature < -50)) { 
-      dsme_log(LOG_WARNING,
-               "thermalmanager: invalid temperature reading: %s %dC",
-               thermal_object->conf->name,
-               temperature);
-      return;
-  }
-
-  /* figure out the new thermal object status based on the temperature */
-  if (temperature < thermal_object->conf->state[new_status].min) {
-      while (new_status > THERMAL_STATUS_LOW &&
-             temperature < thermal_object->conf->state[new_status].min)
-      {
-          --new_status;
-      }
-  } else if (temperature > thermal_object->conf->state[new_status].max) {
-      while (new_status < THERMAL_STATUS_FATAL &&
-             temperature > thermal_object->conf->state[new_status].max)
-      {
-          ++new_status;
-      }
-  }
-
-  dsme_log(LOG_DEBUG,
-           "thermalmanager: %s temperature: %d %s",
-           thermal_object->conf->name,
-           temperature,
-           thermal_status_name[new_status]);
-
-  if ((new_status != previous_status) || thermal_object->status_change_count) {
-      /* Thermal object status has changed, but it can be because of bad reading. 
-       * Before accepting new status, make sure it is not a glitch.
-       * We want 3 consecutive readings indicating same status before we change it.
-       */
-      if (thermal_object->status_change_count == 0) {
-          /* This is first reading for new status */
-          thermal_object->status_change_count = 1;
-          thermal_object->new_status = new_status;
-          dsme_log(LOG_DEBUG,
-                   "thermalmanager: New status in transition started");
-      } else {
-          /* We are in transition. Make sure all new readings want same status */
-          if (thermal_object->new_status != new_status) {
-              thermal_object->status_change_count = 0;
-              dsme_log(LOG_DEBUG,
-                       "thermalmanager: New status in transition did not remain same");
-          } else if (++(thermal_object->status_change_count) >= 3) {
-              /* We got 3 readings all indicating new status, better believe it */
-              dsme_log(LOG_DEBUG,
-                       "thermalmanager: New status accepted: %s", thermal_status_name[new_status]);
-              thermal_object->status = new_status;
-              thermal_object->status_change_count = 0;
-              /* see if the new status affects global thermal status */
-              THERMAL_STATUS previously_indicated_status = current_status;
-              current_status = worst_current_thermal_object_status();
-              if (current_status != previously_indicated_status) {
-                  /* global thermal status has changed; send indication */
-                  send_thermal_indication(thermal_object->conf->name, temperature);
-              }
-          }
-      }
-  }
-
-#ifdef DSME_THERMAL_LOGGING
-  log_temperature(temperature, thermal_object);
-#endif
-}
-
-static void thermal_object_polling_interval_expired(void* object)
-{
-  thermal_object_t* thermal_object = object;
-
-  send_temperature_request(thermal_object);
-
-  // set up heartbeat service to poll the temperature of the object
-  const thermal_status_configuration_t* conf =
-      &thermal_object->conf->state[thermal_object->status];
-
-  DSM_MSGTYPE_WAIT msg = DSME_MSG_INIT(DSM_MSGTYPE_WAIT);
-  /* If thermal status is in transition and we are taking several
-   * readings before change, then use speed up values for
-   * next readings. Otherwise use configured values
-   */
-  if (thermal_object->status_change_count) {
-      msg.req.mintime = 2;
-      msg.req.maxtime = 5;
-  } else {
-      msg.req.mintime = conf->mintime;
-      msg.req.maxtime = conf->maxtime;
-  }
-  msg.req.pid     = 0;
-  msg.data        = thermal_object;
-
-  broadcast_internally(&msg);
-}
-
-
-void dsme_register_thermal_object(thermal_object_t* thermal_object)
-{
-    dsme_log(LOG_DEBUG,
-             "thermalmanager: %s (%s)", __FUNCTION__,
-             thermal_object->conf->name);
-
-  enter_module(this_module);
-
-#ifdef DSME_THERMAL_TUNING
-  thermal_object = thermal_object_copy(thermal_object);
-  thermal_object_try_to_read_config(thermal_object);
-#endif
-
-  // add the thermal object to the list of know thermal objects
-  thermal_objects = g_slist_append(thermal_objects, thermal_object);
-
-  thermal_object_polling_interval_expired(thermal_object);
-
-  leave_module();
-}
-
-void dsme_unregister_thermal_object(thermal_object_t* thermal_object)
-{
-  dsme_log(LOG_DEBUG, "thermalmanager: %s(%s)", __FUNCTION__, thermal_object->conf->name);
-  // TODO
-}
-
-
-static void get_thermal_state(const DsmeDbusMessage* request,
-                              DsmeDbusMessage**      reply)
-{
-  *reply = dsme_dbus_reply_new(request);
-  dsme_dbus_message_append_string(*reply, current_status_name());
-}
-
-static const dsme_dbus_binding_t methods[] = {
-  { get_thermal_state, thermalmanager_get_thermal_state },
-  { 0, 0 }
-};
-
-static bool bound = false;
-
-
+/** Handler for iphb wakeup events
+ */
 DSME_HANDLER(DSM_MSGTYPE_WAKEUP, client, msg)
 {
-    thermal_object_t* thermal_object = (thermal_object_t*)(msg->data);
+    thermal_object_t *thermal_object = msg->data;
 
-    dsme_log(LOG_DEBUG,
-             "thermalmanager: check thermal object '%s'",
-             thermal_object->conf->name);
-    thermal_object_polling_interval_expired(thermal_object);
+    if( !thermal_manager_object_is_registered(thermal_object) )
+        goto EXIT;
+
+    thermal_manager_request_object_update(thermal_object);
+
+EXIT:
+    return;
 }
 
-
+/** Handler for connected to D-Bus system bus event
+ */
 DSME_HANDLER(DSM_MSGTYPE_DBUS_CONNECT, client, msg)
 {
-  dsme_log(LOG_DEBUG, "thermalmanager: DBUS_CONNECT");
-  dsme_dbus_bind_methods(&bound, methods, service, interface);
+    dsme_log(LOG_DEBUG, PFIX"DBUS_CONNECT");
+
+    /* Add dbus method call handlers */
+    dsme_dbus_bind_methods(&dbus_methods_bound, dbus_methods_lut,
+                           thermalmanager_service, thermalmanager_interface);
 }
 
+/** Handler for disconnected to D-Bus system bus event
+ */
 DSME_HANDLER(DSM_MSGTYPE_DBUS_DISCONNECT, client, msg)
 {
-  dsme_log(LOG_DEBUG, "thermalmanager: DBUS_DISCONNECT");
-  dsme_dbus_unbind_methods(&bound, methods, service, interface);
+    dsme_log(LOG_DEBUG, PFIX"DBUS_DISCONNECT");
+
+    /* Remove dbus method call handlers */
+    dsme_dbus_unbind_methods(&dbus_methods_bound, dbus_methods_lut,
+                             thermalmanager_service, thermalmanager_interface);
 }
 
-#ifdef DSME_THERMAL_TUNING
-DSME_HANDLER(DSM_MSGTYPE_SET_TA_TEST_MODE, client, msg)
+/** Array of DSME event handlers implemented by this plugin */
+module_fn_info_t message_handlers[] =
 {
-    is_in_ta_test = true;
-    dsme_log(LOG_NOTICE, "thermalmanager: set TA test mode");
-}
-#endif
-
-
-// TODO: rename module_fn_info_t to dsme_binding_t
-module_fn_info_t message_handlers[] = {
-  DSME_HANDLER_BINDING(DSM_MSGTYPE_WAKEUP),
-  DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_CONNECT),
-  DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_DISCONNECT),
-#ifdef DSME_THERMAL_TUNING
-  DSME_HANDLER_BINDING(DSM_MSGTYPE_SET_TA_TEST_MODE),
-#endif
-  { 0 }
+    DSME_HANDLER_BINDING(DSM_MSGTYPE_WAKEUP),
+    DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_CONNECT),
+    DSME_HANDLER_BINDING(DSM_MSGTYPE_DBUS_DISCONNECT),
+    { 0 }
 };
 
+/* ========================================================================= *
+ * MODULE_GLUE
+ * ========================================================================= */
 
-void module_init(module_t* handle)
+/** Init hook that DSME plugins need to implement
+ *
+ * @param handle DSME plugin handle
+ */
+void
+module_init(module_t *handle)
 {
-  dsme_log(LOG_DEBUG, "thermalmanager.so loaded");
+    dsme_log(LOG_DEBUG, PFIX"loaded");
 
-  this_module = handle;
+    this_module = handle;
 }
 
-void module_fini(void)
+/** Exit hook that DSME plugins need to implement
+ */
+void
+module_fini(void)
 {
-  g_slist_free(thermal_objects);
+    /* Clear remaining thermal objects from the registered list */
+    if( thermal_objects ) {
+        dsme_log(LOG_ERR, PFIX"registered thermal objects remain "
+                 "at unload time");
 
-  dsme_dbus_unbind_methods(&bound, methods, service, interface);
+        do
+            thermal_manager_unregister_object(thermal_objects->data);
+        while( thermal_objects );
+    }
 
-  dsme_log(LOG_DEBUG, "thermalmanager.so unloaded");
+    /* Remove dbus method call handlers */
+    dsme_dbus_unbind_methods(&dbus_methods_bound, dbus_methods_lut,
+                             thermalmanager_service, thermalmanager_interface);
+
+    dsme_log(LOG_DEBUG, PFIX"unloaded");
 }
-
-#ifdef DSME_THERMAL_TUNING
-#include <stdio.h>
-
-/* Thermal values can be configured in file /etc/dsme/temp_<name>.conf */
-#define DSME_THERMAL_TUNING_CONF_PATH "/etc/dsme/temp_"
-
-static FILE* thermal_tuning_file(const char* thermal_object_name)
-{
-  char  name[1024];
-
-  snprintf(name,
-           sizeof(name),
-           "%s%s.conf",
-           DSME_THERMAL_TUNING_CONF_PATH,
-           thermal_object_name);
-
-  dsme_log(LOG_DEBUG, "thermalmanager: trying to open %s for thermal tuning values", name);
-
-  return fopen(name, "r");
-}
-
-static bool thermal_object_config_read(
-  thermal_object_configuration_t* config,
-  FILE*                           f)
-{
-  bool                           success = true;
-  int                            i;
-  thermal_object_configuration_t new_config;
-
-  new_config = *config;
-
-  for (i = 0; i < THERMAL_STATUS_COUNT; ++i) {
-      if (fscanf(f,
-                 "%d, %d, %d",
-                 &new_config.state[i].min,
-                 &new_config.state[i].max,
-                 &new_config.state[i].maxtime) != 3) {
-          success = false;
-      }
-      if (success) {
-          /* Do some sanity checking for values 
-           * Temp values should be between -40..+200, and in ascending order.
-           * Min must be < max
-           * Next min <= previous max
-           * Polling times should also make sense  10-1000s
-           */
-          if (((i > THERMAL_STATUS_LOW) && (new_config.state[i].min < -40)) ||
-              (new_config.state[i].max < -40) ||
-              (new_config.state[i].min > 200) ||
-              ((i > THERMAL_STATUS_FATAL) && (new_config.state[i].max > 200)) ||
-              (new_config.state[i].min >= new_config.state[i].max) ||
-              ((i > THERMAL_STATUS_LOW) && (new_config.state[i].min <= new_config.state[i-1].min)) ||
-              ((i > THERMAL_STATUS_LOW) && (new_config.state[i].max <= new_config.state[i-1].max)) ||
-              ((i > THERMAL_STATUS_LOW) && (new_config.state[i].min > new_config.state[i-1].max)) ||
-              (new_config.state[i].maxtime < 10) ||
-              (new_config.state[i].maxtime > 1000)) {
-              success = false;
-          }
-      }
-      if (success) {
-          /* Note, it is important to give big enough window min..max
-           * then IPHB can freely choose best wake-up time
-           */
-          new_config.state[i].mintime = new_config.state[i].maxtime/2;
-      } else {
-          dsme_log(LOG_ERR, "thermalmanager: syntax error in thermal tuning on line %d", i+1);
-          break;
-      }
-  }
-  if (success) {
-      *config = new_config;
-  }
-
-  return success;
-}
-
-static void thermal_object_try_to_read_config(thermal_object_t* thermal_object)
-{
-  FILE* f;
-
-  if ((f = thermal_tuning_file(thermal_object->conf->name))) {
-
-      if (thermal_object_config_read(thermal_object->conf, f)) {
-          dsme_log(LOG_NOTICE,
-                   "thermalmanager: Read thermal tuning file for %s",
-                   thermal_object->conf->name);
-      } else {
-          dsme_log(LOG_NOTICE,
-                   "thermalmanager: Thermal tuning file for %s discarded. Using default values",
-                   thermal_object->conf->name);
-      }
-
-      fclose(f);
-  } else {
-      dsme_log(LOG_NOTICE,
-               "thermalmanager: No thermal tuning file for %s. Using default values",
-               thermal_object->conf->name);
-  }
-}
-
-static thermal_object_t* thermal_object_copy(
-  const thermal_object_t* thermal_object)
-{
-  thermal_object_t*               copy_object;
-  thermal_object_configuration_t* copy_config;
-
-  copy_object = malloc(sizeof(thermal_object_t));
-  copy_config = malloc(sizeof(thermal_object_configuration_t));
-
-  if (copy_object && copy_config) {
-      *copy_object = *thermal_object;
-      *copy_config = *(thermal_object->conf);
-      copy_object->conf = copy_config;
-  } else {
-      free(copy_object);
-      free(copy_config);
-
-      copy_object = 0;
-  }
-
-  return copy_object;
-}
-#endif
-
-#ifdef DSME_THERMAL_LOGGING
-#include <stdio.h>
-#include <string.h>
-#include <errno.h>
-
-#define DSME_THERMAL_LOG_PATH "/var/lib/dsme/thermal.log"
-
-static const char* status_string(THERMAL_STATUS status)
-{
-  switch (status) {
-  case THERMAL_STATUS_LOW:     return "LOW_WARNING";
-  case THERMAL_STATUS_NORMAL:  return "NORMAL";
-  case THERMAL_STATUS_WARNING: return "WARNING";
-  case THERMAL_STATUS_ALERT:   return "ALERT";
-  case THERMAL_STATUS_FATAL:   return "FATAL";
-  default:                     return "UNKNOWN";
-  }
-}
-
-static void log_temperature(int temperature, const thermal_object_t* thermal_object)
-{
-  static FILE* log_file = 0;
-
-  if (!log_file) {
-      if (!(log_file = fopen(DSME_THERMAL_LOG_PATH, "a"))) {
-          dsme_log(LOG_ERR,
-                   "thermalmanager: Error opening thermal log " DSME_THERMAL_LOG_PATH ": %s",
-                   strerror(errno));
-          return;
-      }
-  }
-
-  struct timespec t;
-  clock_gettime(CLOCK_MONOTONIC, &t);
-
-  int now = t.tv_sec;
-  static int start_time = 0;
-
-  if (!start_time) {
-      start_time = now;
-  }
-
-  fprintf(log_file,
-          "%d %s %d C %s\n",
-          now - start_time,
-          thermal_object->conf->name,
-          temperature,
-          status_string(thermal_object->status));
-  fflush(log_file);
-  dsme_log(LOG_DEBUG,"thermalmanager: %s %d C %s", thermal_object->conf->name, 
-           temperature, status_string(thermal_object->status));
-}
-#endif

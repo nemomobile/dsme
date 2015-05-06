@@ -28,10 +28,10 @@
 #define _GNU_SOURCE
 #endif
 
-#include "dsme/dsmesock.h"
-#include "dsme/logging.h"
-#include "dsme/modulebase.h"
-#include "dsme/protocol.h"
+#include "../include/dsme/dsmesock.h"
+#include "../include/dsme/logging.h"
+#include "../include/dsme/modulebase.h"
+#include <dsme/protocol.h>
 
 #include <glib.h>
 #include <unistd.h>
