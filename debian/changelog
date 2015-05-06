@@ -1,3 +1,9 @@
+dsme (0.69.0) precise; urgency=low
+
+  * [dsme] Implement configurable generic thermal backend. Fixes JB#25904
+
+ -- Simo Piiroinen <simo.piiroinen@jollamobile.com>  Wed, 06 May 2015 14:54:52 +0300
+
 dsme (0.68.3) precise; urgency=low
 
   * [wlanloader] Only reset wlan module after wifi tethering has been turned
