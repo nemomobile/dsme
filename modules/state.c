@@ -53,6 +53,8 @@
 #include <strings.h>
 #include <signal.h>
 #include <unistd.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <sys/types.h>
 
 #ifdef DSME_VIBRA_FEEDBACK
@@ -224,6 +226,102 @@ static dsme_runlevel_t state2runlevel(dsme_state_t state)
   return runlevel;
 }
 
+static bool need_to_use_reboot(dsme_state_t target_state)
+{
+    static const char output_path[] = "/run/systemd/reboot-param";
+
+    bool use_reboot = false;
+    int  input_fd   = -1;
+    int  output_fd  = -1;
+
+    char input_path[256];
+    char param[256];
+
+    /* Determine path for dsme reboot param config file */
+
+    const char *target_tag  = "unknown";
+    const char *charger_tag = "without-charger";
+
+    switch( target_state ) {
+    case DSME_STATE_SHUTDOWN: target_tag = "shutdown"; break;
+    case DSME_STATE_USER:     target_tag = "user";     break;
+    case DSME_STATE_ACTDEAD:  target_tag = "actdead";  break;
+    case DSME_STATE_REBOOT:   target_tag = "reboot";   break;
+    case DSME_STATE_TEST:     target_tag = "test";     break;
+    case DSME_STATE_MALF:     target_tag = "malf";     break;
+    case DSME_STATE_BOOT:     target_tag = "boot";     break;
+    case DSME_STATE_LOCAL:    target_tag = "local";    break;
+    default: break;
+    }
+
+    if( charger_state == CHARGER_CONNECTED )
+        charger_tag = "with-charger";
+
+    snprintf(input_path, sizeof input_path, "/etc/dsme/reboot-to-%s-%s.param",
+             target_tag, charger_tag);
+
+    /* Read reboot param from dsme config file */
+
+    if( (input_fd = open(input_path, O_RDONLY)) == -1 ) {
+        if( errno != ENOENT )
+            dsme_log(LOG_ERR, PFIX"%s: can't read reboot param: %m",
+                     input_path);
+        goto EXIT;
+    }
+
+    int todo = read(input_fd, param, sizeof param - 1);
+    if( todo == -1 ) {
+        dsme_log(LOG_ERR, PFIX"%s: can't read reboot param: %m",
+                 input_path);
+        goto EXIT;
+    }
+
+    param[todo] = 0;
+    todo = strcspn(param, "\r\n");
+    param[todo] = 0;
+
+    /* Write parameter to where systemd expects it to be at */
+
+    output_fd = open(output_path, O_WRONLY|O_CREAT|O_TRUNC, 0644);
+    if( output_fd == -1 ) {
+        dsme_log(LOG_ERR, PFIX"%s: can't write reboot param: %m",
+                 output_path);
+        goto EXIT;
+    }
+
+    int done = write(output_fd, param, todo);
+
+    if( done == -1 ) {
+        dsme_log(LOG_ERR, PFIX"%s: can't write reboot param: %m",
+                 output_path);
+        goto EXIT;
+    }
+    if( done != todo ) {
+        dsme_log(LOG_ERR, PFIX"%s: can't write reboot param: %s",
+                 output_path, "partial write");;
+        goto EXIT;
+    }
+
+    /* Success - should use reboot instead of shutdown */
+
+    use_reboot = true;
+    dsme_log(LOG_DEBUG, PFIX"%s: using '%s'", output_path, param);
+
+EXIT:
+
+    if( input_fd != -1 )
+        close(input_fd);
+
+    if( output_fd != -1 )
+        close(output_fd);
+
+    if( !use_reboot && unlink(output_path) == -1 && errno != ENOENT ) {
+        dsme_log(LOG_WARNING, PFIX"%s: can't remove reboot param: %m",
+                 output_path);
+    }
+
+    return use_reboot;
+}
 
 static dsme_state_t select_state(void)
 {
@@ -352,8 +450,16 @@ static void try_to_change_state(dsme_state_t new_state)
            * and then we will boot to ACTDEAD
            * Force SHUTDOWN
            */
-          dsme_log(LOG_DEBUG, PFIX"ACTDEAD state requested, we do it via SHUTDOWN");
-          change_state(DSME_STATE_SHUTDOWN);
+          if( need_to_use_reboot(new_state) ) {
+              dsme_log(LOG_DEBUG, PFIX"ACTDEAD state requested, "
+                       "we do it via REBOOT");
+              change_state(DSME_STATE_REBOOT);
+          }
+          else {
+              dsme_log(LOG_DEBUG, PFIX"ACTDEAD state requested, "
+                       "we do it via SHUTDOWN");
+              change_state(DSME_STATE_SHUTDOWN);
+          }
           start_delayed_shutdown_timer(SHUTDOWN_TIMER_TIMEOUT);
 #else
           if (user_switch_done) {
