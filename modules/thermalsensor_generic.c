@@ -144,7 +144,7 @@ static bool                       thermal_sensor_generic_is_valid           (the
 
 static const char                *thermal_sensor_generic_get_name           (const thermal_sensor_generic_t *self);
 static bool                       thermal_sensor_generic_get_status         (const thermal_sensor_generic_t *self, int *temp, THERMAL_STATUS *status);
-static const char                *thermal_sensor_generic_get_depends_on        (const thermal_sensor_generic_t *self);
+static const char                *thermal_sensor_generic_get_depends_on     (const thermal_sensor_generic_t *self);
 static bool                       thermal_sensor_generic_get_poll_delay     (const thermal_sensor_generic_t *self, int *minwait, int *maxwait);
 
 static bool                       thermal_sensor_generic_enable_sensor      (const thermal_sensor_generic_t *self, bool enable);
@@ -166,7 +166,7 @@ static void                       thermal_sensor_generic_set_temp_offs      (the
 static thermal_sensor_generic_t  *thermal_sensor_generic_from_object        (const thermal_object_t *object);
 static void                       thermal_sensor_generic_delete_cb          (thermal_object_t *object);
 static const char                *thermal_sensor_generic_get_name_cb        (const thermal_object_t *object);
-static const char                *thermal_sensor_generic_get_depends_on_cb     (const thermal_object_t *object);
+static const char                *thermal_sensor_generic_get_depends_on_cb  (const thermal_object_t *object);
 static bool                       thermal_sensor_generic_get_status_cb      (const thermal_object_t *object, THERMAL_STATUS *status, int *temp);
 static bool                       thermal_sensor_generic_get_poll_delay_cb  (const thermal_object_t *object, int *minwait, int *maxwait);
 static bool                       thermal_sensor_generic_read_sensor_cb     (thermal_object_t *object);
