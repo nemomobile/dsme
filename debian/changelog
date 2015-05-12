@@ -1,3 +1,10 @@
+dsme (0.69.1) precise; urgency=low
+
+  * [dsme] Attempt to re-enable thermal sensor if temperature read fails.
+    Fixes JB#28654
+
+ -- Simo Piiroinen <simo.piiroinen@jollamobile.com>  Tue, 12 May 2015 08:16:46 +0300
+
 dsme (0.69.0) precise; urgency=low
 
   * [dsme] Implement configurable generic thermal backend. Fixes JB#25904
