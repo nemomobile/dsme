@@ -144,10 +144,11 @@ static bool                       thermal_sensor_generic_is_valid           (the
 
 static const char                *thermal_sensor_generic_get_name           (const thermal_sensor_generic_t *self);
 static bool                       thermal_sensor_generic_get_status         (const thermal_sensor_generic_t *self, int *temp, THERMAL_STATUS *status);
-static const char                *thermal_sensor_generic_get_depends_on        (const thermal_sensor_generic_t *self);
+static const char                *thermal_sensor_generic_get_depends_on     (const thermal_sensor_generic_t *self);
 static bool                       thermal_sensor_generic_get_poll_delay     (const thermal_sensor_generic_t *self, int *minwait, int *maxwait);
 
 static bool                       thermal_sensor_generic_enable_sensor      (const thermal_sensor_generic_t *self, bool enable);
+static bool                       thermal_sensor_generic_sensor_is_enabled  (const thermal_sensor_generic_t *self);
 static bool                       thermal_sensor_generic_read_sensor        (thermal_sensor_generic_t *self);
 
 static void                       thermal_sensor_generic_set_temp_path      (thermal_sensor_generic_t *self, const char *path);
@@ -165,7 +166,7 @@ static void                       thermal_sensor_generic_set_temp_offs      (the
 static thermal_sensor_generic_t  *thermal_sensor_generic_from_object        (const thermal_object_t *object);
 static void                       thermal_sensor_generic_delete_cb          (thermal_object_t *object);
 static const char                *thermal_sensor_generic_get_name_cb        (const thermal_object_t *object);
-static const char                *thermal_sensor_generic_get_depends_on_cb     (const thermal_object_t *object);
+static const char                *thermal_sensor_generic_get_depends_on_cb  (const thermal_object_t *object);
 static bool                       thermal_sensor_generic_get_status_cb      (const thermal_object_t *object, THERMAL_STATUS *status, int *temp);
 static bool                       thermal_sensor_generic_get_poll_delay_cb  (const thermal_object_t *object, int *minwait, int *maxwait);
 static bool                       thermal_sensor_generic_read_sensor_cb     (thermal_object_t *object);
@@ -806,6 +807,34 @@ EXIT:
     return ack;
 }
 
+static bool
+thermal_sensor_generic_sensor_is_enabled(const thermal_sensor_generic_t *self)
+{
+    bool is_enabled = true;
+
+    char *mode = 0;
+
+    if( !self->sg_mode_path || !self->sg_mode_enable )
+        goto EXIT;
+
+    is_enabled = false;
+
+    if( !(mode = tsg_util_read_file(self->sg_mode_path)) ) {
+        dsme_log(LOG_WARNING, PFIX"%s: failed to read sensor mode: %m",
+                 thermal_sensor_generic_get_name(self));
+        goto EXIT;
+    }
+
+    mode[strcspn(mode, "\r\n")] = 0;
+
+    is_enabled = !strcmp(mode, self->sg_mode_enable);
+
+EXIT:
+    free(mode);
+
+    return is_enabled;
+}
+
 /** Read sensor associated with sensor object
  *
  * On success the value is cached and can be obtained via
@@ -829,8 +858,34 @@ thermal_sensor_generic_read_sensor(thermal_sensor_generic_t *self)
     if( !self->sg_temp_cb )
         goto EXIT;
 
-    if( !self->sg_temp_cb(self->sg_temp_path, &temp) )
-        goto EXIT;
+    if( !self->sg_temp_cb(self->sg_temp_path, &temp) ) {
+
+        /* Check if the failure could be because some other
+         * process has disabled the sensor */
+
+        if( thermal_sensor_generic_sensor_is_enabled(self) )
+            goto EXIT;
+
+        /* Attempt to re-enale and read again */
+
+        dsme_log(LOG_WARNING, PFIX"%s: sensor is disabled; re-enabling",
+                 thermal_sensor_generic_get_name(self));
+
+        if( !thermal_sensor_generic_enable_sensor(self, true) ) {
+            dsme_log(LOG_WARNING, PFIX"%s: enabling failed",
+                     thermal_sensor_generic_get_name(self));
+            goto EXIT;
+        }
+
+        if( !self->sg_temp_cb(self->sg_temp_path, &temp) ) {
+            dsme_log(LOG_WARNING, PFIX"%s: reading still failed",
+                     thermal_sensor_generic_get_name(self));
+            goto EXIT;
+        }
+
+        dsme_log(LOG_DEBUG, PFIX"%s: succesfully re-enabled",
+                 thermal_sensor_generic_get_name(self));
+    }
 
     temp += self->sg_temp_offs;
 
