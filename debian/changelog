@@ -1,3 +1,10 @@
+dsme (0.70.0) precise; urgency=low
+
+  * [dsme] Allow using config files to pass reboot parameters to systemd.
+    Contributes to JB#27085
+
+ -- Simo Piiroinen <simo.piiroinen@jollamobile.com>  Tue, 12 May 2015 09:09:09 +0300
+
 dsme (0.69.1) precise; urgency=low
 
   * [dsme] Attempt to re-enable thermal sensor if temperature read fails.
