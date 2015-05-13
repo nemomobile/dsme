@@ -1,3 +1,9 @@
+dsme (0.70.1) precise; urgency=low
+
+  * [dsme] Remove stale dsmetool --ta-test option. Fixes JB#28626
+
+ -- Simo Piiroinen <simo.piiroinen@jollamobile.com>  Wed, 13 May 2015 11:34:28 +0300
+
 dsme (0.70.0) precise; urgency=low
 
   * [dsme] Allow using config files to pass reboot parameters to systemd.
