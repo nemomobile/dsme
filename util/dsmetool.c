@@ -103,7 +103,6 @@ static void               xdsme_request_dbus_disconnect(void);
 static void               xdsme_request_reboot(void);
 static void               xdsme_request_shutdown(void);
 static void               xdsme_request_powerup(void);
-static void               xdsme_request_ta_test_mode(void);
 static void               xdsme_request_runlevel(const char *runlevel);
 static void               xdsme_request_loglevel(unsigned level);
 
@@ -426,14 +425,6 @@ static void xdsme_request_powerup(void)
     dsmeipc_send(&req);
 }
 
-static void xdsme_request_ta_test_mode(void)
-{
-    DSM_MSGTYPE_SET_TA_TEST_MODE req =
-        DSME_MSG_INIT(DSM_MSGTYPE_SET_TA_TEST_MODE);
-
-    dsmeipc_send(&req);
-}
-
 static void xdsme_request_runlevel(const char *runlevel)
 {
     DSM_MSGTYPE_TELINIT req = DSME_MSG_INIT(DSM_MSGTYPE_TELINIT);
@@ -586,7 +577,6 @@ static void output_usage(const char *name)
 "\n"
 "  -d --start-dbus                 Start DSME's D-Bus services\n"
 "  -s --stop-dbus                  Stop DSME's D-Bus services\n"
-"  -a --ta-test                    Enable test automation mode\n"
 "\n"
           );
 }
@@ -606,7 +596,6 @@ int main(int argc, char *argv[])
         {"stop-dbus",  no_argument,       NULL, 's'},
         {"reboot",     no_argument,       NULL, 'b'},
         {"version",    no_argument,       NULL, 'v'},
-        {"ta-test",    no_argument,       NULL, 'a'},
         {"clear-rtc",  no_argument,       NULL, 'c'},
         {"get-state",  no_argument,       NULL, 'g'},
         {"powerup",    no_argument,       NULL, 'u'},
@@ -653,10 +642,6 @@ int main(int argc, char *argv[])
 
         case 'v':
             xdsme_query_version(false);
-            break;
-
-        case 'a':
-            xdsme_request_ta_test_mode();
             break;
 
         case 't':
