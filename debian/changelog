@@ -1,3 +1,10 @@
+dsme (0.71.0) precise; urgency=low
+
+  * [dsme] Make command line reboot go through dsme when applicable.
+    Fixes MER#1049
+
+ -- Simo Piiroinen <simo.piiroinen@jollamobile.com>  Wed, 03 Jun 2015 10:49:31 +0300
+
 dsme (0.70.1) precise; urgency=low
 
   * [dsme] Remove stale dsmetool --ta-test option. Fixes JB#28626
