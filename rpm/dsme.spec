@@ -66,6 +66,7 @@ make %{?_smp_mflags}
 rm -rf %{buildroot}
 %make_install
 
+install -D -m 644 reboot-via-dsme.sh %{buildroot}/etc/profile.d/reboot-via-dsme.sh
 install -D -m 644 %{SOURCE1} %{buildroot}/lib/systemd/system/%{name}.service
 install -d %{buildroot}/lib/systemd/system/multi-user.target.wants/
 ln -s ../%{name}.service %{buildroot}/lib/systemd/system/multi-user.target.wants/%{name}.service
@@ -97,6 +98,8 @@ systemctl daemon-reload || :
 /lib/systemd/system/multi-user.target.wants/%{name}.service
 /var/lib/dsme
 %config(noreplace) /var/lib/dsme/alarm_queue_status
+%dir /etc/profile.d
+/etc/profile.d/reboot-via-dsme.sh
 
 %files tests
 %defattr(-,root,root,-)
