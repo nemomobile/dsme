@@ -1,3 +1,10 @@
+dsme (0.71.1) precise; urgency=low
+
+  * [usbtracker] Do not report unknown usb modes in default verbosity.
+    Contributes to JB#32296
+
+ -- Simo Piiroinen <simo.piiroinen@jollamobile.com>  Thu, 17 Sep 2015 23:13:08 +0300
+
 dsme (0.71.0) precise; urgency=low
 
   * [dsme] Make command line reboot go through dsme when applicable.
