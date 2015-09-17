@@ -245,7 +245,7 @@ evaluate_status(const char *mode, bool *is_charging, bool *is_mounted)
      * is included in the lookup table -> any unknown mode name is assumed
      * to mean that charging should be possible. */
 
-    dsme_log(LOG_WARNING, "unknown usb mode '%s'; assuming charger-connected",
+    dsme_log(LOG_INFO, "unknown usb mode '%s'; assuming charger-connected",
              mode);
 
     charging = true;
