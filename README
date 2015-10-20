@@ -1,9 +1,2 @@
-Build and installation instructions:
-If source is taken from the git repo:
-$ ./autogen.sh
-$ mkdir build
-$ cd build
-$ ../configure <configure-options>
-$ make
-$ sudo make install
-
+This project has migrated to https://git.merproject.org/mer-core/dsme
+as part of the Mer/Nemo merge work

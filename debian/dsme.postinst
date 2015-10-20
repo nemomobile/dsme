@@ -1,5 +1,0 @@
-#!/bin/sh
-
-echo -n USER > /var/lib/dsme/saved_state
-
-#DEBHELPER#
